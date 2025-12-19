@@ -91,7 +91,6 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
-
   google_fonts:
     dependency: "direct main"
     description:
@@ -101,11 +100,7 @@ packages:
     source: hosted
     version: "6.3.3"
   http:
-    dependency: transitive
-
-  http:
     dependency: "direct main"
-
     description:
       name: http
       sha256: "87721a4a50b19c7f1d49001e51409bddc46303966ce89a65af4f4e6004896412"
@@ -300,11 +295,7 @@ packages:
       sha256: ab2726c1a94d3176a45960b6234466ec367179b87dd74f1611adb1f3b5fb9d55
       url: "https://pub.dev"
     source: hosted
-<<<<<<< HEAD
-    version: "0.7.6"
-=======
     version: "0.7.7"
->>>>>>> e374e2cdad7174b164ec65765ffdddde0e37c317
   typed_data:
     dependency: transitive
     description:
@@ -337,7 +328,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.1.1"
-<<<<<<< HEAD
   xdg_directories:
     dependency: transitive
     description:
@@ -346,8 +336,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.1.0"
-=======
->>>>>>> e374e2cdad7174b164ec65765ffdddde0e37c317
 sdks:
   dart: ">=3.9.2 <4.0.0"
   flutter: ">=3.35.0"
