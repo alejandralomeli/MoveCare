@@ -1,29 +1,72 @@
 import 'package:flutter/material.dart';
-import '../main.dart'; 
+import 'package:google_fonts/google_fonts.dart';
 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
 
+  static const Color primaryBlue = Color(0xFF1559B2);
+  static const Color lightInputBlue = Color(0xFFB3D4FF);
+  static const Color googleBtnBlue = Color(0xFFE1EBFD);
+  static const Color forgotPasswordRed = Color(0xFFE57373);
+
   @override
   Widget build(BuildContext context) {
-    final screenHeight = MediaQuery.of(context).size.height;
+    final size = MediaQuery.of(context).size;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Inicio de Sesión'),
-        backgroundColor: Colors.transparent, 
-        elevation: 0,
-      ),
-     
-      resizeToAvoidBottomInset: false,
-      backgroundColor: Colors.white,
       body: Stack(
-        children: <Widget>[
-          _buildBackgroundPattern(screenHeight),
-          Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0),
-              child: _buildLoginCard(context),
+        children: [
+          // 1. Capa de Fondo
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            height: size.height * 0.45,
+            child: Image.asset(
+              'assets/ruta.png',
+              fit: BoxFit.cover,
+            ),
+          ),
+
+          // 2. Capa de Contenido
+          Align(
+            alignment: Alignment.bottomCenter,
+            child: Container(
+              height: size.height * 0.75,
+              width: double.infinity,
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(50),
+                  topRight: Radius.circular(50),
+                ),
+              ),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 35),
+                child: Column(
+                  children: [
+                    const SizedBox(height: 40),
+                    _buildLogo(),
+                    const SizedBox(height: 40),
+                    _buildTextField(
+                      hint: 'Correo',
+                      iconColor: primaryBlue,
+                    ),
+                    const SizedBox(height: 15),
+                    _buildTextField(
+                      hint: 'Contraseña',
+                      iconColor: const Color(0xFF64A1F4),
+                    ),
+                    const SizedBox(height: 30),
+                    _buildIngresarBtn(),
+                    const SizedBox(height: 25),
+                    _buildGoogleBtn(),
+                    const SizedBox(height: 35),
+                    _buildFooter(context), // Pasando el context correctamente
+                    const SizedBox(height: 20),
+                  ],
+                ),
+              ),
             ),
           ),
         ],
@@ -31,224 +74,138 @@ class LoginScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildBackgroundPattern(double screenHeight) {
+  Widget _buildLogo() {
     return Container(
-      height: screenHeight * 0.55, 
-      decoration: BoxDecoration(
-        color: cardBackgroundColor.withOpacity(0.8), 
-      ),
-      child: Image.asset(
-        'assets/fondo_ruta.png', 
-        fit: BoxFit.cover, 
-        alignment: Alignment.topCenter, 
-        errorBuilder: (context, error, stackTrace) {
-          return Container(
-            color: cardBackgroundColor.withOpacity(0.8),
-            child: const Center(
-              child: Text("Fondo no cargado", style: TextStyle(color: Colors.white70)),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  // El card que contiene todos los campos y botones
-  Widget _buildLoginCard(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(24.0),
-      margin: const EdgeInsets.only(top: 80, bottom: 20),
-      constraints: const BoxConstraints(maxWidth: 400),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20.0),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 15,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          _buildAppLogo(),
-          const SizedBox(height: 30),
-
-          _buildTextField(
-            label: 'Correo',
-            icon: Icons.email_outlined,
-            isPassword: false,
-          ),
-          const SizedBox(height: 20),
-
-          _buildTextField(
-            label: 'Contraseña',
-            icon: Icons.lock_outline,
-            isPassword: true,
-          ),
-          const SizedBox(height: 30),
-
-          // Botón Ingresar
-          _buildPrimaryButton(context),
-          const SizedBox(height: 20),
-
-          // Botón Iniciar Sesión con Google
-          _buildGoogleSignInButton(),
-          const SizedBox(height: 40),
-
-          // Enlaces Registrate y Olvidé mi contraseña
-          _buildFooterLinks(),
-        ],
-      ),
-    );
-  }
-
-  // Logo de la aplicación 
-  Widget _buildAppLogo() {
-    return Container(
-      padding: const EdgeInsets.all(16.0),
-      decoration: BoxDecoration(
-        color: cardBackgroundColor,
-        borderRadius: BorderRadius.circular(50.0),
+      width: 130,
+      height: 130,
+      decoration: const BoxDecoration(
+        shape: BoxShape.circle,
       ),
       child: ClipOval(
         child: Image.asset(
           'assets/movecare.png',
-          width: 50,
-          height: 50,
           fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) {
-            // Fallback si la imagen no se encuentra
-            return const Icon(
-              Icons.directions_car_filled,
-              size: 50,
-              color: primaryColor,
-            );
-          },
         ),
       ),
     );
   }
 
-  // Campo de texto personalizado (Correo y Contraseña)
-  Widget _buildTextField({
-    required String label,
-    required IconData icon,
-    required bool isPassword,
-  }) {
+  Widget _buildTextField({required String hint, required Color iconColor}) {
     return Container(
       decoration: BoxDecoration(
-        color: cardBackgroundColor,
-        borderRadius: BorderRadius.circular(15.0),
+        color: lightInputBlue,
+        borderRadius: BorderRadius.circular(20),
       ),
       child: TextField(
-        obscureText: isPassword,
-        style: const TextStyle(color: primaryColor),
         decoration: InputDecoration(
-          hintText: label,
-          hintStyle: const TextStyle(color: primaryColor),
-          border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(vertical: 18.0, horizontal: 10.0),
+          hintText: hint,
+          hintStyle: GoogleFonts.montserrat(
+            color: primaryBlue,
+            fontWeight: FontWeight.w600,
+          ),
           prefixIcon: Padding(
-            padding: const EdgeInsets.only(left: 15.0, right: 10.0),
-            child: Icon(icon, color: primaryColor),
+            padding: const EdgeInsets.symmetric(horizontal: 15),
+            child: CircleAvatar(
+              radius: 18,
+              backgroundColor: iconColor,
+            ),
           ),
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(vertical: 20),
         ),
       ),
     );
   }
 
-  // Botón principal de Ingresar
-  Widget _buildPrimaryButton(BuildContext context) {
+  Widget _buildIngresarBtn() {
     return SizedBox(
       width: double.infinity,
+      height: 55,
       child: ElevatedButton(
-        onPressed: () {
-          // Lógica de inicio de sesión aquí
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Intentando Iniciar Sesión...')),
-          );
-        },
+        onPressed: () {},
         style: ElevatedButton.styleFrom(
-          backgroundColor: primaryColor,
-          padding: const EdgeInsets.symmetric(vertical: 15.0),
+          backgroundColor: primaryBlue,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15.0),
+            borderRadius: BorderRadius.circular(25),
           ),
-          elevation: 5,
+          elevation: 0,
         ),
-        child: const Text(
+        child: Text(
           'Ingresar',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
-        ),
-      ),
-    );
-  }
-
-  // Botón de Iniciar Sesión con Google
-  Widget _buildGoogleSignInButton() {
-    return SizedBox(
-      width: double.infinity,
-      child: OutlinedButton.icon(
-        onPressed: () {
-          // Lógica de inicio de sesión con Google aquí
-        },
-        icon: Image.asset(
-          'assets/icono_google.png', // Ruta a tu icono de Google
-          height: 20.0,
-        ),
-        label: const Text(
-          'Iniciar Sesión con Google',
-          style: TextStyle(fontSize: 16, color: Colors.black54),
-        ),
-        style: OutlinedButton.styleFrom(
-          padding: const EdgeInsets.symmetric(vertical: 15.0),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15.0),
+          style: GoogleFonts.montserrat(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
           ),
-          side: const BorderSide(color: Colors.grey, width: 0.5),
         ),
       ),
     );
   }
 
-  // Enlaces de pie de página (Registrate y Olvidé mi contraseña)
-  Widget _buildFooterLinks() {
+  Widget _buildGoogleBtn() {
+    return Container(
+      width: double.infinity,
+      height: 55,
+      decoration: BoxDecoration(
+        color: googleBtnBlue,
+        borderRadius: BorderRadius.circular(25),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Image.asset('assets/icono_google.png', height: 24),
+          const SizedBox(width: 12),
+          Text(
+            'Iniciar Sesión con Google',
+            style: GoogleFonts.montserrat(
+              color: primaryBlue,
+              fontWeight: FontWeight.bold,
+              fontSize: 15,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- FOOTER ACTUALIZADO CON RUTAS ---
+  Widget _buildFooter(BuildContext context) {
     return Column(
-      children: <Widget>[
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text(
-              '¿No tienes cuenta? ',
-              style: TextStyle(color: Colors.black54),
-            ),
-            GestureDetector(
-              onTap: () {
-                // Lógica para navegar a la pantalla de registro
-              },
-              child: const Text(
-                'Regístrate',
-                style: TextStyle(
-                  color: primaryColor,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 15),
+      children: [
         GestureDetector(
           onTap: () {
-            // Lógica para navegar a la pantalla de olvido de contraseña
+            // Navega a la pantalla de selección de rol
+            Navigator.pushNamed(context, '/register_screen');
+          },
+          child: RichText(
+            text: TextSpan(
+              style: GoogleFonts.montserrat(color: Colors.black87, fontSize: 16),
+              children: [
+                const TextSpan(text: '¿No tienes cuenta? '),
+                TextSpan(
+                  text: 'Registrate',
+                  style: GoogleFonts.montserrat(
+                    color: primaryBlue,
+                    fontWeight: FontWeight.bold,
+                    decoration: TextDecoration.underline,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 10),
+        GestureDetector(
+          onTap: () {
+            // Navega a la pantalla de recuperación de contraseña
+            Navigator.pushNamed(context, '/forgot_password_screen');
           },
           child: Text(
-            'Olvidé mi contraseña',
-            style: TextStyle(
-              color: primaryColor.withOpacity(0.7),
-              decoration: TextDecoration.underline,
+            'Olvide mi contraseña',
+            style: GoogleFonts.montserrat(
+              color: forgotPasswordRed,
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
             ),
           ),
         ),
@@ -256,5 +213,3 @@ class LoginScreen extends StatelessWidget {
     );
   }
 }
-
-// **CLASE MapPatternPainter ELIMINADA** porque ahora usamos una imagen asset.
