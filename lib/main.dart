@@ -1,5 +1,13 @@
 import 'package:flutter/material.dart';
+import 'screens/welcomescreen.dart';
 import 'package:movecare/screens/login.dart'; 
+import 'screens/register_screen.dart';
+import 'screens/continue_driver_register_screen.dart';
+import 'screens/forgot_password_screen.dart';
+import 'screens/driver_register_screen.dart';
+import 'screens/passenger_register_screen.dart';
+import 'screens/verification_code_screen.dart';
+import 'screens/home_passenger_screen.dart';
 
 // Colores constantes compartidos con la pantalla de login
 const Color primaryColor = Color(0xFF2E6FFC);
@@ -16,16 +24,30 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'MoveCare App',
-      // Quita el banner de "DEBUG"
       debugShowCheckedModeBanner: false, 
       theme: ThemeData(
-        // Define el esquema de color principal para toda la app
         primaryColor: primaryColor,
         colorScheme: ColorScheme.fromSeed(seedColor: primaryColor),
         useMaterial3: true,
       ),
-      // La pantalla de inicio es la LoginScreen que creamos en el otro archivo
-      home: const LoginScreen(),
+      initialRoute: '/',
+     routes: {
+        '/': (context) => const WelcomeScreen(),
+        '/login': (context) => const LoginScreen(),
+        '/forgot_password_screen': (context) => const ForgotPasswordScreen(),
+        
+        // Registro Principal (Selección de rol)
+        '/register_screen': (context) => const RegisterScreen(),
+        
+        // Flujo del Conductor
+        '/driver_register_screen': (context) => const DriverRegisterScreen(),
+        '/continue_driver_register_screen': (context) => const ContinueDriverRegisterScreen(),
+        
+        // Flujo del Pasajero
+        '/passenger_register_screen': (context) => const PassengerRegisterScreen(),
+        '/home_passenger_screen': (context) => const HomePassengerScreen(),
+        '/verification_code': (context) => const VerificationCodeScreen(),
+      },
     );
   }
 }
