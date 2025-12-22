@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../services/auth/auth_service.dart';
+import '../core/storage/secure_storage.dart';
 
-class LoginScreen extends StatelessWidget {
+class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
   static const Color primaryBlue = Color(0xFF1559B2);
@@ -10,13 +12,22 @@ class LoginScreen extends StatelessWidget {
   static const Color forgotPasswordRed = Color(0xFFE57373);
 
   @override
+  State<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+
+  bool _loading = false;
+
+  @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
 
     return Scaffold(
       body: Stack(
         children: [
-          // 1. Capa de Fondo
           Positioned(
             top: 0,
             left: 0,
@@ -27,8 +38,6 @@ class LoginScreen extends StatelessWidget {
               fit: BoxFit.cover,
             ),
           ),
-
-          // 2. Capa de Contenido
           Align(
             alignment: Alignment.bottomCenter,
             child: Container(
@@ -50,19 +59,23 @@ class LoginScreen extends StatelessWidget {
                     const SizedBox(height: 40),
                     _buildTextField(
                       hint: 'Correo',
-                      iconColor: primaryBlue,
+                      iconColor: LoginScreen.primaryBlue,
+                      controller: _emailController,
+                      isPassword: false,
                     ),
                     const SizedBox(height: 15),
                     _buildTextField(
                       hint: 'Contraseña',
                       iconColor: const Color(0xFF64A1F4),
+                      controller: _passwordController,
+                      isPassword: true,
                     ),
                     const SizedBox(height: 30),
                     _buildIngresarBtn(),
                     const SizedBox(height: 25),
                     _buildGoogleBtn(),
                     const SizedBox(height: 35),
-                    _buildFooter(context), // Pasando el context correctamente
+                    _buildFooter(context),
                     const SizedBox(height: 20),
                   ],
                 ),
@@ -78,9 +91,7 @@ class LoginScreen extends StatelessWidget {
     return Container(
       width: 130,
       height: 130,
-      decoration: const BoxDecoration(
-        shape: BoxShape.circle,
-      ),
+      decoration: const BoxDecoration(shape: BoxShape.circle),
       child: ClipOval(
         child: Image.asset(
           'assets/movecare.png',
@@ -90,17 +101,24 @@ class LoginScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildTextField({required String hint, required Color iconColor}) {
+  Widget _buildTextField({
+    required String hint,
+    required Color iconColor,
+    required TextEditingController controller,
+    required bool isPassword,
+  }) {
     return Container(
       decoration: BoxDecoration(
-        color: lightInputBlue,
+        color: LoginScreen.lightInputBlue,
         borderRadius: BorderRadius.circular(20),
       ),
       child: TextField(
+        controller: controller,
+        obscureText: isPassword,
         decoration: InputDecoration(
           hintText: hint,
           hintStyle: GoogleFonts.montserrat(
-            color: primaryBlue,
+            color: LoginScreen.primaryBlue,
             fontWeight: FontWeight.w600,
           ),
           prefixIcon: Padding(
@@ -122,22 +140,24 @@ class LoginScreen extends StatelessWidget {
       width: double.infinity,
       height: 55,
       child: ElevatedButton(
-        onPressed: () {},
+        onPressed: _loading ? null : _login,
         style: ElevatedButton.styleFrom(
-          backgroundColor: primaryBlue,
+          backgroundColor: LoginScreen.primaryBlue,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(25),
           ),
           elevation: 0,
         ),
-        child: Text(
-          'Ingresar',
-          style: GoogleFonts.montserrat(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
+        child: _loading
+            ? const CircularProgressIndicator(color: Colors.white)
+            : Text(
+                'Ingresar',
+                style: GoogleFonts.montserrat(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
       ),
     );
   }
@@ -147,7 +167,7 @@ class LoginScreen extends StatelessWidget {
       width: double.infinity,
       height: 55,
       decoration: BoxDecoration(
-        color: googleBtnBlue,
+        color: LoginScreen.googleBtnBlue,
         borderRadius: BorderRadius.circular(25),
       ),
       child: Row(
@@ -158,7 +178,7 @@ class LoginScreen extends StatelessWidget {
           Text(
             'Iniciar Sesión con Google',
             style: GoogleFonts.montserrat(
-              color: primaryBlue,
+              color: LoginScreen.primaryBlue,
               fontWeight: FontWeight.bold,
               fontSize: 15,
             ),
@@ -168,13 +188,11 @@ class LoginScreen extends StatelessWidget {
     );
   }
 
-  // --- FOOTER ACTUALIZADO CON RUTAS ---
   Widget _buildFooter(BuildContext context) {
     return Column(
       children: [
         GestureDetector(
           onTap: () {
-            // Navega a la pantalla de selección de rol
             Navigator.pushNamed(context, '/register_screen');
           },
           child: RichText(
@@ -185,7 +203,7 @@ class LoginScreen extends StatelessWidget {
                 TextSpan(
                   text: 'Registrate',
                   style: GoogleFonts.montserrat(
-                    color: primaryBlue,
+                    color: LoginScreen.primaryBlue,
                     fontWeight: FontWeight.bold,
                     decoration: TextDecoration.underline,
                   ),
@@ -197,19 +215,80 @@ class LoginScreen extends StatelessWidget {
         const SizedBox(height: 10),
         GestureDetector(
           onTap: () {
-            // Navega a la pantalla de recuperación de contraseña
             Navigator.pushNamed(context, '/forgot_password_screen');
           },
           child: Text(
             'Olvide mi contraseña',
             style: GoogleFonts.montserrat(
-              color: forgotPasswordRed,
+              color: LoginScreen.forgotPasswordRed,
               fontSize: 14,
               fontWeight: FontWeight.w500,
             ),
           ),
         ),
       ],
+    );
+  }
+
+  // ================== LOGIN ==================
+
+  Future<void> _login() async {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+
+    if (email.isEmpty || password.isEmpty) {
+      _showAlert('Campos vacíos', 'Por favor llena todos los campos');
+      return;
+    }
+
+    setState(() => _loading = true);
+
+    final result = await AuthService.login(
+      email: email,
+      password: password,
+    );
+
+    setState(() => _loading = false);
+
+    if (result['ok']) {
+      final data = result['data'];
+      final token = data['token'];
+      final rol = data['rol'];
+
+      await SecureStorage.saveToken(token);
+
+      if (!mounted) return;
+
+      if (rol == 'pasajero') {
+        Navigator.pushReplacementNamed(context, '/home_passenger_screen');
+      } else if (rol == 'conductor') {
+        Navigator.pushReplacementNamed(context, '/home_conductor_screen');
+      } else if (rol == 'administrador') {
+        Navigator.pushReplacementNamed(context, '/home_admin_screen');
+      } else {
+        _showAlert('Error', 'Rol no reconocido');
+      }
+    } else {
+      _showAlert(
+        'Error de inicio de sesión',
+        result['error']['detail'] ?? result['error'].toString(),
+      );
+    }
+  }
+
+  void _showAlert(String title, String message) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Aceptar'),
+          ),
+        ],
+      ),
     );
   }
 }
