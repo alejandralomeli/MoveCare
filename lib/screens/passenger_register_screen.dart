@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../services/auth/auth_service.dart';
 
 class PassengerRegisterScreen extends StatefulWidget {
   const PassengerRegisterScreen({super.key});
@@ -12,9 +13,15 @@ class _PassengerRegisterScreenState extends State<PassengerRegisterScreen> {
   static const Color primaryBlue = Color(0xFF1559B2);
   static const Color fieldBlue = Color(0xFFD6E8FF);
 
-  // Estados para ocultar/mostrar contraseñas
+  final _nombreCtrl = TextEditingController();
+  final _correoCtrl = TextEditingController();
+  final _telefonoCtrl = TextEditingController();
+  final _passwordCtrl = TextEditingController();
+  final _confirmCtrl = TextEditingController();
+
   bool _obscurePass = true;
   bool _obscureConfirmPass = true;
+  bool _loading = false;
 
   @override
   Widget build(BuildContext context) {
@@ -23,43 +30,14 @@ class _PassengerRegisterScreenState extends State<PassengerRegisterScreen> {
     return Scaffold(
       body: Stack(
         children: [
-          // 1. Fondo del Mapa
           Positioned(
             top: 0,
             left: 0,
             right: 0,
             height: size.height * 0.4,
-            child: Image.asset(
-              'assets/ruta.png', 
-              fit: BoxFit.cover,
-            ),
+            child: Image.asset('assets/ruta.png', fit: BoxFit.cover),
           ),
 
-          // 2. Logo superior flotante
-          Positioned(
-            top: size.height * 0.12,
-            left: 0,
-            right: 0,
-            child: Center(
-              child: Container(
-                width: 90,
-                height: 90,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(25),
-                  boxShadow: const [
-                    BoxShadow(color: Colors.black12, blurRadius: 10)
-                  ],
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(10),
-                  child: Image.asset('assets/movecare.png'),
-                ),
-              ),
-            ),
-          ),
-
-          // 3. Tarjeta Blanca con Formulario
           Align(
             alignment: Alignment.bottomCenter,
             child: Container(
@@ -87,57 +65,49 @@ class _PassengerRegisterScreenState extends State<PassengerRegisterScreen> {
                     ),
                     const SizedBox(height: 20),
 
-                    // Campos de Texto
-                    _buildTextField(label: 'Nombre', iconColor: Colors.blue.shade800),
-                    _buildTextField(label: 'Correo electrónico', iconColor: Colors.blue.shade400),
-                    _buildTextField(label: 'Teléfono de contacto', iconColor: Colors.blue.shade800),
-                    
-                    // Campo Contraseña con Ojo
+                    _buildTextField('Nombre', Colors.blue.shade800, _nombreCtrl),
+                    _buildTextField('Correo electrónico', Colors.blue.shade400, _correoCtrl),
+                    _buildTextField('Teléfono de contacto', Colors.blue.shade800, _telefonoCtrl),
+
                     _buildPasswordField(
-                      label: 'Contraseña', 
-                      iconColor: Colors.blue.shade400, 
-                      isObscured: _obscurePass,
-                      onToggle: () => setState(() => _obscurePass = !_obscurePass)
+                      'Contraseña',
+                      Colors.blue.shade400,
+                      _passwordCtrl,
+                      _obscurePass,
+                      () => setState(() => _obscurePass = !_obscurePass),
                     ),
 
-                    // Campo Confirmación con Ojo
                     _buildPasswordField(
-                      label: 'Confirmación de contraseña', 
-                      iconColor: Colors.blue.shade800, 
-                      isObscured: _obscureConfirmPass,
-                      onToggle: () => setState(() => _obscureConfirmPass = !_obscureConfirmPass)
+                      'Confirmación de contraseña',
+                      Colors.blue.shade800,
+                      _confirmCtrl,
+                      _obscureConfirmPass,
+                      () => setState(() => _obscureConfirmPass = !_obscureConfirmPass),
                     ),
 
                     const SizedBox(height: 25),
 
-                    // Botón Registrarme
                     SizedBox(
                       width: size.width * 0.7,
                       height: 50,
                       child: ElevatedButton(
-                        onPressed: () {
-                          // Usamos pushNamedAndRemoveUntil para que el usuario entre al Home
-                          // y no pueda regresar al formulario de registro con el botón "atrás".
-                          Navigator.pushNamedAndRemoveUntil(
-                            context, 
-                            '/home_passenger_screen', 
-                            (route) => false
-                          );
-                        },
+                        onPressed: _loading ? null : _register,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: primaryBlue,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(25),
                           ),
                         ),
-                        child: Text(
-                          'Registrarme',
-                          style: GoogleFonts.montserrat(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 15,
-                          ),
-                        ),
+                        child: _loading
+                            ? const CircularProgressIndicator(color: Colors.white)
+                            : Text(
+                                'Registrarme',
+                                style: GoogleFonts.montserrat(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 15,
+                                ),
+                              ),
                       ),
                     ),
 
@@ -154,21 +124,19 @@ class _PassengerRegisterScreenState extends State<PassengerRegisterScreen> {
     );
   }
 
-  Widget _buildTextField({required String label, required Color iconColor}) {
+  Widget _buildTextField(String label, Color color, TextEditingController ctrl) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Container(
-        decoration: BoxDecoration(
-          color: fieldBlue,
-          borderRadius: BorderRadius.circular(20),
-        ),
+        decoration: BoxDecoration(color: fieldBlue, borderRadius: BorderRadius.circular(20)),
         child: TextField(
+          controller: ctrl,
           decoration: InputDecoration(
             hintText: label,
-            hintStyle: GoogleFonts.montserrat(color: primaryBlue, fontSize: 14, fontWeight: FontWeight.w600),
+            hintStyle: GoogleFonts.montserrat(color: primaryBlue, fontWeight: FontWeight.w600),
             prefixIcon: Padding(
               padding: const EdgeInsets.all(12),
-              child: CircleAvatar(backgroundColor: iconColor, radius: 10),
+              child: CircleAvatar(backgroundColor: color, radius: 10),
             ),
             border: InputBorder.none,
             contentPadding: const EdgeInsets.symmetric(vertical: 15),
@@ -178,31 +146,30 @@ class _PassengerRegisterScreenState extends State<PassengerRegisterScreen> {
     );
   }
 
-  Widget _buildPasswordField({
-    required String label, 
-    required Color iconColor, 
-    required bool isObscured,
-    required VoidCallback onToggle,
-  }) {
+  Widget _buildPasswordField(
+    String label,
+    Color color,
+    TextEditingController ctrl,
+    bool obscure,
+    VoidCallback toggle,
+  ) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Container(
-        decoration: BoxDecoration(
-          color: fieldBlue,
-          borderRadius: BorderRadius.circular(20),
-        ),
+        decoration: BoxDecoration(color: fieldBlue, borderRadius: BorderRadius.circular(20)),
         child: TextField(
-          obscureText: isObscured,
+          controller: ctrl,
+          obscureText: obscure,
           decoration: InputDecoration(
             hintText: label,
-            hintStyle: GoogleFonts.montserrat(color: primaryBlue, fontSize: 14, fontWeight: FontWeight.w600),
+            hintStyle: GoogleFonts.montserrat(color: primaryBlue, fontWeight: FontWeight.w600),
             prefixIcon: Padding(
               padding: const EdgeInsets.all(12),
-              child: CircleAvatar(backgroundColor: iconColor, radius: 10),
+              child: CircleAvatar(backgroundColor: color, radius: 10),
             ),
             suffixIcon: IconButton(
-              icon: Icon(isObscured ? Icons.visibility_off : Icons.visibility, color: primaryBlue),
-              onPressed: onToggle,
+              icon: Icon(obscure ? Icons.visibility_off : Icons.visibility, color: primaryBlue),
+              onPressed: toggle,
             ),
             border: InputBorder.none,
             contentPadding: const EdgeInsets.symmetric(vertical: 15),
@@ -229,6 +196,46 @@ class _PassengerRegisterScreenState extends State<PassengerRegisterScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Future<void> _register() async {
+    if (_passwordCtrl.text != _confirmCtrl.text) {
+      _alert('Error', 'Las contraseñas no coinciden');
+      return;
+    }
+
+    setState(() => _loading = true);
+
+    final result = await AuthService.registerPassenger(
+      nombreCompleto: _nombreCtrl.text,
+      correo: _correoCtrl.text,
+      telefono: _telefonoCtrl.text,
+      password: _passwordCtrl.text,
+    );
+
+    setState(() => _loading = false);
+
+    if (result['ok']) {
+      _alert(
+        'Registro exitoso',
+        'Revisa tu correo para verificar tu cuenta',
+      );
+    } else {
+      _alert('Error', result['error'].toString());
+    }
+  }
+
+  void _alert(String title, String msg) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text(title),
+        content: Text(msg),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Aceptar')),
+        ],
+      ),
     );
   }
 }
