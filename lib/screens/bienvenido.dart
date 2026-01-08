@@ -1,27 +1,41 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-class WelcomeScreen extends StatelessWidget {
-  const WelcomeScreen({super.key});
+class Bienvenido extends StatelessWidget {
+  const Bienvenido({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // Usamos el color de fondo de tu imagen para evitar bordes blancos
+      // Mantenemos el color de fondo para suavizar bordes
       backgroundColor: const Color(0xFFC5DFFF), 
       body: Stack(
         children: [
-          // 1. FONDO: Tu imagen completa (Mapa + Pin + Texto)
+          // 1. FONDO: Ahora usa ruta.png
           Positioned.fill(
             child: Image.asset(
-              'assets/fondo_welcome.png', // Asegúrate de que este sea el nombre en pubspec.yaml
+              'assets/ruta.png', 
               fit: BoxFit.cover,
             ),
           ),
           
-          // 2. BOTONES: Posicionados en la parte inferior
+          // 2. IMAGEN CENTRAL: movecare_principal.png
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 40),
+              child: Image.asset(
+                'assets/movecare_principal.png',
+                fit: BoxFit.contain,
+                // Ajusta el ancho según necesites que se vea el logo
+                width: MediaQuery.of(context).size.width * 0.7, 
+                errorBuilder: (c, e, s) => const Icon(Icons.image, size: 100, color: Colors.grey),
+              ),
+            ),
+          ),
+
+          // 3. BOTONES: Posicionados en la parte inferior
           Positioned(
-            bottom: 80, // Ajusta este número para subir o bajar los botones
+            bottom: 250, 
             left: 0,
             right: 0,
             child: Row(

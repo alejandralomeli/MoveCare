@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-class LoginScreen extends StatelessWidget {
-  const LoginScreen({super.key});
+class IniciarSesion extends StatelessWidget {
+  const IniciarSesion({super.key});
 
   static const Color primaryBlue = Color(0xFF1559B2);
   static const Color lightInputBlue = Color(0xFFB3D4FF);
