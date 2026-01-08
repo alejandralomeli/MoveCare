@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-class PassengerProfileScreen extends StatelessWidget {
-  const PassengerProfileScreen({super.key});
+class PerfilPasajero extends StatelessWidget {
+  const PerfilPasajero({super.key});
 
   static const Color primaryBlue = Color(0xFF1559B2);
   static const Color lightBlueBg = Color(0xFFB3D4FF);
@@ -47,7 +47,7 @@ class PassengerProfileScreen extends StatelessWidget {
         const CircleAvatar(
           radius: 40,
           backgroundColor: lightBlueBg,
-          backgroundImage: AssetImage('assets/avatar_user.png'), // Tu imagen de avatar
+          backgroundImage: AssetImage('assets/usuario.png'), // Tu imagen de avatar
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -92,7 +92,7 @@ class PassengerProfileScreen extends StatelessWidget {
   Widget _buildMapSection() {
     return ClipRRect(
       borderRadius: BorderRadius.circular(20),
-      child: Image.asset('assets/mapa_home.png', height: 130, width: double.infinity, fit: BoxFit.cover),
+      child: Image.asset('assets/mapa.png', height: 130, width: double.infinity, fit: BoxFit.cover),
     );
   }
 

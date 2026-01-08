@@ -1,11 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-class DriverRegisterScreen extends StatelessWidget {
-  const DriverRegisterScreen({super.key});
+class RegistroPasajero extends StatefulWidget {
+  const RegistroPasajero({super.key});
 
+  @override
+  State<RegistroPasajero> createState() => _RegistroPasajeroState();
+}
+
+class _RegistroPasajeroState extends State<RegistroPasajero> {
   static const Color primaryBlue = Color(0xFF1559B2);
   static const Color fieldBlue = Color(0xFFD6E8FF);
+
+  // Estados para ocultar/mostrar contraseñas
+  bool _obscurePass = true;
+  bool _obscureConfirmPass = true;
 
   @override
   Widget build(BuildContext context) {
@@ -28,17 +37,17 @@ class DriverRegisterScreen extends StatelessWidget {
 
           // 2. Logo superior flotante
           Positioned(
-            top: size.height * 0.15,
+            top: size.height * 0.12,
             left: 0,
             right: 0,
             child: Center(
               child: Container(
-                width: 100,
-                height: 100,
+                width: 90,
+                height: 90,
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(25),
-                  boxShadow: [
+                  boxShadow: const [
                     BoxShadow(color: Colors.black12, blurRadius: 10)
                   ],
                 ),
@@ -54,7 +63,7 @@ class DriverRegisterScreen extends StatelessWidget {
           Align(
             alignment: Alignment.bottomCenter,
             child: Container(
-              height: size.height * 0.65,
+              height: size.height * 0.7,
               width: double.infinity,
               decoration: const BoxDecoration(
                 color: Colors.white,
@@ -63,37 +72,57 @@ class DriverRegisterScreen extends StatelessWidget {
                   topRight: Radius.circular(50),
                 ),
               ),
-              child: SingleChildScrollView( // Permite scroll si el teclado aparece
+              child: SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(horizontal: 30),
                 child: Column(
                   children: [
                     const SizedBox(height: 30),
                     Text(
-                      'Crea una cuenta de Conductor',
+                      'Crea una cuenta de Pasajero',
                       style: GoogleFonts.montserrat(
                         color: primaryBlue,
                         fontWeight: FontWeight.bold,
                         fontSize: 18,
                       ),
                     ),
-                    const SizedBox(height: 25),
+                    const SizedBox(height: 20),
 
                     // Campos de Texto
                     _buildTextField(label: 'Nombre', iconColor: Colors.blue.shade800),
                     _buildTextField(label: 'Correo electrónico', iconColor: Colors.blue.shade400),
                     _buildTextField(label: 'Teléfono de contacto', iconColor: Colors.blue.shade800),
-                    _buildTextField(label: 'Contraseña', iconColor: Colors.blue.shade400, isPassword: true),
-                    _buildTextField(label: 'Confirmación de contraseña', iconColor: Colors.blue.shade800, isPassword: true),
+                    
+                    // Campo Contraseña con Ojo
+                    _buildPasswordField(
+                      label: 'Contraseña', 
+                      iconColor: Colors.blue.shade400, 
+                      isObscured: _obscurePass,
+                      onToggle: () => setState(() => _obscurePass = !_obscurePass)
+                    ),
 
-                    const SizedBox(height: 30),
+                    // Campo Confirmación con Ojo
+                    _buildPasswordField(
+                      label: 'Confirmación de contraseña', 
+                      iconColor: Colors.blue.shade800, 
+                      isObscured: _obscureConfirmPass,
+                      onToggle: () => setState(() => _obscureConfirmPass = !_obscureConfirmPass)
+                    ),
 
-                    // Botón Continuar
+                    const SizedBox(height: 25),
+
+                    // Botón Registrarme
                     SizedBox(
                       width: size.width * 0.7,
                       height: 50,
                       child: ElevatedButton(
                         onPressed: () {
-                          Navigator.pushNamed(context, '/continue_driver_register_screen');
+                          // Usamos pushNamedAndRemoveUntil para que el usuario entre al Home
+                          // y no pueda regresar al formulario de registro con el botón "atrás".
+                          Navigator.pushNamedAndRemoveUntil(
+                            context, 
+                            '/home_passenger_screen', 
+                            (route) => false
+                          );
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: primaryBlue,
@@ -102,7 +131,7 @@ class DriverRegisterScreen extends StatelessWidget {
                           ),
                         ),
                         child: Text(
-                          'Continuar con mi registro',
+                          'Registrarme',
                           style: GoogleFonts.montserrat(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
@@ -113,8 +142,6 @@ class DriverRegisterScreen extends StatelessWidget {
                     ),
 
                     const SizedBox(height: 20),
-
-                    // Footer
                     _buildFooter(context),
                     const SizedBox(height: 20),
                   ],
@@ -127,7 +154,7 @@ class DriverRegisterScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildTextField({required String label, required Color iconColor, bool isPassword = false}) {
+  Widget _buildTextField({required String label, required Color iconColor}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Container(
@@ -136,16 +163,46 @@ class DriverRegisterScreen extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
         ),
         child: TextField(
-          obscureText: isPassword,
           decoration: InputDecoration(
             hintText: label,
             hintStyle: GoogleFonts.montserrat(color: primaryBlue, fontSize: 14, fontWeight: FontWeight.w600),
             prefixIcon: Padding(
               padding: const EdgeInsets.all(12),
-              child: CircleAvatar(
-                backgroundColor: iconColor,
-                radius: 10,
-              ),
+              child: CircleAvatar(backgroundColor: iconColor, radius: 10),
+            ),
+            border: InputBorder.none,
+            contentPadding: const EdgeInsets.symmetric(vertical: 15),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPasswordField({
+    required String label, 
+    required Color iconColor, 
+    required bool isObscured,
+    required VoidCallback onToggle,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Container(
+        decoration: BoxDecoration(
+          color: fieldBlue,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: TextField(
+          obscureText: isObscured,
+          decoration: InputDecoration(
+            hintText: label,
+            hintStyle: GoogleFonts.montserrat(color: primaryBlue, fontSize: 14, fontWeight: FontWeight.w600),
+            prefixIcon: Padding(
+              padding: const EdgeInsets.all(12),
+              child: CircleAvatar(backgroundColor: iconColor, radius: 10),
+            ),
+            suffixIcon: IconButton(
+              icon: Icon(isObscured ? Icons.visibility_off : Icons.visibility, color: primaryBlue),
+              onPressed: onToggle,
             ),
             border: InputBorder.none,
             contentPadding: const EdgeInsets.symmetric(vertical: 15),
