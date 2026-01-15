@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-class RegisterScreen extends StatelessWidget {
-  const RegisterScreen({super.key});
+class Registro extends StatelessWidget {
+  const Registro({super.key});
 
   static const Color primaryBlue = Color(0xFF1559B2);
   static const Color lightButtonBlue = Color(0xFFB3D4FF);

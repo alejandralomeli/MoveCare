@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-class ResetPasswordScreen extends StatefulWidget {
-  const ResetPasswordScreen({super.key});
+class NuevaContrasena extends StatefulWidget {
+  const NuevaContrasena({super.key});
 
   @override
-  State<ResetPasswordScreen> createState() => _ResetPasswordScreenState();
+  State<NuevaContrasena> createState() => _NuevaContrasenaState();
 }
 
-class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
+class _NuevaContrasenaState extends State<NuevaContrasena> {
   static const Color primaryBlue = Color(0xFF1559B2);
   static const Color lightInputBlue = Color(0xFFB3D4FF);
 

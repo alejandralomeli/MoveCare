@@ -2,16 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../services/vehicle/vehicle_service.dart';
 
-class ContinueDriverRegisterScreen extends StatefulWidget {
-  const ContinueDriverRegisterScreen({super.key});
+class ContinuarRegistroConductor extends StatefulWidget {
+  const ContinuarRegistroConductor({super.key});
 
   @override
-  State<ContinueDriverRegisterScreen> createState() =>
+  State<ContinuarRegistroConductor> createState() =>
       _ContinueDriverRegisterScreenState();
 }
 
 class _ContinueDriverRegisterScreenState
-    extends State<ContinueDriverRegisterScreen> {
+    extends State<ContinuarRegistroConductor> {
   static const Color primaryBlue = Color(0xFF1559B2);
   static const Color fieldBlue = Color(0xFFD6E8FF);
 

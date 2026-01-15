@@ -3,8 +3,8 @@ import 'package:google_fonts/google_fonts.dart';
 import '../services/auth/auth_service.dart';
 import '../core/storage/secure_storage.dart';
 
-class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+class IniciarSesion extends StatefulWidget {
+  const IniciarSesion({super.key});
 
   static const Color primaryBlue = Color(0xFF1559B2);
   static const Color lightInputBlue = Color(0xFFB3D4FF);
@@ -12,10 +12,10 @@ class LoginScreen extends StatefulWidget {
   static const Color forgotPasswordRed = Color(0xFFE57373);
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  State<IniciarSesion> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _LoginScreenState extends State<IniciarSesion> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
@@ -59,7 +59,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     const SizedBox(height: 40),
                     _buildTextField(
                       hint: 'Correo',
-                      iconColor: LoginScreen.primaryBlue,
+                      iconColor: IniciarSesion.primaryBlue,
                       controller: _emailController,
                       isPassword: false,
                     ),
@@ -109,7 +109,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }) {
     return Container(
       decoration: BoxDecoration(
-        color: LoginScreen.lightInputBlue,
+        color: IniciarSesion.lightInputBlue,
         borderRadius: BorderRadius.circular(20),
       ),
       child: TextField(
@@ -118,7 +118,7 @@ class _LoginScreenState extends State<LoginScreen> {
         decoration: InputDecoration(
           hintText: hint,
           hintStyle: GoogleFonts.montserrat(
-            color: LoginScreen.primaryBlue,
+            color: IniciarSesion.primaryBlue,
             fontWeight: FontWeight.w600,
           ),
           prefixIcon: Padding(
@@ -142,7 +142,7 @@ class _LoginScreenState extends State<LoginScreen> {
       child: ElevatedButton(
         onPressed: _loading ? null : _login,
         style: ElevatedButton.styleFrom(
-          backgroundColor: LoginScreen.primaryBlue,
+          backgroundColor: IniciarSesion.primaryBlue,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(25),
           ),
@@ -167,7 +167,7 @@ class _LoginScreenState extends State<LoginScreen> {
       width: double.infinity,
       height: 55,
       decoration: BoxDecoration(
-        color: LoginScreen.googleBtnBlue,
+        color: IniciarSesion.googleBtnBlue,
         borderRadius: BorderRadius.circular(25),
       ),
       child: Row(
@@ -178,7 +178,7 @@ class _LoginScreenState extends State<LoginScreen> {
           Text(
             'Iniciar Sesión con Google',
             style: GoogleFonts.montserrat(
-              color: LoginScreen.primaryBlue,
+              color: IniciarSesion.primaryBlue,
               fontWeight: FontWeight.bold,
               fontSize: 15,
             ),
@@ -203,7 +203,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 TextSpan(
                   text: 'Registrate',
                   style: GoogleFonts.montserrat(
-                    color: LoginScreen.primaryBlue,
+                    color: IniciarSesion.primaryBlue,
                     fontWeight: FontWeight.bold,
                     decoration: TextDecoration.underline,
                   ),
@@ -220,7 +220,7 @@ class _LoginScreenState extends State<LoginScreen> {
           child: Text(
             'Olvide mi contraseña',
             style: GoogleFonts.montserrat(
-              color: LoginScreen.forgotPasswordRed,
+              color: IniciarSesion.forgotPasswordRed,
               fontSize: 14,
               fontWeight: FontWeight.w500,
             ),
