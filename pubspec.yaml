@@ -11,11 +11,11 @@ dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.8
-
   google_fonts: ^6.2.1
-
   http: ^1.6.0
   flutter_secure_storage: ^10.0.0
+  qr_flutter: ^4.1.0 
+
 
 
 dev_dependencies:
@@ -26,7 +26,6 @@ dev_dependencies:
 flutter:
   uses-material-design: true
 
-  # SECCIÓN DE ASSETS CORREGIDA
   assets:
     - assets/ruta.png
     - assets/movecare.png
@@ -34,3 +33,20 @@ flutter:
     - assets/fondo_welcome.png
     - assets/mapa.png
     - assets/conductor.png
+    - assets/pasajero.png
+    - assets/auditiva.png
+    - assets/visual.png
+    - assets/control_voz.png
+    - assets/silla_ruedas.png
+    - assets/ine_anverso.png
+    - assets/ine_reverso.png
+    - assets/obesidad.png
+    - assets/tarjeta_credito.png
+    - assets/tarjeta_debito.png
+    - assets/tarjeta.png
+    - assets/tercera_edad.png
+    - assets/home_icon.png
+    - assets/ubi_icon.png
+    - assets/historial_icon.png
+    - assets/perfil_icon.png
+    - assets/movecare_principal.png

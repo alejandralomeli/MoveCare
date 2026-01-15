@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-class VerificationCodeScreen extends StatelessWidget {
-  const VerificationCodeScreen({super.key});
+class CodigoVerificacion extends StatelessWidget {
+  const CodigoVerificacion({super.key});
 
   static const Color primaryBlue = Color(0xFF1559B2);
   static const Color fieldBlue = Color(0xFFD6E8FF);

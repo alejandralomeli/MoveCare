@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../services/auth/auth_service.dart';
 
-class PassengerRegisterScreen extends StatefulWidget {
-  const PassengerRegisterScreen({super.key});
+class RegistroPasajero extends StatefulWidget {
+  const RegistroPasajero({super.key});
 
   @override
-  State<PassengerRegisterScreen> createState() => _PassengerRegisterScreenState();
+  State<RegistroPasajero> createState() => _RegistroPasajeroState();
 }
 
-class _PassengerRegisterScreenState extends State<PassengerRegisterScreen> {
+class _RegistroPasajeroState extends State<RegistroPasajero> {
   static const Color primaryBlue = Color(0xFF1559B2);
   static const Color fieldBlue = Color(0xFFD6E8FF);
 
