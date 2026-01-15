@@ -1,18 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../services/vehicle/vehicle_service.dart';
 
 class ContinueDriverRegisterScreen extends StatefulWidget {
   const ContinueDriverRegisterScreen({super.key});
 
   @override
-  State<ContinueDriverRegisterScreen> createState() => _ContinueDriverRegisterScreenState();
+  State<ContinueDriverRegisterScreen> createState() =>
+      _ContinueDriverRegisterScreenState();
 }
 
-class _ContinueDriverRegisterScreenState extends State<ContinueDriverRegisterScreen> {
+class _ContinueDriverRegisterScreenState
+    extends State<ContinueDriverRegisterScreen> {
   static const Color primaryBlue = Color(0xFF1559B2);
   static const Color fieldBlue = Color(0xFFD6E8FF);
 
-  // --- LISTAS DE OPCIONES ---
+  // ================== IDS ==================
+  late String idUsuario;
+  String? idConductor;
+
+  // ================== CONTROLLERS ==================
+  final TextEditingController modeloController = TextEditingController();
+  final TextEditingController placasController = TextEditingController();
+
+  // ================== LISTAS ==================
   final List<String> marcas = [
     'Toyota Hiace',
     'Nissan Urvan',
@@ -41,11 +52,33 @@ class _ContinueDriverRegisterScreenState extends State<ContinueDriverRegisterScr
     'Ninguno'
   ];
 
-  // Variables para guardar la selección
+  // ================== SELECCIONES ==================
   String? marcaSeleccionada;
   String? colorSeleccionado;
   String? accesorioSeleccionado;
 
+  // ================== INIT ==================
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    idUsuario = ModalRoute.of(context)!.settings.arguments as String;
+    _obtenerIdConductor();
+  }
+
+  Future<void> _obtenerIdConductor() async {
+    final response =
+        await VehicleService.getConductorId(idUsuario: idUsuario);
+
+    if (response["ok"]) {
+      setState(() {
+        idConductor = response["id_conductor"];
+      });
+    } else {
+      _showError(response["error"]);
+    }
+  }
+
+  // ================== UI ==================
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
@@ -53,20 +86,14 @@ class _ContinueDriverRegisterScreenState extends State<ContinueDriverRegisterScr
     return Scaffold(
       body: Stack(
         children: [
-          // 1. Fondo del Mapa
           Positioned(
             top: 0,
             left: 0,
             right: 0,
             height: size.height * 0.4,
-            child: Image.asset(
-              'assets/ruta.png',
-              fit: BoxFit.cover,
-            ),
+            child: Image.asset('assets/ruta.png', fit: BoxFit.cover),
           ),
-
-          // 2. Logo Circular Centrado
-         Positioned(
+          Positioned(
             top: size.height * 0.15,
             left: 0,
             right: 0,
@@ -77,7 +104,7 @@ class _ContinueDriverRegisterScreenState extends State<ContinueDriverRegisterScr
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(25),
-                  boxShadow: [
+                  boxShadow: const [
                     BoxShadow(color: Colors.black12, blurRadius: 10)
                   ],
                 ),
@@ -88,8 +115,6 @@ class _ContinueDriverRegisterScreenState extends State<ContinueDriverRegisterScr
               ),
             ),
           ),
-          
-          // 3. Tarjeta Blanca de Formulario
           Align(
             alignment: Alignment.bottomCenter,
             child: Container(
@@ -117,57 +142,57 @@ class _ContinueDriverRegisterScreenState extends State<ContinueDriverRegisterScr
                     ),
                     const SizedBox(height: 25),
 
-                    // --- CAMPOS ---
                     _buildDropdownField(
                       label: 'Marca del auto (Van)',
                       options: marcas,
                       value: marcaSeleccionada,
-                      onChanged: (val) => setState(() => marcaSeleccionada = val),
+                      onChanged: (val) =>
+                          setState(() => marcaSeleccionada = val),
                       iconColor: Colors.blue.shade900,
                     ),
 
                     _buildTextField(
                       label: 'Modelo (Año)',
                       iconColor: Colors.blue.shade400,
+                      controller: modeloController,
                     ),
 
                     _buildDropdownField(
                       label: 'Color',
                       options: colores,
                       value: colorSeleccionado,
-                      onChanged: (val) => setState(() => colorSeleccionado = val),
+                      onChanged: (val) =>
+                          setState(() => colorSeleccionado = val),
                       iconColor: Colors.blue.shade900,
                     ),
 
                     _buildTextField(
                       label: 'Placas',
                       iconColor: Colors.blue.shade400,
+                      controller: placasController,
                     ),
 
                     _buildDropdownField(
                       label: 'Accesorios especiales',
                       options: accesorios,
                       value: accesorioSeleccionado,
-                      onChanged: (val) => setState(() => accesorioSeleccionado = val),
+                      onChanged: (val) =>
+                          setState(() => accesorioSeleccionado = val),
                       iconColor: Colors.blue.shade900,
                     ),
 
                     const SizedBox(height: 30),
 
-                    // Botón Registrarme
                     SizedBox(
                       width: size.width * 0.75,
                       height: 55,
                       child: ElevatedButton(
-                        onPressed: () {
-                          // Aquí iría la lógica final de registro
-                        },
+                        onPressed: _registrarVehiculo,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: primaryBlue,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(25),
                           ),
-                          elevation: 3,
                         ),
                         child: Text(
                           'Registrarme',
@@ -193,7 +218,35 @@ class _ContinueDriverRegisterScreenState extends State<ContinueDriverRegisterScr
     );
   }
 
-  // WIDGET DROP DOWN (CORREGIDO Y CENTRADO)
+  // ================== LOGICA ==================
+  Future<void> _registrarVehiculo() async {
+    if (idConductor == null) {
+      _showError('No se pudo obtener el conductor');
+      return;
+    }
+
+    final response = await VehicleService.registerVehicle(
+      idConductor: idConductor!,
+      marca: marcaSeleccionada!,
+      modelo: modeloController.text,
+      color: colorSeleccionado!,
+      placas: placasController.text,
+      accesorios: accesorioSeleccionado,
+    );
+
+    if (response["ok"]) {
+      Navigator.pushReplacementNamed(context, '/login');
+    } else {
+      _showError(response["error"]);
+    }
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  // ================== WIDGETS ==================
   Widget _buildDropdownField({
     required String label,
     required List<String> options,
@@ -219,47 +272,22 @@ class _ContinueDriverRegisterScreenState extends State<ContinueDriverRegisterScr
               fontWeight: FontWeight.w600,
             ),
           ),
-          icon: const Padding(
-            padding: EdgeInsets.only(right: 15),
-            child: Icon(Icons.arrow_drop_down, color: primaryBlue),
-          ),
-          decoration: InputDecoration(
-            border: InputBorder.none,
-            // PrefixIcon ajustado para centrar el círculo
-            prefixIcon: UnconstrainedBox(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 15),
-                child: CircleAvatar(
-                  backgroundColor: iconColor,
-                  radius: 10,
-                ),
-              ),
-            ),
-            // Padding vertical para centrar el texto seleccionado
-            contentPadding: const EdgeInsets.symmetric(vertical: 18),
-          ),
-          dropdownColor: fieldBlue,
-          borderRadius: BorderRadius.circular(20),
-          items: options.map((String option) {
-            return DropdownMenuItem<String>(
-              value: option,
-              child: Text(
-                option,
-                style: GoogleFonts.montserrat(
-                  color: primaryBlue,
-                  fontSize: 14,
-                ),
-              ),
-            );
-          }).toList(),
+          decoration: const InputDecoration(border: InputBorder.none),
+          items: options
+              .map((e) =>
+                  DropdownMenuItem(value: e, child: Text(e)))
+              .toList(),
           onChanged: onChanged,
         ),
       ),
     );
   }
 
-  // WIDGET TEXTFIELD ESTÁNDAR
-  Widget _buildTextField({required String label, required Color iconColor}) {
+  Widget _buildTextField({
+    required String label,
+    required Color iconColor,
+    TextEditingController? controller,
+  }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Container(
@@ -268,25 +296,12 @@ class _ContinueDriverRegisterScreenState extends State<ContinueDriverRegisterScr
           borderRadius: BorderRadius.circular(20),
         ),
         child: TextField(
-          style: GoogleFonts.montserrat(color: primaryBlue, fontSize: 14),
+          controller: controller,
           decoration: InputDecoration(
             hintText: label,
-            hintStyle: GoogleFonts.montserrat(
-              color: primaryBlue,
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-            ),
-            prefixIcon: UnconstrainedBox(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 15),
-                child: CircleAvatar(
-                  backgroundColor: iconColor,
-                  radius: 10,
-                ),
-              ),
-            ),
             border: InputBorder.none,
-            contentPadding: const EdgeInsets.symmetric(vertical: 18),
+            contentPadding:
+                const EdgeInsets.symmetric(vertical: 18, horizontal: 20),
           ),
         ),
       ),
@@ -299,7 +314,10 @@ class _ContinueDriverRegisterScreenState extends State<ContinueDriverRegisterScr
       children: [
         Text(
           '¿Ya tienes cuenta? ',
-          style: GoogleFonts.montserrat(fontSize: 13, color: Colors.black54),
+          style: GoogleFonts.montserrat(
+            fontSize: 13,
+            color: Colors.black54,
+          ),
         ),
         GestureDetector(
           onTap: () => Navigator.pushNamed(context, '/login'),
