@@ -32,19 +32,19 @@ class MyApp extends StatelessWidget {
       ),
       initialRoute: '/',
      routes: {
-        '/': (context) => const WelcomeScreen(),
-        '/login': (context) => const LoginScreen(),
+        '/': (context) => const WelcomeScreen(), //No necesita conectar
+        '/login': (context) => const LoginScreen(), //Conectado
         '/forgot_password_screen': (context) => const ForgotPasswordScreen(),
         
         // Registro Principal (Selección de rol)
-        '/register_screen': (context) => const RegisterScreen(),
+        '/register_screen': (context) => const RegisterScreen(), //No necesita conectar
         
         // Flujo del Conductor
-        '/driver_register_screen': (context) => const DriverRegisterScreen(),
-        '/continue_driver_register_screen': (context) => const ContinueDriverRegisterScreen(),
+        '/driver_register_screen': (context) => const DriverRegisterScreen(), //Conectado
+        '/continue_driver_register_screen': (context) => const ContinueDriverRegisterScreen(), //Conectado
         
         // Flujo del Pasajero
-        '/passenger_register_screen': (context) => const PassengerRegisterScreen(),
+        '/passenger_register_screen': (context) => const PassengerRegisterScreen(), //Conectado
         '/home_passenger_screen': (context) => const HomePassengerScreen(),
         '/verification_code': (context) => const VerificationCodeScreen(),
       },
