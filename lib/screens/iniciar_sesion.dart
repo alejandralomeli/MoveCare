@@ -33,10 +33,7 @@ class _LoginScreenState extends State<IniciarSesion> {
             left: 0,
             right: 0,
             height: size.height * 0.45,
-            child: Image.asset(
-              'assets/ruta.png',
-              fit: BoxFit.cover,
-            ),
+            child: Image.asset('assets/ruta.png', fit: BoxFit.cover),
           ),
           Align(
             alignment: Alignment.bottomCenter,
@@ -93,10 +90,7 @@ class _LoginScreenState extends State<IniciarSesion> {
       height: 130,
       decoration: const BoxDecoration(shape: BoxShape.circle),
       child: ClipOval(
-        child: Image.asset(
-          'assets/movecare.png',
-          fit: BoxFit.cover,
-        ),
+        child: Image.asset('assets/movecare.png', fit: BoxFit.cover),
       ),
     );
   }
@@ -123,10 +117,7 @@ class _LoginScreenState extends State<IniciarSesion> {
           ),
           prefixIcon: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 15),
-            child: CircleAvatar(
-              radius: 18,
-              backgroundColor: iconColor,
-            ),
+            child: CircleAvatar(radius: 18, backgroundColor: iconColor),
           ),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(vertical: 20),
@@ -193,11 +184,14 @@ class _LoginScreenState extends State<IniciarSesion> {
       children: [
         GestureDetector(
           onTap: () {
-            Navigator.pushNamed(context, '/register_screen');
+            Navigator.pushNamed(context, '/registro');
           },
           child: RichText(
             text: TextSpan(
-              style: GoogleFonts.montserrat(color: Colors.black87, fontSize: 16),
+              style: GoogleFonts.montserrat(
+                color: Colors.black87,
+                fontSize: 16,
+              ),
               children: [
                 const TextSpan(text: '¿No tienes cuenta? '),
                 TextSpan(
@@ -215,7 +209,7 @@ class _LoginScreenState extends State<IniciarSesion> {
         const SizedBox(height: 10),
         GestureDetector(
           onTap: () {
-            Navigator.pushNamed(context, '/forgot_password_screen');
+            Navigator.pushNamed(context, '/olvide_contrasena');
           },
           child: Text(
             'Olvide mi contraseña',
@@ -243,24 +237,18 @@ class _LoginScreenState extends State<IniciarSesion> {
 
     setState(() => _loading = true);
 
-    final result = await AuthService.login(
-      email: email,
-      password: password,
-    );
+    final result = await AuthService.login(email: email, password: password);
 
     setState(() => _loading = false);
 
     if (result['ok']) {
       final data = result['data'];
-      final token = data['token'];
       final rol = data['rol'];
-
-      await SecureStorage.saveToken(token);
 
       if (!mounted) return;
 
       if (rol == 'pasajero') {
-        Navigator.pushReplacementNamed(context, '/home_passenger_screen');
+        Navigator.pushReplacementNamed(context, '/principal_pasajero');
       } else if (rol == 'conductor') {
         Navigator.pushReplacementNamed(context, '/home_conductor_screen');
       } else if (rol == 'administrador') {
@@ -269,10 +257,20 @@ class _LoginScreenState extends State<IniciarSesion> {
         _showAlert('Error', 'Rol no reconocido');
       }
     } else {
-      _showAlert(
-        'Error de inicio de sesión',
-        result['error']['detail'] ?? result['error'].toString(),
-      );
+      final error = result['error'];
+      final errorMsg = error is Map && error['detail'] != null
+          ? error['detail'].toString()
+          : error.toString();
+
+      // 🔥 REDIRECCIÓN A CONFIRMAR CORREO
+      if (errorMsg.contains(
+        'Debes verificar tu correo antes de iniciar sesión.',
+      )) {
+        Navigator.pushReplacementNamed(context, '/confirmar-correo');
+        return;
+      }
+
+      _showAlert('Error de inicio de sesión', errorMsg);
     }
   }
 

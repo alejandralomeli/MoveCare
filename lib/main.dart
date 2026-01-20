@@ -23,6 +23,7 @@ import 'screens/registro_acompanante.dart';
 import 'screens/historial_viajes_pasajero.dart';
 import 'screens/viaje_confirmado.dart';
 import 'screens/estimacion_costo.dart';
+import 'screens/confirmar_correo.dart';
 
 // Colores constantes compartidos
 const Color primaryColor = Color(0xFF2E6FFC);
@@ -56,30 +57,32 @@ class MyApp extends StatelessWidget {
 
         // Rutas existentes
         '/': (context) => const Bienvenido(),
-        '/iniciar_sesion': (context) => const IniciarSesion(),
-        '/olvide_contrasena': (context) => const OlvideContrasena(),
-        
+        '/iniciar_sesion': (context) => const IniciarSesion(), //Conectado
+        '/olvide_contrasena': (context) => const OlvideContrasena(), //Pendiente, debo ver lo del correo
+        '/confirmar-correo': (context) => const ConfirmarCorreoScreen(), //Conectado
+
+
         // Registro Principal (Selección de rol)
-        '/registro': (context) => const Registro(),
+        '/registro': (context) => const Registro(), //No se necesita conectar
         
         // Flujo del Conductor
-        '/registro_conductor': (context) => const RegistroConductor(),
-        '/continue_driver_register_screen': (context) => const ContinuarRegistroConductor(),
+        '/registro_conductor': (context) => const RegistroConductor(), //Conectado
+        '/continue_driver_register_screen': (context) => const ContinuarRegistroConductor(), //Conectado
         
         // Flujo del Pasajero
-        '/registro_pasajero': (context) => const RegistroPasajero(),
-        '/principal_pasajero': (context) => const PrincipalPasajero(),
-        '/codigo_verificacion': (context) => const CodigoVerificacion(),
-        '/completar_perfil_pasajero': (context) => const CompletarPerfilPasajero(),
-        '/agendar_viaje': (context) => const AgendarViaje(),
-        '/mi_perfil_pasajero': (context) => const MiPerfilPasajero(),
-        '/agendar_varios_destinos': (context) => const AgendarVariosDestinos(),
-        '/pago_tarjeta': (context) => const PagoTarjetaScreen(),
-        '/registro_tarjeta': (context) => const RegistroTarjetaScreen(),
-        '/registro_acompanante': (context) => const RegistrarAcompanante(),
-        '/historial_viajes_pasajero': (context) => const HistorialViajesPasajero(),
-        '/viaje_confirmado': (context) => const ViajeConfirmado(),
-        '/estimacion_costo': (context) => const EstimacionViaje(),
+        '/registro_pasajero': (context) => const RegistroPasajero(), //Conectado
+        '/principal_pasajero': (context) => const PrincipalPasajero(), //Consulta
+        '/codigo_verificacion': (context) => const CodigoVerificacion(), //Este puede ser tanto formulario como consulta
+        '/completar_perfil_pasajero': (context) => const CompletarPerfilPasajero(),//Formulario
+        '/agendar_viaje': (context) => const AgendarViaje(), //Formulario
+        '/mi_perfil_pasajero': (context) => const MiPerfilPasajero(), //Consulta
+        '/agendar_varios_destinos': (context) => const AgendarVariosDestinos(), //Formulario
+        '/pago_tarjeta': (context) => const PagoTarjetaScreen(), //Este sera el mayor pendiente a futuro
+        '/registro_tarjeta': (context) => const RegistroTarjetaScreen(), //Formulario
+        '/registro_acompanante': (context) => const RegistrarAcompanante(), //Formulario
+        '/historial_viajes_pasajero': (context) => const HistorialViajesPasajero(), //Consulta
+        '/viaje_confirmado': (context) => const ViajeConfirmado(), //Consulta
+        '/estimacion_costo': (context) => const EstimacionViaje(), //Consulta con calculo
       },
 
     );

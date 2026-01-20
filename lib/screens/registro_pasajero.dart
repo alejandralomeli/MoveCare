@@ -185,7 +185,7 @@ class _RegistroPasajeroState extends State<RegistroPasajero> {
       children: [
         Text('¿Ya tienes cuenta? ', style: GoogleFonts.montserrat(fontSize: 13)),
         GestureDetector(
-          onTap: () => Navigator.pushNamed(context, '/login'),
+          onTap: () => Navigator.pushNamed(context, '/iniciar_sesion'),
           child: Text(
             'Inicia Sesión',
             style: GoogleFonts.montserrat(
