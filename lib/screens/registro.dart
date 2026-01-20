@@ -43,7 +43,7 @@ class Registro extends StatelessWidget {
                   _buildRoleButton(
                     label: 'Soy conductor',
                     onPressed: () {
-                      Navigator.pushNamed(context, '/driver_register_screen');
+                      Navigator.pushNamed(context, '/registro_conductor');
                     },
                   ),
                   
@@ -52,7 +52,7 @@ class Registro extends StatelessWidget {
                   _buildRoleButton(
                     label: 'Soy pasajero',
                     onPressed: () {
-                      Navigator.pushNamed(context, '/passenger_register_screen');
+                      Navigator.pushNamed(context, '/registro_pasajero');
                     },
                   ),
 
@@ -120,7 +120,7 @@ class Registro extends StatelessWidget {
           ),
         ),
         GestureDetector(
-          onTap: () => Navigator.pushNamed(context, '/login'),
+          onTap: () => Navigator.pushNamed(context, '/iniciar_sesion'),
           child: Text(
             'Inicia Sesión',
             style: GoogleFonts.montserrat(

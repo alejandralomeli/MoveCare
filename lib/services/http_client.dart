@@ -1,8 +1,18 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../core/config/api_config.dart';
+import '../core/storage/secure_storage.dart';
 
 class HttpClient {
+
+  static Future<Map<String, String>> _headers() async {
+    final token = await SecureStorage.getToken();
+
+    return {
+      "Content-Type": "application/json",
+      if (token != null) "Authorization": "Bearer $token",
+    };
+  }
 
   // ================= POST =================
   static Future<http.Response> post(
@@ -13,9 +23,7 @@ class HttpClient {
 
     return await http.post(
       url,
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: await _headers(),
       body: jsonEncode(body),
     );
   }
@@ -26,9 +34,7 @@ class HttpClient {
 
     return await http.get(
       url,
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: await _headers(),
     );
   }
 
@@ -41,9 +47,7 @@ class HttpClient {
 
     return await http.put(
       url,
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: await _headers(),
       body: jsonEncode(body),
     );
   }
@@ -54,10 +58,9 @@ class HttpClient {
 
     return await http.delete(
       url,
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: await _headers(),
     );
   }
 }
+
 
