@@ -12,34 +12,53 @@ class _NuevaContrasenaState extends State<NuevaContrasena> {
   static const Color primaryBlue = Color(0xFF1559B2);
   static const Color lightInputBlue = Color(0xFFB3D4FF);
 
-  // Estados para mostrar/ocultar contraseña
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
+  double sp(double size, double sw) => sw * (size / 375);
+
+  TextStyle mBold({Color color = Colors.black, double size = 14, required double sw}) {
+    return GoogleFonts.montserrat(
+      color: color,
+      fontSize: sp(size, sw),
+      fontWeight: FontWeight.bold,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
+    final sw = size.width;
+    final sh = size.height;
 
     return Scaffold(
+      backgroundColor: Colors.white,
+      resizeToAvoidBottomInset: true,
       body: Stack(
         children: [
-          // 1. Fondo del Mapa
           Positioned(
             top: 0,
             left: 0,
             right: 0,
-            height: size.height * 0.4,
+            height: sh * 0.4,
             child: Image.asset(
               'assets/ruta.png',
               fit: BoxFit.cover,
             ),
           ),
 
-          // 2. Tarjeta Blanca
+          Positioned(
+            top: 45,
+            left: 10,
+            child: IconButton(
+              icon: Icon(Icons.arrow_back_ios_new, color: primaryBlue, size: sp(20, sw)),
+              onPressed: () => Navigator.pop(context),
+            ),
+          ),
+
           Align(
             alignment: Alignment.bottomCenter,
             child: Container(
-              height: size.height * 0.7,
+              height: sh * 0.72,
               width: double.infinity,
               decoration: const BoxDecoration(
                 color: Colors.white,
@@ -47,50 +66,47 @@ class _NuevaContrasenaState extends State<NuevaContrasena> {
                   topLeft: Radius.circular(50),
                   topRight: Radius.circular(50),
                 ),
+                boxShadow: [
+                  BoxShadow(color: Colors.black12, blurRadius: 20, offset: Offset(0, -5))
+                ],
               ),
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 35),
+                physics: const BouncingScrollPhysics(),
+                padding: EdgeInsets.symmetric(horizontal: sw * 0.09),
                 child: Column(
                   children: [
-                    const SizedBox(height: 35),
-                    
-                    // Logo MoveCare
-                    _buildLogo(),
+                    SizedBox(height: sh * 0.04),
 
-                    const SizedBox(height: 25),
+                    _buildLogo(sh, sw),
 
-                    // Título
+                    SizedBox(height: sh * 0.03),
+
                     Text(
                       'Nueva Contraseña',
                       textAlign: TextAlign.center,
-                      style: GoogleFonts.montserrat(
-                        color: primaryBlue,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 24,
-                      ),
+                      style: mBold(color: primaryBlue, size: 24, sw: sw),
                     ),
 
                     const SizedBox(height: 8),
 
-                    // Instrucción
                     Text(
                       'Por favor ingrese su nueva contraseña',
                       textAlign: TextAlign.center,
                       style: GoogleFonts.montserrat(
                         color: Colors.black87,
-                        fontSize: 14,
+                        fontSize: sp(13, sw),
                         fontWeight: FontWeight.w500,
                       ),
                     ),
 
-                    const SizedBox(height: 25),
+                    SizedBox(height: sh * 0.04),
 
-                    // --- CAMPOS DE CONTRASEÑA ---
                     _buildPasswordField(
                       label: 'Nueva contraseña',
                       isObscured: _obscurePassword,
                       onToggle: () => setState(() => _obscurePassword = !_obscurePassword),
                       iconColor: primaryBlue,
+                      sw: sw,
                     ),
 
                     const SizedBox(height: 15),
@@ -99,18 +115,17 @@ class _NuevaContrasenaState extends State<NuevaContrasena> {
                       label: 'Confirmar nueva contraseña',
                       isObscured: _obscureConfirmPassword,
                       onToggle: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
-                      iconColor: const Color(0xFF64A1F4), // Azul más claro
+                      iconColor: const Color(0xFF64A1F4),
+                      sw: sw,
                     ),
 
-                    const SizedBox(height: 40),
+                    SizedBox(height: sh * 0.05),
 
-                    // Botón Confirmar
                     SizedBox(
-                      width: size.width * 0.7,
-                      height: 55,
+                      width: sw * 0.75,
+                      height: sp(55, sw),
                       child: ElevatedButton(
                         onPressed: () {
-                          // Lógica para guardar la nueva contraseña y volver al login
                           Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
                         },
                         style: ElevatedButton.styleFrom(
@@ -118,19 +133,15 @@ class _NuevaContrasenaState extends State<NuevaContrasena> {
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(30),
                           ),
-                          elevation: 0,
+                          elevation: 4,
                         ),
                         child: Text(
                           'Confirmar contraseña',
-                          style: GoogleFonts.montserrat(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
+                          style: mBold(color: Colors.white, size: 16, sw: sw),
                         ),
                       ),
                     ),
-                    const SizedBox(height: 30),
+                    SizedBox(height: sh * 0.05), 
                   ],
                 ),
               ),
@@ -141,18 +152,21 @@ class _NuevaContrasenaState extends State<NuevaContrasena> {
     );
   }
 
-  Widget _buildLogo() {
+  Widget _buildLogo(double sh, double sw) {
+    double logoDim = sh * 0.12; 
+    if (logoDim > 100) logoDim = 100;
+
     return Center(
       child: Container(
-        width: 100,
-        height: 100,
+        width: logoDim,
+        height: logoDim,
         decoration: const BoxDecoration(
           color: Color(0xFFE8F1FF),
           shape: BoxShape.circle,
         ),
         child: Padding(
           padding: const EdgeInsets.all(12),
-          child: Image.asset('assets/movecare.png'),
+          child: Image.asset('assets/movecare.png', errorBuilder: (c, e, s) => const Icon(Icons.health_and_safety, color: primaryBlue, size: 40)),
         ),
       ),
     );
@@ -163,6 +177,7 @@ class _NuevaContrasenaState extends State<NuevaContrasena> {
     required bool isObscured,
     required VoidCallback onToggle,
     required Color iconColor,
+    required double sw,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -173,7 +188,7 @@ class _NuevaContrasenaState extends State<NuevaContrasena> {
             label,
             style: GoogleFonts.montserrat(
               color: Colors.black87,
-              fontSize: 13,
+              fontSize: sp(13, sw),
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -185,27 +200,31 @@ class _NuevaContrasenaState extends State<NuevaContrasena> {
           ),
           child: TextField(
             obscureText: isObscured,
-            style: GoogleFonts.montserrat(color: primaryBlue, fontWeight: FontWeight.w600),
+            style: GoogleFonts.montserrat(
+              color: primaryBlue, 
+              fontWeight: FontWeight.w600,
+              fontSize: sp(14, sw)
+            ),
             decoration: InputDecoration(
               prefixIcon: UnconstrainedBox(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 15),
                   child: CircleAvatar(
-                    radius: 12,
+                    radius: sp(10, sw),
                     backgroundColor: iconColor,
                   ),
                 ),
               ),
-              // ICONO DE OJO PARA MOSTRAR/OCULTAR
               suffixIcon: IconButton(
                 icon: Icon(
                   isObscured ? Icons.visibility_off : Icons.visibility,
                   color: primaryBlue.withOpacity(0.6),
+                  size: sp(20, sw),
                 ),
                 onPressed: onToggle,
               ),
               border: InputBorder.none,
-              contentPadding: const EdgeInsets.symmetric(vertical: 18),
+              contentPadding: EdgeInsets.symmetric(vertical: sp(18, sw)),
             ),
           ),
         ),
