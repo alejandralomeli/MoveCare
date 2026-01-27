@@ -8,22 +8,48 @@ class HistorialViajesPasajero extends StatefulWidget {
   State<HistorialViajesPasajero> createState() => _HistorialViajesPasajero();
 }
 
-class _HistorialViajesPasajero extends State<HistorialViajesPasajero> {
+class _HistorialViajesPasajero extends State<HistorialViajesPasajero> with TickerProviderStateMixin {
   static const Color primaryBlue = Color(0xFF1559B2);
   static const Color lightBlueBg = Color(0xFFB3D4FF);
   static const Color containerBlue = Color(0xFFD6E8FF);
   static const Color accentBlue = Color(0xFF64A1F4);
 
-  int _selectedIndex = 2; // Historial seleccionado en el menú inferior
+  int _selectedIndex = 2; 
   String _filterSelected = 'Todos';
+  bool _isVoiceActive = false;
+
+  late AnimationController _pulseController;
+  late Animation<double> _pulseAnimation;
 
   final List<String> filters = ['Todos', 'En proceso', 'Aceptados', 'Rechazados'];
 
-  TextStyle mBold({Color color = primaryBlue, double size = 14}) {
+  @override
+  void initState() {
+    super.initState();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.15).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    super.dispose();
+  }
+
+  TextStyle mFont({
+    Color color = primaryBlue, 
+    double size = 14, 
+    FontWeight weight = FontWeight.w800
+  }) {
     return GoogleFonts.montserrat(
       color: color,
       fontSize: size,
-      fontWeight: FontWeight.w800,
+      fontWeight: weight,
     );
   }
 
@@ -35,13 +61,13 @@ class _HistorialViajesPasajero extends State<HistorialViajesPasajero> {
         child: Column(
           children: [
             _buildHeader(),
-            const SizedBox(height: 20),
+            const SizedBox(height: 35), 
             _buildFilterMenu(),
             Expanded(
               child: ListView(
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                 children: [
-                  _buildTripCard('En Curso', const Color(0xFF1559B2), '27 - Noviembre - 2025'),
+                  _buildTripCard('En Curso', primaryBlue, '27 - Noviembre - 2025'),
                   _buildTripCard('En Curso', const Color(0xFFF44336), '27 - Noviembre - 2025'),
                   _buildTripCard('Finalizado', const Color(0xFFF44336), '27 - Noviembre - 2025'),
                   _buildTripCard('Finalizado', const Color(0xFFF44336), '27 - Noviembre - 2025'),
@@ -58,23 +84,55 @@ class _HistorialViajesPasajero extends State<HistorialViajesPasajero> {
   Widget _buildHeader() {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 30),
+      height: 110,
       decoration: const BoxDecoration(color: lightBlueBg),
       child: Stack(
-        alignment: Alignment.center,
+        clipBehavior: Clip.none,
         children: [
-          Text('Historial de Viajes', style: mBold(size: 22, color: Colors.black)),
-          Align(
-            alignment: Alignment.centerRight,
-            child: Transform.translate(
-              offset: const Offset(10, 45),
-              child: Image.asset(
-                'assets/control_voz.png',
-                height: 65,
-                width: 65,
-                errorBuilder: (c, e, s) => const CircleAvatar(
-                  backgroundColor: Colors.transparent,
-                  child: Icon(Icons.mic, color: primaryBlue, size: 40),
+          Positioned(
+            left: 20,
+            bottom: 35,
+            child: IconButton(
+              icon: const Icon(Icons.arrow_back_ios_new, color: primaryBlue, size: 20),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+          ),
+          Center(
+            child: Text(
+              'Historial de Viajes', 
+              style: mFont(size: 20, color: Colors.black, weight: FontWeight.w800)
+            ),
+          ),
+          Positioned(
+            right: 20,
+            bottom: -32,
+            child: GestureDetector(
+              onTap: () {
+                setState(() {
+                  _isVoiceActive = !_isVoiceActive;
+                  if (_isVoiceActive) {
+                    _pulseController.repeat(reverse: true);
+                  } else {
+                    _pulseController.stop();
+                    _pulseController.reset();
+                  }
+                });
+              },
+              child: ScaleTransition(
+                scale: _pulseAnimation,
+                child: Image.asset(
+                  _isVoiceActive ? 'assets/escuchando.png' : 'assets/controlvoz.png',
+                  height: 65,
+                  width: 65,
+                  errorBuilder: (c, e, s) => CircleAvatar(
+                    backgroundColor: _isVoiceActive ? Colors.red : primaryBlue,
+                    radius: 32,
+                    child: Icon(
+                      _isVoiceActive ? Icons.graphic_eq : Icons.mic, 
+                      color: Colors.white, 
+                      size: 30
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -102,7 +160,7 @@ class _HistorialViajesPasajero extends State<HistorialViajesPasajero> {
               ),
               child: Text(
                 filter,
-                style: mBold(
+                style: mFont(
                   color: isSelected ? Colors.white : primaryBlue,
                   size: 13,
                 ),
@@ -131,7 +189,6 @@ class _HistorialViajesPasajero extends State<HistorialViajesPasajero> {
       ),
       child: Stack(
         children: [
-          // Badge de estado
           Positioned(
             right: 20,
             top: 10,
@@ -143,7 +200,7 @@ class _HistorialViajesPasajero extends State<HistorialViajesPasajero> {
               ),
               child: Text(
                 status,
-                style: mBold(color: Colors.white, size: 11),
+                style: mFont(color: Colors.white, size: 11),
               ),
             ),
           ),
@@ -152,41 +209,46 @@ class _HistorialViajesPasajero extends State<HistorialViajesPasajero> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SizedBox(height: 10),
-                const Text('------------------------------------------------------------',
-                    style: TextStyle(color: Colors.black26, fontSize: 10)),
+                const SizedBox(height: 25), 
+                _buildDottedLine(1.5, Colors.black45),
+                const SizedBox(height: 15),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('Origen', style: mBold(size: 16, color: Colors.black)),
-                    const Text('-----------------------', style: TextStyle(color: Colors.black26)),
-                    Text('Destino', style: mBold(size: 16, color: Colors.black)),
+                    Text('Origen', style: mFont(size: 16, color: Colors.black)),
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        child: _buildDottedLine(2.0, primaryBlue.withOpacity(0.5)),
+                      ),
+                    ),
+                    Text('Destino', style: mFont(size: 16, color: Colors.black)),
                   ],
                 ),
-                Text('Fecha $date', style: mBold(size: 11, color: accentBlue)),
+                const SizedBox(height: 8),
+                Text(
+                  'Fecha $date', 
+                  style: mFont(size: 14, color: accentBlue, weight: FontWeight.w400)
+                ),
                 const SizedBox(height: 15),
                 Row(
                   children: [
                     CircleAvatar(
                       radius: 25,
-                      backgroundImage: const AssetImage('assets/conductor.png'),
                       backgroundColor: containerBlue,
-                      child: ClipOval(
-                        child: Image.asset('assets/conductor.png', 
-                          errorBuilder: (c,e,s) => const Icon(Icons.person, color: primaryBlue)),
-                      ),
+                      backgroundImage: const AssetImage('assets/conductor.png'),
                     ),
                     const SizedBox(width: 15),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Username', style: mBold(size: 14, color: Colors.black)),
+                        Text('Username', style: mFont(size: 14, color: Colors.black)),
                         Row(
                           children: [
                             ...List.generate(5, (index) => 
                               const Icon(Icons.star, color: Colors.orange, size: 14)),
                             const SizedBox(width: 5),
-                            Text('4.5', style: mBold(size: 10, color: accentBlue)),
+                            Text('4.5', style: mFont(size: 10, color: accentBlue)),
                           ],
                         ),
                         const SizedBox(height: 4),
@@ -200,7 +262,7 @@ class _HistorialViajesPasajero extends State<HistorialViajesPasajero> {
                             children: [
                               const Icon(Icons.check_circle, color: Colors.white, size: 12),
                               const SizedBox(width: 4),
-                              Text('Verificado', style: mBold(color: Colors.white, size: 10)),
+                              Text('Verificado', style: mFont(color: Colors.white, size: 10)),
                             ],
                           ),
                         )
@@ -216,10 +278,32 @@ class _HistorialViajesPasajero extends State<HistorialViajesPasajero> {
     );
   }
 
+  Widget _buildDottedLine(double thickness, Color color) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final boxWidth = constraints.constrainWidth();
+        const dashWidth = 4.0;
+        final dashCount = (boxWidth / (2 * dashWidth)).floor();
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: List.generate(dashCount, (_) {
+            return SizedBox(
+              width: dashWidth,
+              height: thickness,
+              child: DecoratedBox(
+                decoration: BoxDecoration(color: color),
+              ),
+            );
+          }),
+        );
+      },
+    );
+  }
+
   Widget _buildCustomBottomNav() {
     return Container(
       height: 75,
-      decoration: const BoxDecoration(color: Color(0xFFE3F2FD)),
+      decoration: const BoxDecoration(color: Color(0xFFD6E8FF)),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [

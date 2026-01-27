@@ -18,148 +18,166 @@ class _PagoTarjetaScreenState extends State<PagoTarjetaScreen> {
 
   int _selectedIndex = 1; 
   String tipoTarjetaSeleccionada = 'Crédito'; 
+  bool _isVoiceActive = false;
+  double sp(double size, double sw) => sw * (size / 375);
 
-  TextStyle mSemibold({Color color = Colors.black, double size = 14}) {
+  TextStyle mSemibold({Color color = Colors.black, double size = 14, required double sw}) {
     return GoogleFonts.montserrat(
       color: color,
-      fontSize: size,
+      fontSize: sp(size, sw),
       fontWeight: FontWeight.w600,
     );
   }
 
-  TextStyle mExtrabold({Color color = Colors.black, double size = 18}) {
+  TextStyle mExtrabold({Color color = Colors.black, double size = 18, required double sw}) {
     return GoogleFonts.montserrat(
       color: color,
-      fontSize: size,
+      fontSize: sp(size, sw),
       fontWeight: FontWeight.w800,
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final sw = MediaQuery.of(context).size.width;
+
     return Scaffold(
       backgroundColor: Colors.white,
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.only(
-                  left: 25,
-                  right: 25,
-                  bottom: 20, 
-                  top: 40,
+      body: Column(
+        children: [
+          _buildHeader(sw),
+          Expanded(
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              padding: EdgeInsets.only(
+                left: sp(25, sw),
+                right: sp(25, sw),
+                bottom: sp(20, sw), 
+                top: sp(50, sw), 
+              ),
+              child: Container(
+                padding: EdgeInsets.all(sp(20, sw)),
+                decoration: BoxDecoration(
+                  color: containerBlue,
+                  borderRadius: BorderRadius.circular(30),
                 ),
-                child: Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: containerBlue,
-                    borderRadius: BorderRadius.circular(30),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Tarjeta de crédito o débito', 
-                        style: mExtrabold(color: primaryBlue, size: 18)),
-                      Text('Seleccione un método', 
-                        style: mSemibold(size: 12)),
-                      const SizedBox(height: 20),
-                      
-                      Row(
-                        children: [
-                          Expanded(child: _buildSelectorTarjeta('Crédito', 'assets/tarjeta_credito.png')),
-                          const SizedBox(width: 15),
-                          Expanded(child: _buildSelectorTarjeta('Débito', 'assets/tarjeta_debito.png')),
-                        ],
-                      ),
-                      
-                      const SizedBox(height: 25),
-                      Text('Detalles de Tarjeta', 
-                        style: mExtrabold(color: primaryBlue, size: 18)),
-                      Text('Selecciona para ingresar los datos de tu tarjeta crédito / débito', 
-                        style: mSemibold(size: 11)),
-                      const SizedBox(height: 15),
-                      
-                      // CONTENEDOR DE DETALLES REDONDEADO Y CON SOMBRA
-                      Center(
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(25), // Redondeado solicitado
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.15),
-                                blurRadius: 10,
-                                offset: const Offset(0, 5), // Sombra por abajo
-                              ),
-                            ],
-                          ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(25),
-                            child: Image.asset(
-                              'assets/tarjeta.png',
-                              width: double.infinity,
-                              fit: BoxFit.contain,
-                              errorBuilder: (c, e, s) => Container(
-                                height: 180,
-                                child: const Icon(Icons.credit_card, size: 80, color: primaryBlue),
-                              ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Tarjeta de crédito o débito', 
+                      style: mExtrabold(color: primaryBlue, size: 18, sw: sw)),
+                    Text('Seleccione un método', 
+                      style: mSemibold(size: 12, sw: sw)),
+                    SizedBox(height: sp(20, sw)),
+                    
+                    Row(
+                      children: [
+                        Expanded(child: _buildSelectorTarjeta('Crédito', 'assets/tarjeta_credito.png', sw)),
+                        SizedBox(width: sp(15, sw)),
+                        Expanded(child: _buildSelectorTarjeta('Débito', 'assets/tarjeta_debito.png', sw)),
+                      ],
+                    ),
+                    
+                    SizedBox(height: sp(25, sw)),
+                    Text('Detalles de Tarjeta', 
+                      style: mExtrabold(color: primaryBlue, size: 18, sw: sw)),
+                    Text('Selecciona para ingresar los datos de tu tarjeta crédito / débito', 
+                      style: mSemibold(size: 11, sw: sw)),
+                    SizedBox(height: sp(15, sw)),
+                    
+                    Center(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(25),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.15),
+                              blurRadius: 10,
+                              offset: const Offset(0, 5),
+                            ),
+                          ],
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(25),
+                          child: Image.asset(
+                            'assets/tarjeta.png',
+                            width: double.infinity,
+                            fit: BoxFit.contain,
+                            errorBuilder: (c, e, s) => Container(
+                              height: sp(180, sw),
+                              child: Icon(Icons.credit_card, size: sp(80, sw), color: primaryBlue),
                             ),
                           ),
                         ),
                       ),
-                      
-                      const SizedBox(height: 30),
-                      _buildBottomPayBar(),
-                    ],
-                  ),
+                    ),
+                    
+                    SizedBox(height: sp(30, sw)),
+                    _buildBottomPayBar(sw),
+                  ],
                 ),
+              ),
+            ),
+          ),
+        ],
+      ),
+      bottomNavigationBar: _buildCustomBottomNav(sw),
+    );
+  }
+
+  Widget _buildHeader(double sw) {
+    return Container(
+      width: double.infinity,
+      height: 110, 
+      decoration: const BoxDecoration(color: lightBlueBg),
+      child: SafeArea(
+        bottom: false,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Positioned(
+              left: 10,
+              top: 35,
+              child: IconButton(
+                icon: const Icon(Icons.arrow_back_ios_new, color: primaryBlue, size: 20),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ),
+            Center(
+              child: Text(
+                'Pago con tarjeta', 
+                style: mExtrabold(size: 20, color: Colors.black, sw: sw)
+              ),
+            ),
+
+            Positioned(
+              right: 20,
+              bottom: -32,
+              child: _PulseVoiceButton(
+                isActive: _isVoiceActive,
+                size: sp(65, sw),
+                onTap: () => setState(() => _isVoiceActive = !_isVoiceActive),
               ),
             ),
           ],
         ),
       ),
-      bottomNavigationBar: _buildCustomBottomNav(),
     );
   }
 
-  Widget _buildHeader() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 30),
-      decoration: const BoxDecoration(color: lightBlueBg),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          const SizedBox(width: 45), 
-          Text('Pago con tarjeta', style: mExtrabold(size: 22)),
-          Transform.translate(
-            offset: const Offset(0, 50),
-            child: Image.asset(
-              'assets/control_voz.png', 
-              height: 65, width: 65, 
-              errorBuilder: (c, e, s) => const CircleAvatar(backgroundColor: primaryBlue, child: Icon(Icons.mic, color: Colors.white)),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSelectorTarjeta(String tipo, String assetPath) {
+  Widget _buildSelectorTarjeta(String tipo, String assetPath, double sw) {
     bool isSelected = tipoTarjetaSeleccionada == tipo;
     return GestureDetector(
       onTap: () => setState(() => tipoTarjetaSeleccionada = tipo),
       child: Column(
         children: [
           Container(
-            padding: const EdgeInsets.all(8),
+            padding: EdgeInsets.all(sp(8, sw)),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(15),
               border: Border.all(color: isSelected ? primaryBlue : Colors.transparent, width: 2),
-              // SOMBRA POR ABAJO PARA CRÉDITO/DÉBITO
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withOpacity(0.1),
@@ -170,23 +188,23 @@ class _PagoTarjetaScreenState extends State<PagoTarjetaScreen> {
             ),
             child: Image.asset(
               assetPath,
-              errorBuilder: (c, e, s) => const Icon(Icons.credit_card, size: 50, color: primaryBlue),
+              height: sp(50, sw),
+              errorBuilder: (c, e, s) => Icon(Icons.credit_card, size: sp(50, sw), color: primaryBlue),
             ),
           ),
-          const SizedBox(height: 5),
-          Text(tipo, style: mSemibold(color: primaryBlue, size: 12)),
+          SizedBox(height: sp(5, sw)),
+          Text(tipo, style: mSemibold(color: primaryBlue, size: 12, sw: sw)),
         ],
       ),
     );
   }
 
-  Widget _buildBottomPayBar() {
+  Widget _buildBottomPayBar(double sw) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      padding: EdgeInsets.symmetric(horizontal: sp(20, sw), vertical: sp(12, sw)),
       decoration: BoxDecoration(
         color: primaryBlue,
         borderRadius: BorderRadius.circular(20),
-        // SOMBRA POR ABAJO PARA LA BARRA DE PAGO
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.2),
@@ -202,9 +220,9 @@ class _PagoTarjetaScreenState extends State<PagoTarjetaScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('Total', style: mSemibold(color: Colors.white, size: 12)),
+              Text('Total', style: mSemibold(color: Colors.white, size: 12, sw: sw)),
               Text('\$${widget.totalAPagar.toStringAsFixed(2)}', 
-                style: mExtrabold(color: Colors.white, size: 22)),
+                style: mExtrabold(color: Colors.white, size: 22, sw: sw)),
             ],
           ),
           ElevatedButton(
@@ -212,39 +230,118 @@ class _PagoTarjetaScreenState extends State<PagoTarjetaScreen> {
             style: ElevatedButton.styleFrom(
               backgroundColor: accentBlue,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-              padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 10),
+              padding: EdgeInsets.symmetric(horizontal: sp(25, sw), vertical: sp(10, sw)),
             ),
-            child: Text('Pagar', style: mExtrabold(color: Colors.white, size: 16)),
+            child: Text('Pagar', style: mExtrabold(color: Colors.white, size: 16, sw: sw)),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildCustomBottomNav() {
+  Widget _buildCustomBottomNav(double sw) {
     return Container(
-      height: 75,
+      height: sp(75, sw),
       decoration: const BoxDecoration(color: containerBlue),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          _navIcon(0, Icons.home),
-          _navIcon(1, Icons.location_on),
-          _navIcon(2, Icons.history),
-          _navIcon(3, Icons.person),
+          _navIcon(0, Icons.home, sw),
+          _navIcon(1, Icons.location_on, sw),
+          _navIcon(2, Icons.history, sw),
+          _navIcon(3, Icons.person, sw),
         ],
       ),
     );
   }
 
-  Widget _navIcon(int index, IconData icon) {
+  Widget _navIcon(int index, IconData icon, double sw) {
     bool active = _selectedIndex == index;
     return GestureDetector(
       onTap: () => setState(() => _selectedIndex = index),
       child: Container(
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(color: active ? primaryBlue : Colors.white, shape: BoxShape.circle),
-        child: Icon(icon, color: active ? Colors.white : primaryBlue, size: 28),
+        padding: EdgeInsets.all(sp(10, sw)),
+        decoration: BoxDecoration(
+          color: active ? primaryBlue : Colors.white, 
+          shape: BoxShape.circle,
+        ),
+        child: Icon(icon, color: active ? Colors.white : primaryBlue, size: sp(28, sw)),
+      ),
+    );
+  }
+}
+
+// Widget auxiliar para manejar la animación de pulso
+class _PulseVoiceButton extends StatefulWidget {
+  final bool isActive;
+  final double size;
+  final VoidCallback onTap;
+
+  const _PulseVoiceButton({
+    required this.isActive,
+    required this.size,
+    required this.onTap,
+  });
+
+  @override
+  State<_PulseVoiceButton> createState() => _PulseVoiceButtonState();
+}
+
+class _PulseVoiceButtonState extends State<_PulseVoiceButton> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1000),
+    );
+    _animation = Tween<double>(begin: 1.0, end: 1.15).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+
+    if (widget.isActive) _controller.repeat(reverse: true);
+  }
+
+  @override
+  void didUpdateWidget(_PulseVoiceButton oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isActive) {
+      _controller.repeat(reverse: true);
+    } else {
+      _controller.stop();
+      _controller.reset();
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: widget.onTap,
+      child: ScaleTransition(
+        scale: widget.isActive ? _animation : const AlwaysStoppedAnimation(1.0),
+        child: Image.asset(
+          widget.isActive ? 'assets/escuchando.png' : 'assets/controlvoz.png',
+          height: widget.size,
+          width: widget.size,
+          errorBuilder: (c, e, s) => CircleAvatar(
+            backgroundColor: widget.isActive ? Colors.red : const Color(0xFF1559B2),
+            radius: widget.size / 2,
+            child: Icon(
+              widget.isActive ? Icons.graphic_eq : Icons.mic,
+              color: Colors.white,
+              size: widget.size * 0.45,
+            ),
+          ),
+        ),
       ),
     );
   }

@@ -8,7 +8,8 @@ class PrincipalPasajero extends StatefulWidget {
   State<PrincipalPasajero> createState() => _PrincipalPasajeroState();
 }
 
-class _PrincipalPasajeroState extends State<PrincipalPasajero> {
+class _PrincipalPasajeroState extends State<PrincipalPasajero>
+    with SingleTickerProviderStateMixin {
   static const Color primaryBlue = Color(0xFF1559B2);
   static const Color lightBlueBg = Color(0xFFB3D4FF);
   static const Color cardBlue = Color(0xFFD6E8FF);
@@ -17,296 +18,287 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
   static const Color darkBlue = Color(0xFF0D47A1);
 
   int _selectedIndex = 0;
-  String _selectedDate = '28'; // Estado para controlar la selección del calendario
+  String _selectedDate = '28';
+  bool _isListening = false;
 
-  TextStyle mExtrabold({Color color = Colors.black, double size = 14}) {
+  late AnimationController _pulseController;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+      lowerBound: 1.0,
+      upperBound: 1.15,
+    )..addStatusListener((status) {
+        if (status == AnimationStatus.completed) {
+          _pulseController.reverse();
+        } else if (status == AnimationStatus.dismissed && _isListening) {
+          _pulseController.forward();
+        }
+      });
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    super.dispose();
+  }
+
+  void _toggleListening() {
+    setState(() {
+      _isListening = !_isListening;
+      if (_isListening) {
+        _pulseController.forward();
+      } else {
+        _pulseController.stop();
+        _pulseController.value = 1.0;
+      }
+    });
+  }
+
+  double sp(double size, BuildContext context) {
+    double sw = MediaQuery.of(context).size.width;
+    double res = sw * (size / 375);
+    return (size <= 20 && res > 20) ? 20 : res;
+  }
+
+  TextStyle mExtrabold(
+      {Color color = Colors.black,
+      double size = 14,
+      required BuildContext context}) {
     return GoogleFonts.montserrat(
       color: color,
-      fontSize: size,
+      fontSize: sp(size, context),
       fontWeight: FontWeight.bold,
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final sw = MediaQuery.of(context).size.width;
+
     return Scaffold(
       backgroundColor: Colors.white,
-      body: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // --- CABECERA (Altura exacta de completar perfil) ---
-            Stack(
-              clipBehavior: Clip.none,
+      body: Stack(
+        children: [
+          SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  height: 110,
-                  width: double.infinity,
-                  color: lightBlueBg,
+                Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Container(
+                      height: 120,
+                      width: double.infinity,
+                      color: lightBlueBg,
+                      child: Column(
+                        children: [
+                          const SizedBox(height: 35),
+                          Align(
+                            alignment: Alignment.topLeft,
+                            child: IconButton(
+                              icon: const Icon(Icons.arrow_back_ios_new,
+                                  color: primaryBlue, size: 20),
+                              onPressed: () => Navigator.pop(context),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Positioned(
+                      bottom: -50,
+                      left: 20,
+                      child: Container(
+                        width: 100,
+                        height: 100,
+                        decoration: const BoxDecoration(
+                          shape: BoxShape.circle,
+                          image: DecorationImage(
+                            image: AssetImage('assets/pasajero.png'),
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                      ),
+                    ),
+                    // Info Usuario
+                    Positioned(
+                      bottom: -35,
+                      left: 130,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Bienvenido!',
+                              style: GoogleFonts.montserrat(
+                                  fontSize: 24, fontWeight: FontWeight.w900)),
+                          Text('Username',
+                              style: GoogleFonts.montserrat(
+                                  fontSize: 18, fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 5),
+                          GestureDetector(
+                            onTap: () => Navigator.pushNamed(
+                                context, 'completar_perfil_pasajero'),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 5),
+                              decoration: BoxDecoration(
+                                  color: buttonLightBlue,
+                                  borderRadius: BorderRadius.circular(20)),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.info_outline,
+                                      color: Colors.white, size: 14),
+                                  const SizedBox(width: 5),
+                                  Text('Completa tu perfil',
+                                      style: mExtrabold(
+                                          color: Colors.white,
+                                          size: 10,
+                                          context: context)),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-                SafeArea(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 55),
-                    child: _buildHeader(),
+
+                Padding(
+                  padding: const EdgeInsets.only(left: 130, top: 45),
+                  child: Row(
+                    children: [
+                      ...List.generate(
+                          5,
+                          (index) => const Icon(Icons.star,
+                              color: Colors.orange, size: 16)),
+                      Text(' 5.00',
+                          style: mExtrabold(
+                              color: primaryBlue, size: 12, context: context)),
+                    ],
                   ),
                 ),
-                Positioned(
-                  top: 10,
-                  bottom: 3,
-                  right: 20,
-                  child: Image.asset('assets/control_voz.png', width: 65, height: 65),
+
+                const SizedBox(height: 25),
+
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: sw * 0.06),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Ubicación actual',
+                          style: mExtrabold(size: 18, context: context)),
+                      const SizedBox(height: 10),
+                      _buildMapSection(),
+                      const SizedBox(height: 25),
+                      Text('Próximo viaje',
+                          style: mExtrabold(size: 18, context: context)),
+                      const SizedBox(height: 10),
+                      _buildNextTripCard(context),
+                      const SizedBox(height: 25),
+
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          _calendarDay('D', '26', context),
+                          _calendarDay('L', '27', context),
+                          _calendarDay('M', '28', context),
+                          _calendarDay('M', '29', context),
+                          _calendarDay('J', '30', context),
+                        ],
+                      ),
+                      const SizedBox(height: 15),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: _buildAgendarButton(context),
+                      ),
+                      const SizedBox(height: 25),
+                      Text('Historial de viajes',
+                          style: mExtrabold(size: 18, context: context)),
+                      const SizedBox(height: 10),
+                      _buildTripHistory(context),
+                      const SizedBox(height: 30),
+                      _buildReportButton(context),
+                      const SizedBox(height: 30),
+                    ],
+                  ),
                 ),
               ],
             ),
-
-            const SizedBox(height: 10),
-
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildStatusButton(),
-                  const SizedBox(height: 25),
-                  Text('Ubicación actual', style: mExtrabold(size: 18)),
-                  const SizedBox(height: 10),
-                  _buildMapSection(),
-                  const SizedBox(height: 25),
-                  Text('Próximo viaje', style: mExtrabold(size: 18)),
-                  const SizedBox(height: 10),
-                  _buildNextTripCard(),
-                  const SizedBox(height: 20),
-                  
-                  // --- CALENDARIO MENOS ESPACIADO ---
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      _calendarDay('D', '26'),
-                      _calendarDay('L', '27'),
-                      _calendarDay('M', '28'),
-                      _calendarDay('M', '29'),
-                      _calendarDay('J', '30'),
-                    ],
-                  ),
-                  
-                  const SizedBox(height: 15),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: _buildAgendarButton(),
-                  ),
-                  const SizedBox(height: 25),
-                  Text('Historial de viajes', style: mExtrabold(size: 18)),
-                  const SizedBox(height: 10),
-                  _buildTripHistory(),
-                  const SizedBox(height: 30),
-                  _buildReportButton(),
-                  const SizedBox(height: 30),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-      bottomNavigationBar: _buildCustomBottomNav(),
-    );
-  }
-
-  Widget _buildHeader() {
-    return Row(
-      children: [
-        Container(
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(color: Colors.white, width: 2),
           ),
-          child: const CircleAvatar(
-            radius: 50,
-            backgroundColor: Color(0xFF81D4FA),
-            backgroundImage: AssetImage('assets/pasajero.png'),
-          ),
-        ),
-        const SizedBox(width: 15),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('Username', style: mExtrabold(size: 22)),
-              Row(
-                children: [
-                  ...List.generate(5, (index) => const Icon(Icons.star, color: Colors.orange, size: 18)),
-                  Text(' 5.00', style: mExtrabold(color: primaryBlue, size: 12)),
-                ],
-              ),
-              const SizedBox(height: 8),
-              _buildBadge(Icons.check_circle, 'Verificado'),
-              const SizedBox(height: 4),
-              _buildBadge(Icons.info, 'Pendiente de verificación'),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
 
-Widget _calendarDay(String day, String num) {
-    bool isSelected = _selectedDate == num;
-    return GestureDetector(
-      onTap: () => setState(() => _selectedDate = num),
-      child: Container(
-        // Ancho y alto ajustados para ser compactos (proporción app real)
-        width: 55, 
-        height: 62, 
-        margin: const EdgeInsets.symmetric(horizontal: 3), // Margen mínimo para evitar desbordamiento
-        decoration: BoxDecoration(
-          // Color azul claro de fondo para las tarjetas no seleccionadas
-          color: const Color(0xFFE3F2FD), 
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isSelected ? primaryBlue : Colors.transparent, 
-            width: 2,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1), 
-              blurRadius: 4, 
-              offset: const Offset(0, 3), // Sombra en el borde inferior
-            )
-          ],
-        ),
-        child: Column(
-          children: [
-            // Parte superior: Letra del día (Azul fuerte)
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 2),
-              decoration: BoxDecoration(
-                color: primaryBlue, 
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
-              ),
-              child: Text(
-                day, 
-                textAlign: TextAlign.center, 
-                style: GoogleFonts.montserrat(
-                  color: Colors.white, 
-                  fontSize: 11, 
-                  fontWeight: FontWeight.w600
+          Positioned(
+            top: 87.5,
+            right: 20,
+            child: GestureDetector(
+              onTap: _toggleListening,
+              child: ScaleTransition(
+                scale: _pulseController,
+                child: Image.asset(
+                  _isListening
+                      ? 'assets/escuchando.png'
+                      : 'assets/controlvoz.png',
+                  width: 65,
+                  height: 65,
                 ),
               ),
             ),
-            // Parte inferior: Número, Punto y Mes
+          ),
+        ],
+      ),
+      bottomNavigationBar: _buildCustomBottomNav(context),
+    );
+  }
+
+  Widget _calendarDay(String day, String num, BuildContext context) {
+    bool isSelected = _selectedDate == num;
+    double sw = MediaQuery.of(context).size.width;
+    return GestureDetector(
+      onTap: () => setState(() => _selectedDate = num),
+      child: Container(
+        width: sw * 0.15,
+        height: 70,
+        decoration: BoxDecoration(
+          color: const Color(0xFFE3F2FD),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+              color: isSelected ? primaryBlue : Colors.transparent, width: 2),
+        ),
+        child: Column(
+          children: [
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 2),
+              decoration: const BoxDecoration(
+                color: primaryBlue,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(10)),
+              ),
+              child: Text(day,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold)),
+            ),
             Expanded(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text(
-                    num, 
-                    style: GoogleFonts.montserrat(
-                      color: primaryBlue,
-                      fontSize: 16, // Tamaño compacto
-                      fontWeight: FontWeight.w800, // Extra Bold
-                      height: 1.0,
-                    ),
-                  ),
-                  // Punto indicador de selección
-                  Icon(
-                    Icons.circle, 
-                    size: 4, 
-                    color: isSelected ? Colors.red : Colors.transparent
-                  ),
-                  Text(
-                    'Oct', 
-                    style: GoogleFonts.montserrat(
-                      color: Colors.black, 
-                      fontSize: 9, 
-                      fontWeight: FontWeight.w600
-                    ),
-                  ),
+                  Text(num,
+                      style: mExtrabold(
+                          color: primaryBlue, size: 16, context: context)),
+                  if (isSelected)
+                    const Icon(Icons.circle, size: 6, color: Colors.red)
+                  else
+                    const SizedBox(height: 6),
                 ],
               ),
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildTripHistory() {
-    return Container(
-      clipBehavior: Clip.antiAlias, // Para que el efecto de clic no se salga de los bordes
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: primaryBlue, width: 1.5),
-      ),
-      child: Column(
-        children: [
-          _historyItem('Oct 13', 'Centro médico', 'En curso'),
-          const Divider(height: 1, color: primaryBlue),
-          _historyItem('Oct 1', 'Banco', 'Finalizado'),
-          const Divider(height: 1, color: primaryBlue),
-          _historyItem('Sep 28', 'Actividad social', 'Finalizado'),
-        ],
-      ),
-    );
-  }
-
-  Widget _historyItem(String date, String title, String status) {
-    return InkWell(
-      onTap: () {
-        print("Click en viaje: $title");
-      },
-      child: Padding(
-        padding: const EdgeInsets.all(15),
-        child: Row(
-          children: [
-            Text(date, style: mExtrabold(size: 13)),
-            const SizedBox(width: 15),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title, style: mExtrabold(color: primaryBlue, size: 14)),
-                  Text('Conductor:', style: GoogleFonts.montserrat(fontSize: 11, fontWeight: FontWeight.w900)),
-                ],
-              ),
-            ),
-            Text(status, style: mExtrabold(color: statusRed, size: 11)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ... (Los demás widgets de soporte: _buildBadge, _buildStatusButton, etc., se mantienen igual que en el código anterior)
-  
-  Widget _buildBadge(IconData icon, String label) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(color: primaryBlue, borderRadius: BorderRadius.circular(12)),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, color: Colors.white, size: 12),
-          const SizedBox(width: 4),
-          Text(label, style: mExtrabold(color: Colors.white, size: 9)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatusButton() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(color: statusRed, borderRadius: BorderRadius.circular(25)),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.error_outline, color: Colors.white, size: 24),
-          const SizedBox(width: 8),
-          Text('Completar perfil', style: mExtrabold(color: Colors.white, size: 14)),
-        ],
       ),
     );
   }
@@ -315,114 +307,135 @@ Widget _calendarDay(String day, String num) {
     return Container(
       height: 130,
       width: double.infinity,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 10, offset: const Offset(0, 5))],
-      ),
+      decoration: BoxDecoration(borderRadius: BorderRadius.circular(20)),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(20),
-        child: Image.asset('assets/mapa.png', fit: BoxFit.cover),
-      ),
+          borderRadius: BorderRadius.circular(20),
+          child: Image.asset('assets/mapa.png', fit: BoxFit.cover)),
     );
   }
 
-  Widget _buildNextTripCard() {
+  Widget _buildNextTripCard(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
-        color: cardBlue,
-        borderRadius: BorderRadius.circular(25),
-      ),
+          color: cardBlue, borderRadius: BorderRadius.circular(25)),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Martes 28 Octubre', style: mExtrabold(size: 16)),
-                  const SizedBox(height: 4),
-                  Text('Chofer:', style: GoogleFonts.montserrat(fontWeight: FontWeight.w900, fontSize: 14)),
-                  Text('Lugar:', style: GoogleFonts.montserrat(fontWeight: FontWeight.w900, fontSize: 14)),
-                ],
-              ),
+              Text('Martes 28 Octubre',
+                  style: mExtrabold(size: 15, context: context)),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(color: darkBlue, borderRadius: BorderRadius.circular(15)),
-                child: Text('9:30am', style: mExtrabold(color: Colors.white, size: 14)),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                    color: darkBlue, borderRadius: BorderRadius.circular(8)),
+                child: Text('9:30am',
+                    style: mExtrabold(
+                        color: Colors.white, size: 12, context: context)),
               )
             ],
           ),
-          const SizedBox(height: 15),
-          Row(
-            children: [
-              _tripActionBtn('Ver detalles'),
-              const SizedBox(width: 10),
-              _tripActionBtn('Cancelar cita'),
-            ],
-          )
+          const SizedBox(height: 10),
+          Row(children: [
+            _actionBtn('Ver detalles', context),
+            const SizedBox(width: 10),
+            _actionBtn('Cancelar cita', context)
+          ])
         ],
       ),
     );
   }
 
-  Widget _tripActionBtn(String label) {
+  Widget _actionBtn(String label, BuildContext context) {
     return Expanded(
       child: ElevatedButton(
         onPressed: () {},
         style: ElevatedButton.styleFrom(
-          backgroundColor: buttonLightBlue,
-          elevation: 0,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          padding: const EdgeInsets.symmetric(vertical: 8),
-        ),
-        child: Text(label, style: mExtrabold(color: Colors.white, size: 12)),
+            backgroundColor: buttonLightBlue,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            elevation: 0),
+        child: Text(label,
+            style: mExtrabold(color: Colors.white, size: 11, context: context)),
       ),
     );
   }
 
-  Widget _buildAgendarButton() {
+  Widget _buildAgendarButton(BuildContext context) {
     return ElevatedButton(
       onPressed: () {},
       style: ElevatedButton.styleFrom(
-        backgroundColor: buttonLightBlue,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-      ),
-      child: Text('Agendar viaje', style: mExtrabold(color: Colors.black, size: 14)),
+          backgroundColor: buttonLightBlue,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20))),
+      child: Text('Agendar viaje',
+          style: mExtrabold(color: Colors.black, size: 13, context: context)),
     );
   }
 
-  Widget _buildReportButton() {
+  Widget _buildTripHistory(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: primaryBlue, width: 1.5)),
+      child: Column(
+        children: [
+          _historyItem('Oct 13', 'Centro médico', 'En curso', context),
+          const Divider(height: 1, color: primaryBlue),
+          _historyItem('Oct 1', 'Banco', 'Finalizado', context),
+        ],
+      ),
+    );
+  }
+
+  Widget _historyItem(
+      String date, String title, String status, BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(12),
+      child: Row(
+        children: [
+          Text(date, style: mExtrabold(size: 12, context: context)),
+          const SizedBox(width: 15),
+          Expanded(
+              child: Text(title,
+                  style: mExtrabold(
+                      color: primaryBlue, size: 13, context: context))),
+          Text(status,
+              style: mExtrabold(
+                  color: status == 'En curso' ? Colors.green : statusRed,
+                  size: 10,
+                  context: context)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildReportButton(BuildContext context) {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton.icon(
         onPressed: () {},
         icon: const Icon(Icons.error, color: Colors.white),
-        label: Text('Reportar incidencia', style: mExtrabold(color: Colors.white, size: 16)),
+        label: Text('Reportar incidencia',
+            style: mExtrabold(color: Colors.white, size: 15, context: context)),
         style: ElevatedButton.styleFrom(
-          backgroundColor: statusRed,
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-        ),
+            backgroundColor: statusRed,
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))),
       ),
     );
   }
 
-  Widget _buildCustomBottomNav() {
+  Widget _buildCustomBottomNav(BuildContext context) {
     return Container(
-      height: 75,
-      decoration: const BoxDecoration(color: Color(0xFFD6E8FF)),
+      height: 70,
+      color: const Color(0xFFD6E8FF),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          _navIcon(0, Icons.home),
-          _navIcon(1, Icons.location_on),
-          _navIcon(2, Icons.history),
-          _navIcon(3, Icons.person),
-        ],
+        children: List.generate(
+            4,
+            (index) => _navIcon(index,
+                [Icons.home, Icons.location_on, Icons.history, Icons.person][index])),
       ),
     );
   }
@@ -432,12 +445,10 @@ Widget _calendarDay(String day, String num) {
     return GestureDetector(
       onTap: () => setState(() => _selectedIndex = index),
       child: Container(
-        padding: const EdgeInsets.all(10),
+        padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: active ? primaryBlue : Colors.white,
-          shape: BoxShape.circle,
-        ),
-        child: Icon(icon, color: active ? Colors.white : primaryBlue, size: 28),
+            color: active ? primaryBlue : Colors.white, shape: BoxShape.circle),
+        child: Icon(icon, color: active ? Colors.white : primaryBlue, size: 26),
       ),
     );
   }

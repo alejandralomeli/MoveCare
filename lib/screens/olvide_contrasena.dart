@@ -6,31 +6,46 @@ class OlvideContrasena extends StatelessWidget {
 
   static const Color primaryBlue = Color(0xFF1559B2);
   static const Color fieldBlue = Color(0xFFD6E8FF);
+  double sp(double size, double sw) => sw * (size / 375);
 
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
+    final sw = size.width;
+    final sh = size.height;
 
     return Scaffold(
+      backgroundColor: Colors.white,
       body: Stack(
         children: [
-          // 1. Fondo del Mapa
           Positioned(
             top: 0,
             left: 0,
             right: 0,
-            height: size.height * 0.45,
+            height: sh * 0.45,
             child: Image.asset(
-              'assets/ruta.png', 
+              'assets/ruta.png',
               fit: BoxFit.cover,
             ),
           ),
 
-          // 2. Tarjeta Blanca
+          Positioned(
+            top: 45,
+            left: 10,
+            child: IconButton(
+              icon: Icon(
+                Icons.arrow_back_ios_new,
+                color: primaryBlue,
+                size: 20, 
+              ),
+              onPressed: () => Navigator.pop(context),
+            ),
+          ),
+
           Align(
             alignment: Alignment.bottomCenter,
             child: Container(
-              height: size.height * 0.65,
+              height: sh * 0.65,
               width: double.infinity,
               decoration: const BoxDecoration(
                 color: Colors.white,
@@ -38,56 +53,56 @@ class OlvideContrasena extends StatelessWidget {
                   topLeft: Radius.circular(50),
                   topRight: Radius.circular(50),
                 ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black12,
+                    blurRadius: 20,
+                    offset: Offset(0, -5),
+                  )
+                ],
               ),
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 35),
+                physics: const BouncingScrollPhysics(),
+                padding: EdgeInsets.symmetric(horizontal: sw * 0.09),
                 child: Column(
                   children: [
-                    const SizedBox(height: 40),
-                    
-                    // Logo Circular
-                    _buildLogo(),
+      
+                    _buildLogo(sh),
 
-                    const SizedBox(height: 30),
+                    SizedBox(height: sh * 0.03),
 
-                    // Título
                     Text(
                       '¿Olvidaste tu contraseña?',
                       textAlign: TextAlign.center,
                       style: GoogleFonts.montserrat(
                         color: primaryBlue,
                         fontWeight: FontWeight.bold,
-                        fontSize: 22,
+                        fontSize: sp(22, sw),
                       ),
                     ),
 
-                    const SizedBox(height: 15),
+                    SizedBox(height: sh * 0.02),
 
-                    // Instrucción
                     Text(
-                      'Por favor ingrese su correo electrónico para recibir un codigo de confirmación',
+                      'Por favor ingrese su correo electrónico para recibir un código de confirmación',
                       textAlign: TextAlign.center,
                       style: GoogleFonts.montserrat(
                         color: Colors.black87,
-                        fontSize: 14,
+                        fontSize: sp(14, sw),
                         fontWeight: FontWeight.w500,
                       ),
                     ),
 
-                    const SizedBox(height: 30),
+                    SizedBox(height: sh * 0.04),
 
-                    // Campo de Correo
-                    _buildEmailField(),
+                    _buildEmailField(sw),
 
-                    const SizedBox(height: 40),
-
-                    // Botón de Confirmar
+                    SizedBox(height: sh * 0.05),
                     SizedBox(
-                      width: size.width * 0.7,
-                      height: 55,
+                      width: sw * 0.75,
+                      height: sp(55, sw),
                       child: ElevatedButton(
                         onPressed: () {
-                          // Lógica para enviar código
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: primaryBlue,
@@ -101,12 +116,12 @@ class OlvideContrasena extends StatelessWidget {
                           style: GoogleFonts.montserrat(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
-                            fontSize: 16,
+                            fontSize: sp(16, sw),
                           ),
                         ),
                       ),
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 30),
                   ],
                 ),
               ),
@@ -117,13 +132,16 @@ class OlvideContrasena extends StatelessWidget {
     );
   }
 
-  Widget _buildLogo() {
+  Widget _buildLogo(double sh) {
+    double logoSize = sh * 0.13;
+    if (logoSize > 110) logoSize = 110;
+
     return Center(
       child: Container(
-        width: 110,
-        height: 110,
-        decoration: BoxDecoration(
-          color: const Color(0xFFE8F1FF), // Azul muy clarito de fondo del logo
+        width: logoSize,
+        height: logoSize,
+        decoration: const BoxDecoration(
+          color: Color(0xFFE8F1FF),
           shape: BoxShape.circle,
         ),
         child: Padding(
@@ -134,7 +152,7 @@ class OlvideContrasena extends StatelessWidget {
     );
   }
 
-  Widget _buildEmailField() {
+  Widget _buildEmailField(double sw) {
     return Container(
       decoration: BoxDecoration(
         color: fieldBlue,
@@ -142,25 +160,29 @@ class OlvideContrasena extends StatelessWidget {
       ),
       child: TextField(
         keyboardType: TextInputType.emailAddress,
-        style: GoogleFonts.montserrat(color: primaryBlue, fontWeight: FontWeight.w600),
+        style: GoogleFonts.montserrat(
+          color: primaryBlue,
+          fontWeight: FontWeight.w600,
+          fontSize: sp(15, sw),
+        ),
         decoration: InputDecoration(
           hintText: 'Correo',
           hintStyle: GoogleFonts.montserrat(
             color: primaryBlue.withOpacity(0.7),
-            fontSize: 15,
+            fontSize: sp(15, sw),
             fontWeight: FontWeight.w600,
           ),
           prefixIcon: UnconstrainedBox(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 15),
               child: CircleAvatar(
-                radius: 12,
+                radius: sp(12, sw),
                 backgroundColor: primaryBlue,
               ),
             ),
           ),
           border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(vertical: 20),
+          contentPadding: EdgeInsets.symmetric(vertical: sp(18, sw)),
         ),
       ),
     );

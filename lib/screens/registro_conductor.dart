@@ -7,54 +7,66 @@ class RegistroConductor extends StatelessWidget {
   static const Color primaryBlue = Color(0xFF1559B2);
   static const Color fieldBlue = Color(0xFFD6E8FF);
 
+  double sp(double size, BuildContext context) {
+    double sw = MediaQuery.of(context).size.width;
+    return sw * (size / 375); 
+  }
+
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
+    final sw = size.width;
 
     return Scaffold(
       body: Stack(
         children: [
-          // 1. Fondo del Mapa
           Positioned(
             top: 0,
             left: 0,
             right: 0,
-            height: size.height * 0.4,
+            height: size.height * 0.45, 
             child: Image.asset(
-              'assets/ruta.png', 
+              'assets/ruta.png',
               fit: BoxFit.cover,
             ),
           ),
 
-          // 2. Logo superior flotante
           Positioned(
-            top: size.height * 0.15,
+            top: MediaQuery.of(context).padding.top + 35,
+            left: 15,
+            child: IconButton(
+              icon: Icon(Icons.arrow_back_ios_new, color: primaryBlue, size: 20),
+              onPressed: () => Navigator.pop(context),
+            ),
+          ),
+
+          Positioned(
+            top: size.height * 0.12,
             left: 0,
             right: 0,
             child: Center(
               child: Container(
-                width: 100,
-                height: 100,
+                width: sp(100, context),
+                height: sp(100, context),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(25),
-                  boxShadow: [
-                    BoxShadow(color: Colors.black12, blurRadius: 10)
+                  boxShadow: const [
+                    BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, 5))
                   ],
                 ),
                 child: Padding(
-                  padding: const EdgeInsets.all(10),
+                  padding: const EdgeInsets.all(12),
                   child: Image.asset('assets/movecare.png'),
                 ),
               ),
             ),
           ),
 
-          // 3. Tarjeta Blanca con Formulario
           Align(
             alignment: Alignment.bottomCenter,
             child: Container(
-              height: size.height * 0.65,
+              height: size.height * 0.68,
               width: double.infinity,
               decoration: const BoxDecoration(
                 color: Colors.white,
@@ -63,42 +75,43 @@ class RegistroConductor extends StatelessWidget {
                   topRight: Radius.circular(50),
                 ),
               ),
-              child: SingleChildScrollView( // Permite scroll si el teclado aparece
-                padding: const EdgeInsets.symmetric(horizontal: 30),
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                padding: EdgeInsets.symmetric(horizontal: sw * 0.08),
                 child: Column(
                   children: [
-                    const SizedBox(height: 30),
+                    SizedBox(height: sp(35, context)),
                     Text(
                       'Crea una cuenta de Conductor',
+                      textAlign: TextAlign.center,
                       style: GoogleFonts.montserrat(
                         color: primaryBlue,
                         fontWeight: FontWeight.bold,
-                        fontSize: 18,
+                        fontSize: sp(18, context),
                       ),
                     ),
-                    const SizedBox(height: 25),
+                    SizedBox(height: sp(25, context)),
 
-                    // Campos de Texto
-                    _buildTextField(label: 'Nombre', iconColor: Colors.blue.shade800),
-                    _buildTextField(label: 'Correo electrónico', iconColor: Colors.blue.shade400),
-                    _buildTextField(label: 'Teléfono de contacto', iconColor: Colors.blue.shade800),
-                    _buildTextField(label: 'Contraseña', iconColor: Colors.blue.shade400, isPassword: true),
-                    _buildTextField(label: 'Confirmación de contraseña', iconColor: Colors.blue.shade800, isPassword: true),
+                    _buildTextField(context, label: 'Nombre', iconColor: Colors.blue.shade800),
+                    _buildTextField(context, label: 'Correo electrónico', iconColor: Colors.blue.shade400),
+                    _buildTextField(context, label: 'Teléfono de contacto', iconColor: Colors.blue.shade800),
+                    _buildTextField(context, label: 'Contraseña', iconColor: Colors.blue.shade400, isPassword: true),
+                    _buildTextField(context, label: 'Confirmación de contraseña', iconColor: Colors.blue.shade800, isPassword: true),
 
-                    const SizedBox(height: 30),
+                    SizedBox(height: sp(25, context)),
 
-                    // Botón Continuar
                     SizedBox(
-                      width: size.width * 0.7,
-                      height: 50,
+                      width: sw * 0.75,
+                      height: 55,
                       child: ElevatedButton(
                         onPressed: () {
                           Navigator.pushNamed(context, '/continue_driver_register_screen');
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: primaryBlue,
+                          elevation: 3,
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(25),
+                            borderRadius: BorderRadius.circular(30),
                           ),
                         ),
                         child: Text(
@@ -106,17 +119,16 @@ class RegistroConductor extends StatelessWidget {
                           style: GoogleFonts.montserrat(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
-                            fontSize: 15,
+                            fontSize: sp(14, context),
                           ),
                         ),
                       ),
                     ),
 
-                    const SizedBox(height: 20),
+                    SizedBox(height: sp(20, context)),
 
-                    // Footer
                     _buildFooter(context),
-                    const SizedBox(height: 20),
+                    SizedBox(height: sp(30, context)),
                   ],
                 ),
               ),
@@ -127,7 +139,7 @@ class RegistroConductor extends StatelessWidget {
     );
   }
 
-  Widget _buildTextField({required String label, required Color iconColor, bool isPassword = false}) {
+  Widget _buildTextField(BuildContext context, {required String label, required Color iconColor, bool isPassword = false}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Container(
@@ -137,18 +149,23 @@ class RegistroConductor extends StatelessWidget {
         ),
         child: TextField(
           obscureText: isPassword,
+          style: GoogleFonts.montserrat(fontSize: sp(14, context), color: Colors.black87),
           decoration: InputDecoration(
             hintText: label,
-            hintStyle: GoogleFonts.montserrat(color: primaryBlue, fontSize: 14, fontWeight: FontWeight.w600),
+            hintStyle: GoogleFonts.montserrat(
+              color: primaryBlue.withOpacity(0.7), 
+              fontSize: sp(13, context), 
+              fontWeight: FontWeight.w600
+            ),
             prefixIcon: Padding(
               padding: const EdgeInsets.all(12),
               child: CircleAvatar(
                 backgroundColor: iconColor,
-                radius: 10,
+                radius: 8,
               ),
             ),
             border: InputBorder.none,
-            contentPadding: const EdgeInsets.symmetric(vertical: 15),
+            contentPadding: const EdgeInsets.symmetric(vertical: 18),
           ),
         ),
       ),
@@ -159,7 +176,10 @@ class RegistroConductor extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Text('¿Ya tienes cuenta? ', style: GoogleFonts.montserrat(fontSize: 13)),
+        Text(
+          '¿Ya tienes cuenta? ', 
+          style: GoogleFonts.montserrat(fontSize: sp(13, context))
+        ),
         GestureDetector(
           onTap: () => Navigator.pushNamed(context, '/login'),
           child: Text(
@@ -167,7 +187,7 @@ class RegistroConductor extends StatelessWidget {
             style: GoogleFonts.montserrat(
               color: primaryBlue,
               fontWeight: FontWeight.bold,
-              fontSize: 13,
+              fontSize: sp(13, context),
             ),
           ),
         ),
