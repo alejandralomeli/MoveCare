@@ -58,16 +58,107 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero>
     });
   }
 
+  // --- FUNCIÓN PARA MOSTRAR EL RECUADRO DE LA IMAGEN ---
+  void _mostrarPanelAgendar(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) {
+        return Container(
+          height: MediaQuery.of(context).size.height * 0.5,
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: primaryBlue.withOpacity(0.95), // Color primaryBlue como pediste
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(40)),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center, // Centra los botones
+            children: [
+              Text(
+                'Tipo de Viaje',
+                style: GoogleFonts.montserrat(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w900,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 30),
+              
+              // Botón: Un destino
+              _buildOptionBtn(
+                label: 'Un destino',
+                circleColor: Colors.white,
+                context: context,
+                onTap: () => Navigator.pop(context),
+              ),
+              
+              const SizedBox(height: 20),
+              
+              // Botón: Dos o más destinos
+              _buildOptionBtn(
+                label: 'Dos o más destinos',
+                circleColor: buttonLightBlue, // Círculo azul
+                context: context,
+                onTap: () => Navigator.pop(context),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildOptionBtn({
+    required String label, 
+    required Color circleColor, 
+    required BuildContext context,
+    required VoidCallback onTap
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: MediaQuery.of(context).size.width * 0.8,
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 15),
+        decoration: BoxDecoration(
+          color: lightBlueBg.withOpacity(0.8), // Recuadro igual a la imagen
+          borderRadius: BorderRadius.circular(25),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 45,
+              height: 45,
+              decoration: BoxDecoration(
+                color: circleColor,
+                shape: BoxShape.circle,
+              ),
+            ),
+            Expanded(
+              child: Text(
+                label,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.montserrat(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: primaryBlue,
+                ),
+              ),
+            ),
+            const SizedBox(width: 45), // Espacio para equilibrar el círculo
+          ],
+        ),
+      ),
+    );
+  }
+
   double sp(double size, BuildContext context) {
     double sw = MediaQuery.of(context).size.width;
     double res = sw * (size / 375);
     return (size <= 20 && res > 20) ? 20 : res;
   }
 
-  TextStyle mExtrabold(
-      {Color color = Colors.black,
-      double size = 14,
-      required BuildContext context}) {
+  TextStyle mExtrabold({Color color = Colors.black, double size = 14, required BuildContext context}) {
     return GoogleFonts.montserrat(
       color: color,
       fontSize: sp(size, context),
@@ -101,8 +192,7 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero>
                           Align(
                             alignment: Alignment.topLeft,
                             child: IconButton(
-                              icon: const Icon(Icons.arrow_back_ios_new,
-                                  color: primaryBlue, size: 20),
+                              icon: const Icon(Icons.arrow_back_ios_new, color: primaryBlue, size: 20),
                               onPressed: () => Navigator.pop(context),
                             ),
                           ),
@@ -124,41 +214,24 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero>
                         ),
                       ),
                     ),
-                    // Info Usuario
                     Positioned(
                       bottom: -35,
                       left: 130,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Bienvenido!',
-                              style: GoogleFonts.montserrat(
-                                  fontSize: 24, fontWeight: FontWeight.w900)),
-                          Text('Username',
-                              style: GoogleFonts.montserrat(
-                                  fontSize: 18, fontWeight: FontWeight.bold)),
+                          Text('Bienvenido!', style: GoogleFonts.montserrat(fontSize: 24, fontWeight: FontWeight.w900)),
+                          Text('Username', style: GoogleFonts.montserrat(fontSize: 18, fontWeight: FontWeight.bold)),
                           const SizedBox(height: 5),
-                          GestureDetector(
-                            onTap: () => Navigator.pushNamed(
-                                context, 'completar_perfil_pasajero'),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 12, vertical: 5),
-                              decoration: BoxDecoration(
-                                  color: buttonLightBlue,
-                                  borderRadius: BorderRadius.circular(20)),
-                              child: Row(
-                                children: [
-                                  const Icon(Icons.info_outline,
-                                      color: Colors.white, size: 14),
-                                  const SizedBox(width: 5),
-                                  Text('Completa tu perfil',
-                                      style: mExtrabold(
-                                          color: Colors.white,
-                                          size: 10,
-                                          context: context)),
-                                ],
-                              ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                            decoration: BoxDecoration(color: buttonLightBlue, borderRadius: BorderRadius.circular(20)),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.info_outline, color: Colors.white, size: 14),
+                                const SizedBox(width: 5),
+                                Text('Completa tu perfil', style: mExtrabold(color: Colors.white, size: 10, context: context)),
+                              ],
                             ),
                           ),
                         ],
@@ -166,40 +239,29 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero>
                     ),
                   ],
                 ),
-
                 Padding(
                   padding: const EdgeInsets.only(left: 130, top: 45),
                   child: Row(
                     children: [
-                      ...List.generate(
-                          5,
-                          (index) => const Icon(Icons.star,
-                              color: Colors.orange, size: 16)),
-                      Text(' 5.00',
-                          style: mExtrabold(
-                              color: primaryBlue, size: 12, context: context)),
+                      ...List.generate(5, (index) => const Icon(Icons.star, color: Colors.orange, size: 16)),
+                      Text(' 5.00', style: mExtrabold(color: primaryBlue, size: 12, context: context)),
                     ],
                   ),
                 ),
-
                 const SizedBox(height: 25),
-
                 Padding(
                   padding: EdgeInsets.symmetric(horizontal: sw * 0.06),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Ubicación actual',
-                          style: mExtrabold(size: 18, context: context)),
+                      Text('Ubicación actual', style: mExtrabold(size: 18, context: context)),
                       const SizedBox(height: 10),
                       _buildMapSection(),
                       const SizedBox(height: 25),
-                      Text('Próximo viaje',
-                          style: mExtrabold(size: 18, context: context)),
+                      Text('Próximo viaje', style: mExtrabold(size: 18, context: context)),
                       const SizedBox(height: 10),
                       _buildNextTripCard(context),
                       const SizedBox(height: 25),
-
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -216,8 +278,7 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero>
                         child: _buildAgendarButton(context),
                       ),
                       const SizedBox(height: 25),
-                      Text('Historial de viajes',
-                          style: mExtrabold(size: 18, context: context)),
+                      Text('Historial de viajes', style: mExtrabold(size: 18, context: context)),
                       const SizedBox(height: 10),
                       _buildTripHistory(context),
                       const SizedBox(height: 30),
@@ -229,7 +290,6 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero>
               ],
             ),
           ),
-
           Positioned(
             top: 87.5,
             right: 20,
@@ -238,9 +298,7 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero>
               child: ScaleTransition(
                 scale: _pulseController,
                 child: Image.asset(
-                  _isListening
-                      ? 'assets/escuchando.png'
-                      : 'assets/controlvoz.png',
+                  _isListening ? 'assets/escuchando.png' : 'assets/controlvoz.png',
                   width: 65,
                   height: 65,
                 ),
@@ -264,8 +322,7 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero>
         decoration: BoxDecoration(
           color: const Color(0xFFE3F2FD),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-              color: isSelected ? primaryBlue : Colors.transparent, width: 2),
+          border: Border.all(color: isSelected ? primaryBlue : Colors.transparent, width: 2),
         ),
         child: Column(
           children: [
@@ -276,24 +333,14 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero>
                 color: primaryBlue,
                 borderRadius: BorderRadius.vertical(top: Radius.circular(10)),
               ),
-              child: Text(day,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold)),
+              child: Text(day, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
             ),
             Expanded(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text(num,
-                      style: mExtrabold(
-                          color: primaryBlue, size: 16, context: context)),
-                  if (isSelected)
-                    const Icon(Icons.circle, size: 6, color: Colors.red)
-                  else
-                    const SizedBox(height: 6),
+                  Text(num, style: mExtrabold(color: primaryBlue, size: 16, context: context)),
+                  if (isSelected) const Icon(Icons.circle, size: 6, color: Colors.red) else const SizedBox(height: 6),
                 ],
               ),
             ),
@@ -308,40 +355,29 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero>
       height: 130,
       width: double.infinity,
       decoration: BoxDecoration(borderRadius: BorderRadius.circular(20)),
-      child: ClipRRect(
-          borderRadius: BorderRadius.circular(20),
-          child: Image.asset('assets/mapa.png', fit: BoxFit.cover)),
+      child: ClipRRect(borderRadius: BorderRadius.circular(20), child: Image.asset('assets/mapa.png', fit: BoxFit.cover)),
     );
   }
 
   Widget _buildNextTripCard(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(15),
-      decoration: BoxDecoration(
-          color: cardBlue, borderRadius: BorderRadius.circular(25)),
+      decoration: BoxDecoration(color: cardBlue, borderRadius: BorderRadius.circular(25)),
       child: Column(
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Martes 28 Octubre',
-                  style: mExtrabold(size: 15, context: context)),
+              Text('Martes 28 Octubre', style: mExtrabold(size: 15, context: context)),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                    color: darkBlue, borderRadius: BorderRadius.circular(8)),
-                child: Text('9:30am',
-                    style: mExtrabold(
-                        color: Colors.white, size: 12, context: context)),
+                decoration: BoxDecoration(color: darkBlue, borderRadius: BorderRadius.circular(8)),
+                child: Text('9:30am', style: mExtrabold(color: Colors.white, size: 12, context: context)),
               )
             ],
           ),
           const SizedBox(height: 10),
-          Row(children: [
-            _actionBtn('Ver detalles', context),
-            const SizedBox(width: 10),
-            _actionBtn('Cancelar cita', context)
-          ])
+          Row(children: [_actionBtn('Ver detalles', context), const SizedBox(width: 10), _actionBtn('Cancelar cita', context)])
         ],
       ),
     );
@@ -351,33 +387,23 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero>
     return Expanded(
       child: ElevatedButton(
         onPressed: () {},
-        style: ElevatedButton.styleFrom(
-            backgroundColor: buttonLightBlue,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            elevation: 0),
-        child: Text(label,
-            style: mExtrabold(color: Colors.white, size: 11, context: context)),
+        style: ElevatedButton.styleFrom(backgroundColor: buttonLightBlue, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)), elevation: 0),
+        child: Text(label, style: mExtrabold(color: Colors.white, size: 11, context: context)),
       ),
     );
   }
 
   Widget _buildAgendarButton(BuildContext context) {
     return ElevatedButton(
-      onPressed: () {},
-      style: ElevatedButton.styleFrom(
-          backgroundColor: buttonLightBlue,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20))),
-      child: Text('Agendar viaje',
-          style: mExtrabold(color: Colors.black, size: 13, context: context)),
+      onPressed: () => _mostrarPanelAgendar(context),
+      style: ElevatedButton.styleFrom(backgroundColor: buttonLightBlue, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20))),
+      child: Text('Agendar viaje', style: mExtrabold(color: Colors.black, size: 13, context: context)),
     );
   }
 
   Widget _buildTripHistory(BuildContext context) {
     return Container(
-      decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: primaryBlue, width: 1.5)),
+      decoration: BoxDecoration(borderRadius: BorderRadius.circular(20), border: Border.all(color: primaryBlue, width: 1.5)),
       child: Column(
         children: [
           _historyItem('Oct 13', 'Centro médico', 'En curso', context),
@@ -388,23 +414,15 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero>
     );
   }
 
-  Widget _historyItem(
-      String date, String title, String status, BuildContext context) {
+  Widget _historyItem(String date, String title, String status, BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(12),
       child: Row(
         children: [
           Text(date, style: mExtrabold(size: 12, context: context)),
           const SizedBox(width: 15),
-          Expanded(
-              child: Text(title,
-                  style: mExtrabold(
-                      color: primaryBlue, size: 13, context: context))),
-          Text(status,
-              style: mExtrabold(
-                  color: status == 'En curso' ? Colors.green : statusRed,
-                  size: 10,
-                  context: context)),
+          Expanded(child: Text(title, style: mExtrabold(color: primaryBlue, size: 13, context: context))),
+          Text(status, style: mExtrabold(color: status == 'En curso' ? Colors.green : statusRed, size: 10, context: context)),
         ],
       ),
     );
@@ -416,12 +434,8 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero>
       child: ElevatedButton.icon(
         onPressed: () {},
         icon: const Icon(Icons.error, color: Colors.white),
-        label: Text('Reportar incidencia',
-            style: mExtrabold(color: Colors.white, size: 15, context: context)),
-        style: ElevatedButton.styleFrom(
-            backgroundColor: statusRed,
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))),
+        label: Text('Reportar incidencia', style: mExtrabold(color: Colors.white, size: 15, context: context)),
+        style: ElevatedButton.styleFrom(backgroundColor: statusRed, padding: const EdgeInsets.symmetric(vertical: 12), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))),
       ),
     );
   }
@@ -432,10 +446,7 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero>
       color: const Color(0xFFD6E8FF),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: List.generate(
-            4,
-            (index) => _navIcon(index,
-                [Icons.home, Icons.location_on, Icons.history, Icons.person][index])),
+        children: List.generate(4, (index) => _navIcon(index, [Icons.home, Icons.location_on, Icons.history, Icons.person][index])),
       ),
     );
   }
@@ -446,8 +457,7 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero>
       onTap: () => setState(() => _selectedIndex = index),
       child: Container(
         padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-            color: active ? primaryBlue : Colors.white, shape: BoxShape.circle),
+        decoration: BoxDecoration(color: active ? primaryBlue : Colors.white, shape: BoxShape.circle),
         child: Icon(icon, color: active ? Colors.white : primaryBlue, size: 26),
       ),
     );

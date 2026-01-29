@@ -42,6 +42,54 @@ class _SolicitudViajeState extends State<SolicitudViaje> with SingleTickerProvid
     super.dispose();
   }
 
+  // --- PANEL DE ESTADO (ACEPTADO / RECHAZADO) ---
+  void _mostrarPanelEstado(BuildContext context, String mensaje, String imagen) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) {
+        return Container(
+          height: MediaQuery.of(context).size.height * 0.45,
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: lightBlueBg.withOpacity(0.9),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(40)),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                mensaje,
+                style: GoogleFonts.montserrat(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w900,
+                  color: Colors.black,
+                ),
+              ),
+              const SizedBox(height: 30),
+              SizedBox(
+                height: 180,
+                width: 180,
+                child: Image.asset(
+                  'assets/$imagen',
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Icon(
+                      imagen == 'aceptado.png' ? Icons.check_circle : Icons.cancel,
+                      size: 120,
+                      color: primaryBlue,
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   void _toggleVoice() {
     setState(() {
       _isVoiceActive = !_isVoiceActive;
@@ -54,11 +102,12 @@ class _SolicitudViajeState extends State<SolicitudViaje> with SingleTickerProvid
     });
   }
 
-  TextStyle mSemibold(double sw, {Color color = Colors.black, double size = 14}) {
+  // Estilos de texto
+  TextStyle mBold(double sw, {Color color = Colors.black, double size = 16}) {
     return GoogleFonts.montserrat(
       color: color,
       fontSize: sw * (size / 375),
-      fontWeight: FontWeight.w600,
+      fontWeight: FontWeight.bold, // Negrita estándar
     );
   }
 
@@ -66,7 +115,7 @@ class _SolicitudViajeState extends State<SolicitudViaje> with SingleTickerProvid
     return GoogleFonts.montserrat(
       color: color,
       fontSize: sw * (size / 375),
-      fontWeight: FontWeight.w800,
+      fontWeight: FontWeight.w900, // Máxima negrita
     );
   }
 
@@ -105,7 +154,7 @@ class _SolicitudViajeState extends State<SolicitudViaje> with SingleTickerProvid
                   const SizedBox(height: 25),
                   _buildUserInfoCard(sw),
                   const SizedBox(height: 30),
-                  _buildActionButtons(sw),
+                  _buildActionButtons(sw, context),
                   const SizedBox(height: 30),
                 ],
               ),
@@ -152,7 +201,7 @@ class _SolicitudViajeState extends State<SolicitudViaje> with SingleTickerProvid
             children: [
               const Icon(Icons.access_time_filled, color: primaryBlue),
               const SizedBox(width: 10),
-              Text('10 : 30 am', style: mSemibold(sw, size: 16)),
+              Text('10 : 30 am', style: mBold(sw, size: 16)),
             ],
           )
         ],
@@ -168,8 +217,8 @@ class _SolicitudViajeState extends State<SolicitudViaje> with SingleTickerProvid
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(title, style: mSemibold(sw, color: primaryBlue, size: 12)),
-            Text(subtitle, style: mSemibold(sw, size: 14)),
+            Text(title, style: mBold(sw, color: primaryBlue, size: 12)),
+            Text(subtitle, style: mBold(sw, size: 14).copyWith(fontWeight: FontWeight.normal)),
           ],
         )
       ],
@@ -198,7 +247,7 @@ class _SolicitudViajeState extends State<SolicitudViaje> with SingleTickerProvid
             ),
           ],
         ),
-        Text('Con acompañante / Sin acompañante', style: mSemibold(sw, size: 11, color: Colors.black54)),
+        Text('Con acompañante / Sin acompañante', style: mBold(sw, size: 11, color: Colors.black54)),
       ],
     );
   }
@@ -218,11 +267,11 @@ class _SolicitudViajeState extends State<SolicitudViaje> with SingleTickerProvid
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Username', style: mSemibold(sw, size: 16)),
+                Text('Username', style: mBold(sw, size: 16)),
                 Row(
                   children: [
                     ...List.generate(5, (i) => const Icon(Icons.star, color: Colors.orange, size: 16)),
-                    Text(' 5.00', style: mSemibold(sw, size: 10, color: primaryBlue)),
+                    Text(' 5.00', style: mBold(sw, size: 10, color: primaryBlue)),
                   ],
                 ),
               ],
@@ -234,27 +283,38 @@ class _SolicitudViajeState extends State<SolicitudViaje> with SingleTickerProvid
     );
   }
 
-  Widget _buildActionButtons(double sw) {
+  Widget _buildActionButtons(double sw, BuildContext context) {
     return Row(
       children: [
-        Expanded(child: _btn(sw, 'Aceptar')),
+        Expanded(
+          child: _btn(sw, 'Aceptar', () => _mostrarPanelEstado(context, '¡Viaje Aceptado!', 'aceptado.png'))
+        ),
         const SizedBox(width: 20),
-        Expanded(child: _btn(sw, 'Rechazar')),
+        Expanded(
+          child: _btn(sw, 'Rechazar', () => _mostrarPanelEstado(context, '¡Viaje Rechazado!', 'rechazado.png'))
+        ),
       ],
     );
   }
 
-  Widget _btn(double sw, String label) {
+  Widget _btn(double sw, String label, VoidCallback onTap) {
     return ElevatedButton(
-      onPressed: () {},
+      onPressed: onTap,
       style: ElevatedButton.styleFrom(
         backgroundColor: lightBlueBg,
         foregroundColor: Colors.black,
         padding: const EdgeInsets.symmetric(vertical: 15),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
-        elevation: 0,
+        elevation: 0, 
       ),
-      child: Text(label, style: mSemibold(sw, size: 16)),
+      child: Text(
+        label, 
+        style: GoogleFonts.montserrat(
+          fontSize: sw * (18 / 375), 
+          fontWeight: FontWeight.bold, 
+          color: Colors.black,
+        ),
+      ),
     );
   }
 
@@ -281,6 +341,8 @@ class _SolicitudViajeState extends State<SolicitudViaje> with SingleTickerProvid
     );
   }
 }
+
+
 
 class _DynamicHeaderDelegate extends SliverPersistentHeaderDelegate {
   final double maxHeight;
@@ -321,8 +383,8 @@ class _DynamicHeaderDelegate extends SliverPersistentHeaderDelegate {
                 child: Text(
                   title,
                   style: GoogleFonts.montserrat(
-                    fontSize: screenWidth * (20 / 375), // Tamaño 20 responsive
-                    fontWeight: FontWeight.w800, // ExtraBold
+                    fontSize: screenWidth * (20 / 375), 
+                    fontWeight: FontWeight.w900, 
                     color: Colors.black
                   ),
                 ),
@@ -330,7 +392,6 @@ class _DynamicHeaderDelegate extends SliverPersistentHeaderDelegate {
             ),
           ),
         ),
-        // Botón Volver - Misma posición que Agendar Viaje
         Positioned(
           left: 10,
           bottom: 35, 
@@ -339,7 +400,6 @@ class _DynamicHeaderDelegate extends SliverPersistentHeaderDelegate {
             onPressed: () => Navigator.of(context).pop(),
           ),
         ),
-        // Botón Voz
         Positioned(
           right: 20,
           bottom: -28,
