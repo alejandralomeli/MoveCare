@@ -549,20 +549,25 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
   }
 
   Widget _buildAgendarButton() {
-    return ElevatedButton(
-      onPressed: () {},
-      style: ElevatedButton.styleFrom(
-        backgroundColor: buttonLightBlue,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+  return ElevatedButton(
+    onPressed: () {
+      Navigator.pushNamed(context, '/agendar_viaje');
+    },
+    style: ElevatedButton.styleFrom(
+      backgroundColor: buttonLightBlue,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
       ),
-      child: Text(
-        'Agendar viaje',
-        style: mExtrabold(color: Colors.black, size: 14),
-      ),
-    );
-  }
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+    ),
+    child: Text(
+      'Agendar viaje',
+      style: mExtrabold(color: Colors.black, size: 14),
+    ),
+  );
+}
 
+//Pendiente cuando haga los reportes
   Widget _buildReportButton() {
     return SizedBox(
       width: double.infinity,
