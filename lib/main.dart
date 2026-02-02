@@ -76,19 +76,19 @@ class MyApp extends StatelessWidget {
         
         // Flujo del Pasajero
         '/registro_pasajero': (context) => const RegistroPasajero(),
-        '/principal_pasajero': (context) => const PrincipalPasajero(), //Hoy debe kuedar
+        '/principal_pasajero': (context) => const PrincipalPasajero(),
 
         '/codigo_verificacion': (context) => const CodigoVerificacion(), //Posiblemente se elimine
 
         '/completar_perfil_pasajero': (context) => const CompletarPerfilPasajero(), //Formulario (Pendiente temas con Ale)
-        '/agendar_viaje': (context) => const AgendarViaje(), //Hoy debe kuedar
-        '/mi_perfil_pasajero': (context) => const MiPerfilPasajero(), //Consulta
-        '/agendar_varios_destinos': (context) => const AgendarVariosDestinos(), //Hoy debe kuedar
+        '/agendar_viaje': (context) => const AgendarViaje(), 
+        '/mi_perfil_pasajero': (context) => const MiPerfilPasajero(), //Consulta 2
+        '/agendar_varios_destinos': (context) => const AgendarVariosDestinos(),
         '/pago_tarjeta': (context) => const PagoTarjetaScreen(), //Este sera el mayor pendiente a futuro
-        '/registro_tarjeta': (context) => const RegistroTarjetaScreen(), //Hoy debe kuedar
-        '/registro_acompanante': (context) => const RegistrarAcompanante(), //Hoy debe kuedar
-        '/historial_viajes_pasajero': (context) => const HistorialViajesPasajero(), //Hoy debe kuedar
-        '/viaje_confirmado': (context) => const ViajeConfirmado(), //Consulta
+        '/registro_tarjeta': (context) => const RegistroTarjetaScreen(),
+        '/registro_acompanante': (context) => const RegistrarAcompanante(),
+        '/historial_viajes_pasajero': (context) => const HistorialViajesPasajero(), //Hoy debe kuedar 2
+        '/viaje_confirmado': (context) => const ViajeConfirmado(), //Consulta 2
         '/estimacion_costo': (context) => const EstimacionViaje(), //Consulta con calculo en proceso
       },
     );
