@@ -1,9 +1,9 @@
-//MENU PROVISIONAL PARA PRUEBAS
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import './providers/user_provider.dart';
 
+import 'screens/splash_screen.dart'; 
 import 'screens/bienvenido.dart';
 import 'package:movecare/screens/iniciar_sesion.dart';
 import 'screens/registro.dart';
@@ -26,7 +26,6 @@ import 'screens/viaje_confirmado.dart';
 import 'screens/estimacion_costo.dart';
 import 'screens/confirmar_correo.dart';
 
-// Colores constantes compartidos
 const Color primaryColor = Color(0xFF2E6FFC);
 const Color cardBackgroundColor = Color(0xFFE3F2FD);
 
@@ -51,45 +50,44 @@ class MyApp extends StatelessWidget {
         primaryColor: primaryColor,
         colorScheme: ColorScheme.fromSeed(seedColor: primaryColor),
         useMaterial3: true,
-        // Configuración global de fuentes para toda la app
         textTheme: GoogleFonts.montserratTextTheme(),
       ),
 
-      initialRoute: '/menu_vistas',
+      home: const SplashScreen(), 
 
       routes: {
-        // Ruta del menú provisional
-        '/menu_vistas': (context) => const MenuVistas(),
-
         // Rutas existentes
+        '/menu_vistas': (context) => const MenuVistas(),
+        
         '/': (context) => const Bienvenido(),
+        
         '/iniciar_sesion': (context) => const IniciarSesion(), 
-        '/olvide_contrasena': (context) => const OlvideContrasena(), //Pendiente, debo ver lo del correo
+        '/olvide_contrasena': (context) => const OlvideContrasena(),
         '/confirmar-correo': (context) => const ConfirmarCorreoScreen(),
         
-        // Registro Principal (Selección de rol)
+        // Registro
         '/registro': (context) => const Registro(),
         
-        // Flujo del Conductor
+        // Conductor
         '/registro_conductor': (context) => const RegistroConductor(),
         '/continue_driver_register_screen': (context) => const ContinuarRegistroConductor(),
         
-        // Flujo del Pasajero
+        // Pasajero
         '/registro_pasajero': (context) => const RegistroPasajero(),
         '/principal_pasajero': (context) => const PrincipalPasajero(),
 
-        '/codigo_verificacion': (context) => const CodigoVerificacion(), //Posiblemente se elimine
+        '/codigo_verificacion': (context) => const CodigoVerificacion(),//SE ELIMINARA
 
-        '/completar_perfil_pasajero': (context) => const CompletarPerfilPasajero(), //Formulario (Pendiente temas con Ale)
+        '/completar_perfil_pasajero': (context) => const CompletarPerfilPasajero(),//VERIFICAR DETALLES
         '/agendar_viaje': (context) => const AgendarViaje(), 
-        '/mi_perfil_pasajero': (context) => const MiPerfilPasajero(), //Consulta 2
+        '/mi_perfil_pasajero': (context) => const MiPerfilPasajero(),
         '/agendar_varios_destinos': (context) => const AgendarVariosDestinos(),
-        '/pago_tarjeta': (context) => const PagoTarjetaScreen(), //Este sera el mayor pendiente a futuro
+        '/pago_tarjeta': (context) => const PagoTarjetaScreen(),//FALTA
         '/registro_tarjeta': (context) => const RegistroTarjetaScreen(),
         '/registro_acompanante': (context) => const RegistrarAcompanante(),
-        '/historial_viajes_pasajero': (context) => const HistorialViajesPasajero(), //Hoy debe kuedar 2
-        '/viaje_confirmado': (context) => const ViajeConfirmado(), //Consulta 2
-        '/estimacion_costo': (context) => const EstimacionViaje(), //Consulta con calculo en proceso
+        '/historial_viajes_pasajero': (context) => const HistorialViajesPasajero(),
+        '/viaje_confirmado': (context) => const ViajeConfirmado(),
+        '/estimacion_costo': (context) => const EstimacionViaje(),//FALTA
       },
     );
   }

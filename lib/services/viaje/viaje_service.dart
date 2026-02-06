@@ -4,8 +4,10 @@ import '../http_client.dart';
 class ViajeService {
   static Future<String> crearViaje({
     required String puntoInicio,
-    required String destino,
-    required String fechaHoraInicio, // ISO string
+    String? destino,
+    List<Map<String, dynamic>>? destinos,
+    bool checkVariosDestinos = false,
+    required String fechaHoraInicio,
     String? metodoPago,
     String? especificaciones,
     bool checkAcompanante = false,
@@ -13,31 +15,39 @@ class ViajeService {
     double? costo,
     int? duracionEstimada,
   }) async {
-    final response = await HttpClient.post(
-      "/viajes/crear",
-      {
-        "punto_inicio": puntoInicio,
-        "destino": destino,
-        "fecha_hora_inicio": fechaHoraInicio,
-        "metodo_pago": metodoPago,
-        "costo": costo,
-        "duracion_estimada": duracionEstimada,
-        "especificaciones": especificaciones,
-        "check_acompanante": checkAcompanante,
-        "id_acompanante": idAcompanante,
-      },
-    );
+
+    final Map<String, dynamic> body = {
+      "punto_inicio": puntoInicio,
+      "fecha_hora_inicio": fechaHoraInicio,
+      "metodo_pago": metodoPago,
+      "costo": costo,
+      "duracion_estimada": duracionEstimada,
+      "especificaciones": especificaciones,
+      "check_acompanante": checkAcompanante,
+      "id_acompanante": idAcompanante,
+      "check_destinos": checkVariosDestinos,
+    };
+
+    if (checkVariosDestinos) {
+      body["destino"] = null;
+      body["destinos"] = destinos;
+    } else {
+      body["destino"] = destino;
+    }
+
+    final response = await HttpClient.post("/viajes/crear", body);
 
     if (response.statusCode == 200 || response.statusCode == 201) {
-      final body = jsonDecode(response.body);
-      return body["viaje_id"];
+      final bodyResponse = jsonDecode(response.body);
+      return bodyResponse["viaje_id"];
     }
 
     if (response.statusCode == 401) {
       throw Exception('TOKEN_INVALIDO');
     }
 
-    final body = jsonDecode(response.body);
-    throw Exception(body["detail"] ?? "Error al crear viaje");
+    final bodyResponse = jsonDecode(response.body);
+    throw Exception(bodyResponse["detail"] ?? "Error al crear viaje");
   }
 }
+
