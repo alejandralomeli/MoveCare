@@ -5,8 +5,7 @@ import 'package:provider/provider.dart';
 import 'widgets/map_widget.dart';
 import '../providers/user_provider.dart';
 import '../services/home/home_service.dart';
-import '../core/storage/secure_storage.dart';
-import './iniciar_sesion.dart';
+import '../core/utils/auth_helper.dart'; // Importas el ayudante
 
 class PrincipalPasajero extends StatefulWidget {
   const PrincipalPasajero({super.key});
@@ -115,17 +114,10 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
       _historialViajes = homeData['historial'] ?? [];
       _buildCalendarDates(fechaViaje);
 
-      setState(() {
-        _loadingHome = false;
-      });
+      setState(() => _loadingHome = false);
     } catch (e) {
-      await SecureStorage.deleteAll();
-
-      if (!mounted) return;
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const IniciarSesion()),
-        (route) => false,
-      );
+      // EN LUGAR DE COPIAR Y PEGAR 10 LINEAS, USAS UNA SOLA:
+      AuthHelper.manejarError(context, e);
     }
   }
 
@@ -414,7 +406,7 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
       ),
     );
   }
-  
+
   // ... (Los demás widgets de soporte: _buildBadge, _buildStatusButton, etc., se mantienen igual que en el código anterior)
 
   Widget _buildBadge(IconData icon, String label) {
@@ -549,25 +541,23 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
   }
 
   Widget _buildAgendarButton() {
-  return ElevatedButton(
-    onPressed: () {
-      Navigator.pushNamed(context, '/agendar_viaje');
-    },
-    style: ElevatedButton.styleFrom(
-      backgroundColor: buttonLightBlue,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
+    return ElevatedButton(
+      onPressed: () {
+        Navigator.pushNamed(context, '/agendar_viaje');
+      },
+      style: ElevatedButton.styleFrom(
+        backgroundColor: buttonLightBlue,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-    ),
-    child: Text(
-      'Agendar viaje',
-      style: mExtrabold(color: Colors.black, size: 14),
-    ),
-  );
-}
+      child: Text(
+        'Agendar viaje',
+        style: mExtrabold(color: Colors.black, size: 14),
+      ),
+    );
+  }
 
-//Pendiente cuando haga los reportes
+  //Pendiente cuando haga los reportes
   Widget _buildReportButton() {
     return SizedBox(
       width: double.infinity,

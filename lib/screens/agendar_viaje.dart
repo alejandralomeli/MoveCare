@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../screens/widgets/modals/confirm_modal.dart';
 import '../services/acompanante/acompanante_service.dart';
 import '../services/viaje/viaje_service.dart';
+import '../core/utils/auth_helper.dart';
 
 class AgendarViaje extends StatefulWidget {
   const AgendarViaje({super.key});
@@ -116,7 +117,12 @@ class _AgendarViajeState extends State<AgendarViaje> {
         };
       }).toList();
     } catch (e) {
-      acompanantes = [];
+      acompanantes = []; // Mantenemos la lista vacía para no romper la UI
+
+      // 🔥 AGREGADO: Validamos si fue por error de sesión
+      if (mounted) {
+        AuthHelper.manejarError(context, e);
+      }
     }
 
     setState(() => cargandoAcompanantes = false);
@@ -141,7 +147,6 @@ class _AgendarViajeState extends State<AgendarViaje> {
                     const SizedBox(height: 10),
                     Text('Seleccionar fecha', style: mSemibold(size: 18)),
                     const SizedBox(height: 10),
-
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -168,10 +173,10 @@ class _AgendarViajeState extends State<AgendarViaje> {
                         ),
                       ],
                     ),
-
                     Center(child: _buildDateRow()),
-
                     const SizedBox(height: 20),
+
+                    // Contenedor del Formulario
                     Container(
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
@@ -218,6 +223,8 @@ class _AgendarViajeState extends State<AgendarViaje> {
                             controller: destinoController,
                             onSelected: (value) => destino = value,
                           ),
+                          const SizedBox(height: 10),
+                          _buildMultipleDestinationsButton(),
                           const SizedBox(height: 15),
                           _buildCompanionSection(),
                           const SizedBox(height: 10),
@@ -656,6 +663,29 @@ class _AgendarViajeState extends State<AgendarViaje> {
     );
   }
 
+  Widget _buildMultipleDestinationsButton() {
+    return Center(
+      child: ElevatedButton.icon(
+        onPressed: () {
+          Navigator.pushNamed(context, '/agendar_varios_destinos');
+        },
+        icon: const Icon(Icons.alt_route, color: Colors.white),
+        label: Text(
+          'Agendar con varios destinos',
+          style: mSemibold(color: Colors.white),
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: primaryBlue,
+          minimumSize: const Size(260, 45),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(25),
+          ),
+          elevation: 2,
+        ),
+      ),
+    );
+  }
+
   Widget _actionBtn(
     String label,
     Color color, {
@@ -747,9 +777,10 @@ class _AgendarViajeState extends State<AgendarViaje> {
         arguments: viajeId,
       );
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.toString())));
+      // 🔥 AGREGADO: El Helper maneja el error (ya sea mensaje o expulsión)
+      if (mounted) {
+        AuthHelper.manejarError(context, e);
+      }
     } finally {
       if (mounted) {
         setState(() => _isCreatingTrip = false);
