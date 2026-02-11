@@ -3,62 +3,90 @@ import 'package:google_fonts/google_fonts.dart';
 
 class Registro extends StatelessWidget {
   const Registro({super.key});
-
   static const Color primaryBlue = Color(0xFF1559B2);
   static const Color lightButtonBlue = Color(0xFFB3D4FF);
+
+  // Función para escalado responsivo
+  double sp(double size, BuildContext context) {
+    double sw = MediaQuery.of(context).size.width;
+    return sw * (size / 375);
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Stack(
         children: [
+          // Fondo de imagen
           Positioned.fill(
-            child: Image.asset(
-              'assets/ruta.png', 
-              fit: BoxFit.cover,
+            child: Image.asset('assets/ruta.png', fit: BoxFit.cover),
+          ),
+
+          // Botón de retroceso
+          Positioned(
+            left: sp(10, context),
+            top: sp(45, context),
+            child: SafeArea(
+              child: IconButton(
+                icon: Icon(
+                  Icons.arrow_back_ios_new,
+                  color: primaryBlue,
+                  size: sp(20, context),
+                ),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
             ),
           ),
+
+          // Contenedor Central (Diseño estético de la rama main)
           Center(
-            child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 30),
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(40),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 20,
-                    offset: const Offset(0, 10),
-                  ),
-                ],
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min, 
-                children: [
-                  _buildLogo(),
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              child: Container(
+                margin: EdgeInsets.symmetric(horizontal: sp(30, context)),
+                padding: EdgeInsets.symmetric(
+                  horizontal: sp(24, context),
+                  vertical: sp(40, context),
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(sp(40, context)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 20,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _buildLogo(context),
+                    SizedBox(height: sp(40, context)),
 
-                  const SizedBox(height: 40),
+                    // Botón Conductor con ruta funcional
+                    _buildRoleButton(
+                      context: context,
+                      label: 'Soy conductor',
+                      onPressed: () =>
+                          Navigator.pushNamed(context, '/registro_conductor'),
+                    ),
 
-                  _buildRoleButton(
-                    label: 'Soy conductor',
-                    onPressed: () {
-                      Navigator.pushNamed(context, '/registro_conductor');
-                    },
-                  ),
-                  
-                  const SizedBox(height: 15),
+                    SizedBox(height: sp(15, context)),
 
-                  _buildRoleButton(
-                    label: 'Soy pasajero',
-                    onPressed: () {
-                      Navigator.pushNamed(context, '/registro_pasajero');
-                    },
-                  ),
+                    // Botón Pasajero con ruta funcional
+                    _buildRoleButton(
+                      context: context,
+                      label: 'Soy pasajero',
+                      onPressed: () =>
+                          Navigator.pushNamed(context, '/registro_pasajero'),
+                    ),
 
-                  const SizedBox(height: 40),
-                  _buildFooter(context),
-                ],
+                    SizedBox(height: sp(40, context)),
+                    _buildFooter(context),
+                  ],
+                ),
               ),
             ),
           ),
@@ -67,33 +95,33 @@ class Registro extends StatelessWidget {
     );
   }
 
-  Widget _buildLogo() {
+  Widget _buildLogo(BuildContext context) {
+    double size = sp(120, context);
     return Container(
-      width: 120, 
-      height: 120,
-      decoration: const BoxDecoration(
-        shape: BoxShape.circle,
-      ),
-      child: ClipOval( 
-        child: Image.asset(
-          'assets/movecare.png', 
-          fit: BoxFit.contain,
-        ),
+      width: size,
+      height: size,
+      decoration: const BoxDecoration(shape: BoxShape.circle),
+      child: ClipOval(
+        child: Image.asset('assets/movecare.png', fit: BoxFit.contain),
       ),
     );
   }
 
-  Widget _buildRoleButton({required String label, required VoidCallback onPressed}) {
+  Widget _buildRoleButton({
+    required BuildContext context,
+    required String label,
+    required VoidCallback onPressed,
+  }) {
     return SizedBox(
       width: double.infinity,
-      height: 50,
+      height: sp(55, context),
       child: ElevatedButton(
         onPressed: onPressed,
         style: ElevatedButton.styleFrom(
           backgroundColor: lightButtonBlue,
           elevation: 0,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(sp(20, context)),
           ),
         ),
         child: Text(
@@ -101,7 +129,7 @@ class Registro extends StatelessWidget {
           style: GoogleFonts.montserrat(
             color: primaryBlue,
             fontWeight: FontWeight.bold,
-            fontSize: 16,
+            fontSize: sp(16, context),
           ),
         ),
       ),
@@ -116,17 +144,18 @@ class Registro extends StatelessWidget {
           '¿Ya tienes cuenta? ',
           style: GoogleFonts.montserrat(
             color: Colors.black54,
-            fontSize: 13,
+            fontSize: sp(13, context),
           ),
         ),
         GestureDetector(
+          // Ruta funcional hacia iniciar_sesion
           onTap: () => Navigator.pushNamed(context, '/iniciar_sesion'),
           child: Text(
             'Inicia Sesión',
             style: GoogleFonts.montserrat(
               color: primaryBlue,
               fontWeight: FontWeight.bold,
-              fontSize: 13,
+              fontSize: sp(13, context),
             ),
           ),
         ),

@@ -3,7 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../screens/widgets/modals/confirm_modal.dart';
 import '../services/acompanante/acompanante_service.dart';
 import '../services/viaje/viaje_service.dart';
-import '../services/pagos/pagos_service.dart'; // Importado
+import '../services/pagos/pagos_service.dart';
 import '../core/utils/auth_helper.dart';
 
 class AgendarVariosDestinos extends StatefulWidget {
@@ -14,57 +14,28 @@ class AgendarVariosDestinos extends StatefulWidget {
 }
 
 class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
+  // --- CONSTANTES DE COLOR ---
   static const Color primaryBlue = Color(0xFF1559B2);
   static const Color lightBlueBg = Color(0xFFB3D4FF);
   static const Color containerBlue = Color(0xFFD6E8FF);
   static const Color accentBlue = Color(0xFF64A1F4);
+  static const Color labelBlue = Color(0xFF42A5F5);
 
+  // --- VARIABLES DE ESTADO (LÓGICA) ---
   bool _isCreatingTrip = false;
+  bool _isVoiceActive = false; // Estado para el header dinámico
 
+  // Controladores de Texto
   final List<TextEditingController> _destinoControllers = [];
   final TextEditingController origenController = TextEditingController();
 
-  DateTime? fechaSeleccionada;
-
-  String? metodoPago;
-  String? especificaciones;
-
-  // ACOMPAÑANTES
-  String? idAcompananteSeleccionado;
-  String? selectedAcompananteId;
-  List<Map<String, String>> acompanantes = [];
-  bool cargandoAcompanantes = false;
-
-  // TARJETAS (Agregado)
-  String? selectedTarjetaId;
-  List<Map<String, String>> tarjetas = [];
-  bool cargandoTarjetas = false;
-
-  // Variables de estado UI
-  int _selectedIndex = 1;
-  int _cantidadDestinos = 2;
+  // Fechas y Horas
   DateTime _weekStart = DateTime.now();
   DateTime? _selectedDateTime;
-
-  String _dayLetter(DateTime d) {
-    const days = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
-    return days[d.weekday - 1];
-  }
-
-  DateTime _inicioSemana(DateTime date) {
-    final day = date.weekday;
-    return date.subtract(Duration(days: day - 1));
-  }
-
-  List<DateTime> get _diasSemana =>
-      List.generate(7, (i) => _weekStart.add(Duration(days: i)));
-
   String? selectedHour;
   String? selectedMinute;
-  String? selectedNeed;
-  String? selectedPayment;
-  bool hasCompanion = false;
 
+  // Listas para Dropdowns
   final List<String> hoursList = List.generate(
     24,
     (index) => index.toString().padLeft(2, '0'),
@@ -98,22 +69,52 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
     'Discapacidad visual',
   ];
 
-  TextStyle mSemibold({Color color = Colors.black, double size = 14}) {
-    return GoogleFonts.montserrat(
-      color: color,
-      fontSize: size,
-      fontWeight: FontWeight.w600,
-    );
-  }
+  // Variables de Selección
+  String? selectedNeed;
+  String? especificaciones;
+  String? selectedPayment;
+  int _cantidadDestinos = 2;
+  int _selectedIndex = 1;
 
-  TextStyle mExtrabold({Color color = Colors.black, double size = 18}) {
-    return GoogleFonts.montserrat(
-      color: color,
-      fontSize: size,
-      fontWeight: FontWeight.w800,
-    );
-  }
+  // ACOMPAÑANTES
+  String? selectedAcompananteId;
+  List<Map<String, String>> acompanantes = [];
+  bool cargandoAcompanantes = false;
+  bool hasCompanion = false;
 
+  // TARJETAS
+  String? selectedTarjetaId;
+  List<Map<String, String>> tarjetas = [];
+  bool cargandoTarjetas = false;
+
+  // --- ESTILOS DE TEXTO (RESPONSIVE) ---
+  TextStyle mSemibold(
+    double sw, {
+    Color color = Colors.black,
+    double size = 14,
+  }) => GoogleFonts.montserrat(
+    color: color,
+    fontSize: (sw * (size / 375)),
+    fontWeight: FontWeight.w600,
+  );
+
+  TextStyle mExtrabold(
+    double sw, {
+    Color color = Colors.black,
+    double size = 18,
+  }) => GoogleFonts.montserrat(
+    color: color,
+    fontSize: (sw * (size / 375)),
+    fontWeight: FontWeight.w800,
+  );
+
+  TextStyle labelStyle(double sw, {double size = 14}) => GoogleFonts.montserrat(
+    color: labelBlue,
+    fontSize: (sw * (size / 375)),
+    fontWeight: FontWeight.w700,
+  );
+
+  // --- MÉTODOS DE CICLO DE VIDA ---
   @override
   void initState() {
     super.initState();
@@ -121,6 +122,16 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
     _cargarDatosIniciales();
   }
 
+  @override
+  void dispose() {
+    origenController.dispose();
+    for (var controller in _destinoControllers) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
+  // --- LÓGICA DE DATOS ---
   Future<void> _cargarDatosIniciales() async {
     await Future.wait([_cargarAcompanantes(), _cargarTarjetas()]);
   }
@@ -154,19 +165,9 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
       }).toList();
     } catch (e) {
       tarjetas = [];
-      // No mostramos error en UI para no saturar, solo log
       print("Error cargando tarjetas: $e");
     }
     if (mounted) setState(() => cargandoTarjetas = false);
-  }
-
-  @override
-  void dispose() {
-    origenController.dispose();
-    for (var controller in _destinoControllers) {
-      controller.dispose();
-    }
-    super.dispose();
   }
 
   void _syncDestinoControllers() {
@@ -187,344 +188,353 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
     });
   }
 
+  // --- LÓGICA DE CREACIÓN DE VIAJE ---
+  DateTime _buildFechaHoraInicio() {
+    if (_selectedDateTime == null) throw Exception('Selecciona una fecha');
+    if (selectedHour == null || selectedMinute == null)
+      throw Exception('Selecciona una hora');
+    return DateTime(
+      _selectedDateTime!.year,
+      _selectedDateTime!.month,
+      _selectedDateTime!.day,
+      int.parse(selectedHour!),
+      int.parse(selectedMinute!),
+    );
+  }
+
+  List<Map<String, dynamic>> _buildDestinosPayload() {
+    final List<Map<String, dynamic>> destinos = [];
+    for (int i = 0; i < _destinoControllers.length; i++) {
+      final text = _destinoControllers[i].text.trim();
+      if (text.isEmpty) throw Exception('Completa todos los destinos');
+      destinos.add({"direccion": text, "orden": i + 1});
+    }
+    return destinos;
+  }
+
+  Future<void> _crearViaje() async {
+    if (_isCreatingTrip) return;
+
+    // Validaciones
+    bool esPagoConTarjeta =
+        (selectedPayment == 'Tarjeta de crédito' ||
+        selectedPayment == 'Tarjeta de débito');
+
+    if (esPagoConTarjeta && selectedTarjetaId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Por favor selecciona una tarjeta'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+    if (origenController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Por favor ingresa el punto de origen')),
+      );
+      return;
+    }
+    if (_selectedDateTime == null ||
+        selectedHour == null ||
+        selectedMinute == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Por favor selecciona fecha y hora')),
+      );
+      return;
+    }
+    if (hasCompanion && selectedAcompananteId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Seleccione un acompañante o desmarque la casilla'),
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isCreatingTrip = true);
+
+    try {
+      final fechaHoraInicio = _buildFechaHoraInicio();
+      final destinos = _buildDestinosPayload();
+
+      final viajeId = await ViajeService.crearViaje(
+        puntoInicio: origenController.text.trim(),
+        destino: null, // Es null porque usamos 'destinos' (lista)
+        destinos: destinos,
+        checkVariosDestinos: true,
+        fechaHoraInicio: fechaHoraInicio.toIso8601String(),
+        metodoPago: selectedPayment ?? 'Efectivo',
+        idMetodo: esPagoConTarjeta ? selectedTarjetaId : null,
+        especificaciones: especificaciones,
+        checkAcompanante: hasCompanion,
+        idAcompanante: hasCompanion ? selectedAcompananteId : null,
+      );
+
+      if (!mounted) return;
+      Navigator.pushReplacementNamed(
+        context,
+        '/principal_pasajero',
+        arguments: viajeId,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      AuthHelper.manejarError(context, e);
+    } finally {
+      if (mounted) setState(() => _isCreatingTrip = false);
+    }
+  }
+
+  // --- LÓGICA DE FECHAS ---
+  String _dayLetter(DateTime d) {
+    const days = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
+    return days[d.weekday - 1];
+  }
+
+  List<DateTime> get _diasSemana =>
+      List.generate(7, (i) => _weekStart.add(Duration(days: i)));
+
+  // --- BUILD UI ---
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    final double sw = size.width;
     bool isCardPayment =
         selectedPayment == 'Tarjeta de crédito' ||
         selectedPayment == 'Tarjeta de débito';
 
     return Scaffold(
       backgroundColor: Colors.white,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
-          child: Column(
-            children: [
-              _buildHeader(),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 15),
-                    _buildInstructionBadge(),
-                    const SizedBox(height: 15),
-                    Text('Seleccionar fecha', style: mExtrabold()),
-                    const SizedBox(height: 10),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.chevron_left),
-                          onPressed: () {
-                            final prev = _weekStart.subtract(
-                              const Duration(days: 7),
-                            );
-                            if (!prev.isBefore(_inicioSemana(DateTime.now()))) {
-                              setState(() => _weekStart = prev);
-                            }
-                          },
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.chevron_right),
-                          onPressed: () {
-                            setState(
+      body: CustomScrollView(
+        physics: const BouncingScrollPhysics(),
+        slivers: [
+          SliverPersistentHeader(
+            pinned: true,
+            delegate: _DynamicHeaderDelegate(
+              maxHeight: 110,
+              minHeight: 85,
+              isVoiceActive: _isVoiceActive,
+              onVoiceTap: () =>
+                  setState(() => _isVoiceActive = !_isVoiceActive),
+              screenWidth: sw,
+            ),
+          ),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: sw * 0.05),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 30),
+                  _buildInstructionBadge(sw),
+                  const SizedBox(height: 15),
+
+                  // Selector de Fecha
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Seleccionar fecha',
+                        style: mExtrabold(sw, size: 20),
+                      ),
+                      Row(
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.chevron_left),
+                            onPressed: () => setState(
+                              () => _weekStart = _weekStart.subtract(
+                                const Duration(days: 7),
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.chevron_right),
+                            onPressed: () => setState(
                               () => _weekStart = _weekStart.add(
                                 const Duration(days: 7),
                               ),
-                            );
-                          },
-                        ),
-                      ],
-                    ),
-                    Center(child: _buildDateRow()),
-                    const SizedBox(height: 20),
-
-                    // Contenedor del Formulario
-                    Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: containerBlue,
-                        borderRadius: BorderRadius.circular(30),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Seleccionar hora', style: mSemibold()),
-                          const SizedBox(height: 8),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _buildTimeDropdown(
-                                  'Hora',
-                                  hoursList,
-                                  selectedHour,
-                                  (v) => setState(() => selectedHour = v),
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: _buildTimeDropdown(
-                                  'Minutos',
-                                  minutesList,
-                                  selectedMinute,
-                                  (v) => setState(() => selectedMinute = v),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 15),
-                          Text('Lugar', style: mSemibold()),
-                          const SizedBox(height: 8),
-                          _buildZMGAutocomplete(
-                            'Ubicación actual',
-                            origenController,
-                          ),
-
-                          // Lógica de cantidad de destinos
-                          const SizedBox(height: 10),
-                          Center(
-                            child: Column(
-                              children: [
-                                Text(
-                                  'Cantidad de destinos',
-                                  style: mSemibold(
-                                    color: primaryBlue,
-                                    size: 12,
-                                  ),
-                                ),
-                                _buildStepperDestinos(),
-                              ],
                             ),
                           ),
-
-                          // Generación dinámica de paradas
-                          ...List.generate(_cantidadDestinos, (index) {
-                            return Padding(
-                              padding: const EdgeInsets.only(top: 8),
-                              child: _buildZMGAutocomplete(
-                                'Parada ${index + 1}',
-                                _destinoControllers[index],
-                              ),
-                            );
-                          }),
-
-                          const SizedBox(height: 10),
-                          _buildOneDestinationButton(),
-
-                          const SizedBox(height: 15),
-                          _buildCompanionSection(),
-                          const SizedBox(height: 10),
-
-                          if (hasCompanion) ...[
-                            _buildAcompananteDropdown(),
-                            const SizedBox(height: 10),
-                            _buildRegistrarAcompananteButton(),
-                            const SizedBox(height: 15),
-                          ],
-
-                          _buildSpecialNeedDropdown(),
-                          const SizedBox(height: 15),
-
-                          Center(
-                            child: Text(
-                              'Seleccionar forma de pago',
-                              style: mSemibold(color: primaryBlue, size: 13),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          _buildSimpleDropdown(
-                            'Forma de pago',
-                            Icons.monetization_on_outlined,
-                            [
-                              'Tarjeta de crédito',
-                              'Tarjeta de débito',
-                              'Efectivo',
-                            ],
-                            selectedPayment,
-                            (v) => setState(() {
-                              selectedPayment = v;
-                              if (!isCardPayment) selectedTarjetaId = null;
-                            }),
-                          ),
-
-                          // Lógica visual de Tarjetas
-                          if (isCardPayment) ...[
-                            const SizedBox(height: 15),
-                            _buildTarjetaDropdown(),
-                            const SizedBox(height: 10),
-                            _buildRegistrarTarjetaButton(),
-                          ],
                         ],
                       ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  _buildDateRow(sw),
+                  const SizedBox(height: 20),
+
+                  // Formulario Principal
+                  Container(
+                    padding: EdgeInsets.all(sw * 0.05),
+                    decoration: BoxDecoration(
+                      color: containerBlue,
+                      borderRadius: BorderRadius.circular(30),
                     ),
-                    const SizedBox(height: 20),
-                    _buildActionButtons(),
-                    const SizedBox(height: 30),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-      bottomNavigationBar: _buildCustomBottomNav(),
-    );
-  }
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Seleccionar hora', style: mSemibold(sw)),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _buildTimeDropdown(
+                                'Hora',
+                                hoursList,
+                                selectedHour,
+                                (v) => setState(() => selectedHour = v),
+                                sw,
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: _buildTimeDropdown(
+                                'Minutos',
+                                minutesList,
+                                selectedMinute,
+                                (v) => setState(() => selectedMinute = v),
+                                sw,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 15),
+                        Text('Lugar', style: mSemibold(sw)),
+                        const SizedBox(height: 8),
+                        _buildZMGAutocomplete(
+                          'Ubicación actual',
+                          origenController,
+                          sw,
+                        ),
 
-  // --- WIDGETS AUXILIARES ---
+                        const SizedBox(height: 15),
+                        Center(
+                          child: Column(
+                            children: [
+                              Text(
+                                'Cantidad de destinos',
+                                style: mSemibold(
+                                  sw,
+                                  color: primaryBlue,
+                                  size: 12,
+                                ),
+                              ),
+                              _buildStepperDestinos(sw),
+                            ],
+                          ),
+                        ),
 
-  Widget _buildRegistrarAcompananteButton() {
-    return SizedBox(
-      width: double.infinity,
-      child: OutlinedButton.icon(
-        onPressed: () {
-          Navigator.pushNamed(
-            context,
-            '/registro_acompanante',
-          ).then((_) => _cargarAcompanantes());
-        },
-        icon: const Icon(Icons.person_add, size: 18, color: primaryBlue),
-        label: Text(
-          "Registrar nuevo acompañante",
-          style: mSemibold(color: primaryBlue),
-        ),
-        style: OutlinedButton.styleFrom(
-          side: const BorderSide(color: primaryBlue),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-        ),
-      ),
-    );
-  }
+                        // Generación de Inputs Dinámicos
+                        ...List.generate(_cantidadDestinos, (index) {
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: _buildZMGAutocomplete(
+                              'Parada ${index + 1}',
+                              _destinoControllers[index],
+                              sw,
+                            ),
+                          );
+                        }),
 
-  Widget _buildTarjetaDropdown() {
-    if (cargandoTarjetas) {
-      return const Center(child: CircularProgressIndicator());
-    }
+                        const SizedBox(height: 15),
+                        _buildCompanionSection(sw),
+                        const SizedBox(height: 10),
 
-    String hintText = tarjetas.isEmpty
-        ? 'Registrar Tarjeta'
-        : 'Selecciona tu tarjeta';
+                        if (hasCompanion) ...[
+                          _buildAcompananteDropdown(sw),
+                          const SizedBox(height: 10),
+                          _buildRegistrarAcompananteButton(sw),
+                          const SizedBox(height: 15),
+                        ],
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 15),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: accentBlue.withOpacity(0.5)),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          value: selectedTarjetaId,
-          dropdownColor: Colors.white,
-          hint: Row(
-            children: [
-              const Icon(Icons.credit_card, color: primaryBlue, size: 20),
-              const SizedBox(width: 10),
-              Text(hintText, style: mSemibold(color: accentBlue)),
-            ],
-          ),
-          isExpanded: true,
-          items: tarjetas.isEmpty
-              ? []
-              : tarjetas.map((t) {
-                  return DropdownMenuItem(
-                    value: t["id"],
-                    child: Text(
-                      t["texto"]!,
-                      style: mSemibold(color: primaryBlue),
+                        _buildSpecialNeedDropdown(sw),
+                        const SizedBox(height: 15),
+
+                        Center(
+                          child: Text(
+                            'Seleccionar forma de pago',
+                            style: mSemibold(sw, color: primaryBlue, size: 13),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        _buildSimpleDropdown(
+                          'Forma de pago',
+                          Icons.monetization_on_outlined,
+                          [
+                            'Tarjeta de crédito',
+                            'Tarjeta de débito',
+                            'Efectivo',
+                          ],
+                          selectedPayment,
+                          (v) => setState(() {
+                            selectedPayment = v;
+                            if (!isCardPayment) selectedTarjetaId = null;
+                          }),
+                          sw,
+                        ),
+
+                        if (isCardPayment) ...[
+                          const SizedBox(height: 15),
+                          _buildTarjetaDropdown(sw),
+                          const SizedBox(height: 10),
+                          _buildRegistrarTarjetaButton(sw),
+                        ],
+                      ],
                     ),
-                  );
-                }).toList(),
-          onChanged: tarjetas.isEmpty
-              ? null
-              : (v) => setState(() => selectedTarjetaId = v),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRegistrarTarjetaButton() {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton.icon(
-        onPressed: () {
-          Navigator.pushNamed(
-            context,
-            '/registro_tarjeta',
-          ).then((_) => _cargarTarjetas());
-        },
-        icon: const Icon(Icons.add_card, color: Colors.white, size: 18),
-        label: Text("Registrar Tarjeta", style: mSemibold(color: Colors.white)),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: accentBlue,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          elevation: 0,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHeader() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 30),
-      decoration: const BoxDecoration(color: lightBlueBg),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          const SizedBox(width: 45),
-          Text('Agenda tu viaje', style: mExtrabold(size: 22)),
-          Transform.translate(
-            offset: const Offset(0, 40),
-            child: Image.asset(
-              'assets/control_voz.png',
-              height: 65,
-              width: 65,
-              errorBuilder: (c, e, s) => const CircleAvatar(
-                backgroundColor: primaryBlue,
-                child: Icon(Icons.mic, color: Colors.white),
+                  ),
+                  const SizedBox(height: 20),
+                  _buildActionButtons(sw),
+                  const SizedBox(height: 30),
+                ],
               ),
             ),
           ),
         ],
       ),
+      bottomNavigationBar: _buildCustomBottomNav(sw),
     );
   }
 
-  Widget _buildDateRow() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: _diasSemana.map((date) {
-        final isPast = date.isBefore(
-          DateTime.now().subtract(const Duration(days: 1)),
-        );
+  // --- WIDGETS AUXILIARES ---
 
-        final isSelected =
-            _selectedDateTime != null &&
-            date.day == _selectedDateTime!.day &&
-            date.month == _selectedDateTime!.month;
+  Widget _buildDateRow(double sw) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      physics: const BouncingScrollPhysics(),
+      child: Row(
+        children: _diasSemana.map((date) {
+          final isPast = date.isBefore(
+            DateTime.now().subtract(const Duration(days: 1)),
+          );
+          final isSelected =
+              _selectedDateTime != null &&
+              date.day == _selectedDateTime!.day &&
+              date.month == _selectedDateTime!.month;
 
-        return GestureDetector(
-          onTap: isPast ? null : () => setState(() => _selectedDateTime = date),
-          child: Opacity(
-            opacity: isPast ? 0.4 : 1,
-            child: _dateItem(_dayLetter(date), date.day.toString(), isSelected),
-          ),
-        );
-      }).toList(),
+          return GestureDetector(
+            onTap: isPast
+                ? null
+                : () => setState(() => _selectedDateTime = date),
+            child: Opacity(
+              opacity: isPast ? 0.4 : 1,
+              child: _dateItem(
+                _dayLetter(date),
+                date.day.toString(),
+                isSelected,
+                sw,
+              ),
+            ),
+          );
+        }).toList(),
+      ),
     );
   }
 
-  Widget _dateItem(String day, String num, bool isSelected) {
+  Widget _dateItem(String day, String num, bool isSelected, double sw) {
     return Container(
-      width: 58,
-      height: 65,
-      margin: const EdgeInsets.symmetric(horizontal: 3),
+      width: sw * 0.155,
+      height: 75,
+      margin: const EdgeInsets.symmetric(horizontal: 4),
       decoration: BoxDecoration(
         color: const Color(0xFFE3F2FD),
         borderRadius: BorderRadius.circular(12),
@@ -545,19 +555,15 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
             child: Text(
               day,
               textAlign: TextAlign.center,
-              style: mSemibold(color: Colors.white, size: 11),
+              style: mSemibold(sw, color: Colors.white, size: 11),
             ),
           ),
           Expanded(
-            child: Center(
-              child: Text(
-                num,
-                style: GoogleFonts.montserrat(
-                  color: primaryBlue,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(num, style: mExtrabold(sw, color: primaryBlue, size: 16)),
+              ],
             ),
           ),
         ],
@@ -565,17 +571,19 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
     );
   }
 
-  Widget _buildStepperDestinos() {
+  Widget _buildStepperDestinos(double sw) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         IconButton(
-          onPressed: () => setState(() {
+          onPressed: () {
             if (_cantidadDestinos > 2) {
-              _cantidadDestinos--;
-              _syncDestinoControllers();
+              setState(() {
+                _cantidadDestinos--;
+                _syncDestinoControllers();
+              });
             }
-          }),
+          },
           icon: const Icon(Icons.remove_circle, color: primaryBlue, size: 28),
         ),
         Container(
@@ -586,23 +594,29 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
           ),
           child: Text(
             '$_cantidadDestinos',
-            style: mSemibold(color: Colors.white, size: 16),
+            style: mSemibold(sw, color: Colors.white, size: 16),
           ),
         ),
         IconButton(
-          onPressed: () => setState(() {
+          onPressed: () {
             if (_cantidadDestinos < 5) {
-              _cantidadDestinos++;
-              _syncDestinoControllers();
+              setState(() {
+                _cantidadDestinos++;
+                _syncDestinoControllers();
+              });
             }
-          }),
+          },
           icon: const Icon(Icons.add_circle, color: primaryBlue, size: 28),
         ),
       ],
     );
   }
 
-  Widget _buildZMGAutocomplete(String hint, TextEditingController controller) {
+  Widget _buildZMGAutocomplete(
+    String hint,
+    TextEditingController controller,
+    double sw,
+  ) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 15),
       decoration: BoxDecoration(
@@ -610,24 +624,23 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
         borderRadius: BorderRadius.circular(20),
       ),
       child: Autocomplete<String>(
-        optionsBuilder: (value) {
-          if (value.text.isEmpty) return const Iterable<String>.empty();
-          return zmgLocations.where(
-            (loc) => loc.toLowerCase().contains(value.text.toLowerCase()),
-          );
-        },
-        onSelected: (value) {
-          controller.text = value;
-        },
-        fieldViewBuilder: (context, _, focusNode, __) {
+        optionsBuilder: (v) => v.text.isEmpty
+            ? const Iterable.empty()
+            : zmgLocations.where(
+                (l) => l.toLowerCase().contains(v.text.toLowerCase()),
+              ),
+        onSelected: (v) => controller.text = v,
+        fieldViewBuilder: (c, ct, f, o) {
+          if (ct.text.isEmpty && controller.text.isNotEmpty)
+            ct.text = controller.text;
           return TextField(
-            controller: controller,
-            focusNode: focusNode,
-            style: mSemibold(color: primaryBlue, size: 13),
+            controller: ct,
+            focusNode: f,
+            onChanged: (text) => controller.text = text,
             decoration: InputDecoration(
               hintText: hint,
-              hintStyle: mSemibold(color: accentBlue, size: 13),
-              icon: const Icon(Icons.location_on, color: primaryBlue),
+              hintStyle: labelStyle(sw),
+              icon: const Icon(Icons.location_on, color: primaryBlue, size: 20),
               border: InputBorder.none,
             ),
           );
@@ -637,10 +650,11 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
   }
 
   Widget _buildTimeDropdown(
-    String hint,
-    List<String> items,
-    String? val,
-    Function(String?) onChange,
+    String h,
+    List<String> i,
+    String? v,
+    Function(String?) o,
+    double sw,
   ) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -650,50 +664,19 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
-          value: val,
-          dropdownColor: Colors.white,
-          hint: Text(hint, style: mSemibold(color: accentBlue)),
+          value: v,
+          hint: Text(h, style: labelStyle(sw, size: 12)),
           isExpanded: true,
-          items: items
-              .map(
-                (e) => DropdownMenuItem(
-                  value: e,
-                  child: Text(e, style: mSemibold(color: primaryBlue)),
-                ),
-              )
+          items: i
+              .map((e) => DropdownMenuItem(value: e, child: Text(e)))
               .toList(),
-          onChanged: onChange,
+          onChanged: o,
         ),
       ),
     );
   }
 
-  Widget _buildCompanionSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Checkbox(
-              value: hasCompanion,
-              activeColor: primaryBlue,
-              onChanged: (v) => setState(() => hasCompanion = v!),
-            ),
-            Text('Registrar acompañante', style: mSemibold(color: accentBlue)),
-          ],
-        ),
-        Padding(
-          padding: const EdgeInsets.only(left: 45),
-          child: Text(
-            '*Marcar solo en caso de llevar acompañante',
-            style: mSemibold(color: Colors.red, size: 9),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSpecialNeedDropdown() {
+  Widget _buildSpecialNeedDropdown(double sw) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 15),
       decoration: BoxDecoration(
@@ -703,82 +686,27 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
           value: selectedNeed,
-          dropdownColor: Colors.white,
-          hint: Row(
-            children: [
-              Image.asset(
-                'assets/movecare.png',
-                height: 24,
-                width: 24,
-                errorBuilder: (c, e, s) =>
-                    const Icon(Icons.wb_sunny_outlined, color: primaryBlue),
-              ),
-              const SizedBox(width: 10),
-              Text('Necesidad especial', style: mSemibold(color: accentBlue)),
-            ],
-          ),
+          hint: Text('Necesidad especial', style: labelStyle(sw, size: 13)),
           isExpanded: true,
           items: needsList
-              .map(
-                (e) => DropdownMenuItem(
-                  value: e,
-                  child: Text(e, style: mSemibold(color: primaryBlue)),
-                ),
-              )
+              .map((e) => DropdownMenuItem(value: e, child: Text(e)))
               .toList(),
-          onChanged: (v) {
-            setState(() {
-              selectedNeed = v;
-              especificaciones = v;
-            });
-          },
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAcompananteDropdown() {
-    if (cargandoAcompanantes) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 15),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          value: selectedAcompananteId,
-          dropdownColor: Colors.white,
-          hint: Text(
-            acompanantes.isEmpty
-                ? 'Sin acompañantes'
-                : 'Selecciona acompañante',
-            style: mSemibold(color: accentBlue),
-          ),
-          isExpanded: true,
-          items: acompanantes.map((a) {
-            return DropdownMenuItem(
-              value: a["id"],
-              child: Text(a["nombre"]!, style: mSemibold(color: primaryBlue)),
-            );
-          }).toList(),
-          onChanged: acompanantes.isEmpty
-              ? null
-              : (v) => setState(() => selectedAcompananteId = v),
+          onChanged: (v) => setState(() {
+            selectedNeed = v;
+            especificaciones = v;
+          }),
         ),
       ),
     );
   }
 
   Widget _buildSimpleDropdown(
-    String hint,
-    IconData icon,
-    List<String> items,
-    String? val,
-    Function(String?) onChange,
+    String h,
+    IconData i,
+    List<String> it,
+    String? v,
+    Function(String?) o,
+    double sw,
   ) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 15),
@@ -788,31 +716,136 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
-          value: val,
-          dropdownColor: Colors.white,
+          value: v,
           hint: Row(
             children: [
-              Icon(icon, color: primaryBlue),
+              Icon(i, color: primaryBlue, size: 20),
               const SizedBox(width: 10),
-              Text(hint, style: mSemibold(color: accentBlue)),
+              Text(h, style: labelStyle(sw, size: 13)),
             ],
           ),
           isExpanded: true,
-          items: items
-              .map(
-                (e) => DropdownMenuItem(
-                  value: e,
-                  child: Text(e, style: mSemibold(color: primaryBlue)),
-                ),
-              )
+          items: it
+              .map((e) => DropdownMenuItem(value: e, child: Text(e)))
               .toList(),
-          onChanged: onChange,
+          onChanged: o,
         ),
       ),
     );
   }
 
-  Widget _buildInstructionBadge() {
+  Widget _buildAcompananteDropdown(double sw) {
+    if (cargandoAcompanantes)
+      return const Center(child: CircularProgressIndicator());
+    return _buildSimpleDropdown(
+      acompanantes.isEmpty ? 'Sin acompañantes' : 'Selecciona acompañante',
+      Icons.person,
+      acompanantes.map((a) => a["nombre"]!).toList(),
+      acompanantes.firstWhere(
+                (element) => element["id"] == selectedAcompananteId,
+                orElse: () => {"nombre": ""},
+              )["nombre"] ==
+              ""
+          ? null
+          : acompanantes.firstWhere(
+              (element) => element["id"] == selectedAcompananteId,
+            )["nombre"],
+      (nombre) {
+        final id = acompanantes.firstWhere((a) => a["nombre"] == nombre)["id"];
+        setState(() => selectedAcompananteId = id);
+      },
+      sw,
+    );
+  }
+
+  Widget _buildTarjetaDropdown(double sw) {
+    if (cargandoTarjetas)
+      return const Center(child: CircularProgressIndicator());
+    return _buildSimpleDropdown(
+      tarjetas.isEmpty ? 'Registrar Tarjeta' : 'Selecciona tu tarjeta',
+      Icons.credit_card,
+      tarjetas.map((t) => t["texto"]!).toList(),
+      tarjetas.firstWhere(
+                (element) => element["id"] == selectedTarjetaId,
+                orElse: () => {"texto": ""},
+              )["texto"] ==
+              ""
+          ? null
+          : tarjetas.firstWhere(
+              (element) => element["id"] == selectedTarjetaId,
+            )["texto"],
+      (texto) {
+        final id = tarjetas.firstWhere((t) => t["texto"] == texto)["id"];
+        setState(() => selectedTarjetaId = id);
+      },
+      sw,
+    );
+  }
+
+  Widget _buildRegistrarAcompananteButton(double sw) {
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: () => Navigator.pushNamed(
+          context,
+          '/registro_acompanante',
+        ).then((_) => _cargarAcompanantes()),
+        icon: const Icon(Icons.person_add, size: 18, color: primaryBlue),
+        label: Text(
+          "Registrar nuevo acompañante",
+          style: mSemibold(sw, color: primaryBlue),
+        ),
+        style: OutlinedButton.styleFrom(
+          side: const BorderSide(color: primaryBlue),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRegistrarTarjetaButton(double sw) {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton.icon(
+        onPressed: () => Navigator.pushNamed(
+          context,
+          '/registro_tarjeta',
+        ).then((_) => _cargarTarjetas()),
+        icon: const Icon(Icons.add_card, color: Colors.white, size: 18),
+        label: Text(
+          "Registrar Tarjeta",
+          style: mSemibold(sw, color: Colors.white),
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: accentBlue,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          elevation: 0,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCompanionSection(double sw) {
+    return Row(
+      children: [
+        Checkbox(
+          value: hasCompanion,
+          activeColor: primaryBlue,
+          onChanged: (v) => setState(() => hasCompanion = v!),
+        ),
+        Text(
+          'Registrar acompañante',
+          style: mSemibold(sw, color: accentBlue, size: 13),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildInstructionBadge(double sw) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
       decoration: BoxDecoration(
@@ -826,57 +859,60 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
           const SizedBox(width: 8),
           Text(
             'Ingresa los datos para agendar',
-            style: mSemibold(color: Colors.white, size: 12),
+            style: mSemibold(sw, color: Colors.white, size: 12),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildActionButtons() {
+  Widget _buildActionButtons(double sw) {
     return Column(
       children: [
         ElevatedButton(
           onPressed: () {},
           style: ElevatedButton.styleFrom(
             backgroundColor: primaryBlue,
-            minimumSize: const Size(220, 45),
+            minimumSize: Size(sw * 0.6, 48),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(25),
             ),
           ),
           child: Text(
             'Mostrar estimación',
-            style: mSemibold(color: Colors.white),
+            style: mSemibold(sw, color: Colors.white, size: 16),
           ),
         ),
         const SizedBox(height: 15),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
-            _actionBtn(
-              'Agendar viaje',
-              accentBlue,
-              onPressed: () {
-                showConfirmModal(
-                  context: context,
-                  title: '¿Está seguro de que desea agendar el viaje?',
-                  onConfirm: _crearViaje,
-                );
-              },
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 5),
+                child: _actionBtn(
+                  'Agendar viaje',
+                  accentBlue,
+                  sw,
+                  () => showConfirmModal(
+                    context: context,
+                    title: '¿Está seguro?',
+                    onConfirm: _crearViaje,
+                  ),
+                ),
+              ),
             ),
-            _actionBtn(
-              'Cancelar',
-              accentBlue,
-              onPressed: () {
-                showConfirmModal(
-                  context: context,
-                  title: '¿Desea cancelar y volver al inicio?',
-                  onConfirm: () {
-                    Navigator.pushReplacementNamed(context, '/home_pasajero');
-                  },
-                );
-              },
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 5),
+                child: _actionBtn(
+                  'Cancelar',
+                  accentBlue,
+                  sw,
+                  () =>
+                      Navigator.pushReplacementNamed(context, '/home_pasajero'),
+                ),
+              ),
             ),
           ],
         ),
@@ -884,187 +920,216 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
     );
   }
 
-  Widget _buildOneDestinationButton() {
-    return Center(
-      child: ElevatedButton.icon(
-        onPressed: () {
-          Navigator.pushNamed(context, '/agendar_viaje');
-        },
-        icon: const Icon(Icons.alt_route, color: Colors.white),
-        label: Text(
-          'Agendar un solo destino',
-          style: mSemibold(color: Colors.white),
-        ),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: primaryBlue,
-          minimumSize: const Size(260, 45),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(25),
-          ),
-          elevation: 2,
-        ),
-      ),
-    );
-  }
-
-  Widget _actionBtn(
-    String label,
-    Color color, {
-    required VoidCallback onPressed,
-  }) {
+  Widget _actionBtn(String l, Color c, double sw, VoidCallback onTap) {
     return ElevatedButton(
-      onPressed: onPressed,
+      onPressed: onTap,
       style: ElevatedButton.styleFrom(
-        backgroundColor: color,
-        minimumSize: const Size(140, 40),
+        backgroundColor: c,
+        padding: const EdgeInsets.symmetric(vertical: 12),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       ),
-      child: Text(label, style: mSemibold()),
+      child: Text(
+        l,
+        textAlign: TextAlign.center,
+        style: mSemibold(sw, color: Colors.white, size: 12),
+      ),
     );
   }
 
-  Widget _buildCustomBottomNav() {
+  Widget _buildCustomBottomNav(double sw) {
     return Container(
-      height: 75,
-      decoration: const BoxDecoration(color: Color(0xFFE3F2FD)),
+      height: sw * 0.2,
+      decoration: const BoxDecoration(color: containerBlue),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          _navIcon(0, Icons.home, '/principal_pasajero'),
-          _navIcon(1, Icons.location_on, '/agendar_viaje'),
-          _navIcon(2, Icons.history, '/historial_viajes_pasajero'),
-          _navIcon(3, Icons.person, '/mi_perfil_pasajero'),
+          _navIcon(0, Icons.home),
+          _navIcon(1, Icons.location_on),
+          _navIcon(2, Icons.history),
+          _navIcon(3, Icons.person),
         ],
       ),
     );
   }
 
-  Widget _navIcon(int index, IconData icon, String routeName) {
-    bool active = _selectedIndex == index;
+  Widget _navIcon(int i, IconData ic) {
+    bool a = _selectedIndex == i;
     return GestureDetector(
       onTap: () {
-        if (_selectedIndex != index) {
-          Navigator.pushReplacementNamed(context, routeName);
-        }
+        setState(() => _selectedIndex = i);
+        if (i == 0)
+          Navigator.pushReplacementNamed(context, '/principal_pasajero');
+        // Agregar otras rutas aquí si es necesario
       },
       child: Container(
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: active ? primaryBlue : Colors.white,
+          color: a ? primaryBlue : Colors.white,
           shape: BoxShape.circle,
         ),
-        child: Icon(icon, color: active ? Colors.white : primaryBlue, size: 28),
+        child: Icon(ic, color: a ? Colors.white : primaryBlue, size: 28),
       ),
     );
   }
+}
 
-  DateTime _buildFechaHoraInicio() {
-    if (_selectedDateTime == null) {
-      throw Exception('Selecciona una fecha');
-    }
-    if (selectedHour == null || selectedMinute == null) {
-      throw Exception('Selecciona una hora');
-    }
+// --- CLASES AUXILIARES DEL HEADER DINÁMICO ---
 
-    return DateTime(
-      _selectedDateTime!.year,
-      _selectedDateTime!.month,
-      _selectedDateTime!.day,
-      int.parse(selectedHour!),
-      int.parse(selectedMinute!),
+class _DynamicHeaderDelegate extends SliverPersistentHeaderDelegate {
+  final double maxHeight;
+  final double minHeight;
+  final bool isVoiceActive;
+  final VoidCallback onVoiceTap;
+  final double screenWidth;
+
+  _DynamicHeaderDelegate({
+    required this.maxHeight,
+    required this.minHeight,
+    required this.isVoiceActive,
+    required this.onVoiceTap,
+    required this.screenWidth,
+  });
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    final double percent = shrinkOffset / maxHeight;
+    final double opacity = 1.0 - percent.clamp(0.0, 1.0);
+
+    return _VoicePulseWrapper(
+      maxHeight: maxHeight,
+      opacity: opacity,
+      isVoiceActive: isVoiceActive,
+      onVoiceTap: onVoiceTap,
     );
   }
 
-  List<Map<String, dynamic>> _buildDestinosPayload() {
-    final List<Map<String, dynamic>> destinos = [];
+  @override
+  double get maxExtent => maxHeight;
+  @override
+  double get minExtent => minHeight;
+  @override
+  bool shouldRebuild(covariant _DynamicHeaderDelegate oldDelegate) => true;
+}
 
-    for (int i = 0; i < _destinoControllers.length; i++) {
-      final text = _destinoControllers[i].text.trim();
-      if (text.isEmpty) {
-        throw Exception('Completa todos los destinos');
-      }
-      destinos.add({"direccion": text, "orden": i + 1});
-    }
+class _VoicePulseWrapper extends StatefulWidget {
+  final double maxHeight;
+  final double opacity;
+  final bool isVoiceActive;
+  final VoidCallback onVoiceTap;
 
-    return destinos;
+  const _VoicePulseWrapper({
+    required this.maxHeight,
+    required this.opacity,
+    required this.isVoiceActive,
+    required this.onVoiceTap,
+  });
+
+  @override
+  State<_VoicePulseWrapper> createState() => _VoicePulseWrapperState();
+}
+
+class _VoicePulseWrapperState extends State<_VoicePulseWrapper>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1000),
+    );
+    _animation = Tween<double>(
+      begin: 1.0,
+      end: 1.2,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+    if (widget.isVoiceActive) _controller.repeat(reverse: true);
   }
 
-  Future<void> _crearViaje() async {
-    if (_isCreatingTrip) return;
+  @override
+  void didUpdateWidget(covariant _VoicePulseWrapper oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isVoiceActive) {
+      _controller.repeat(reverse: true);
+    } else {
+      _controller.stop();
+      _controller.value = 0;
+    }
+  }
 
-    // VALIDACION TARJETA
-    bool esPagoConTarjeta =
-        (selectedPayment == 'Tarjeta de crédito' ||
-        selectedPayment == 'Tarjeta de débito');
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
-    if (esPagoConTarjeta && selectedTarjetaId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Por favor selecciona una tarjeta para continuar'),
-          backgroundColor: Colors.orange,
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Container(
+          height: widget.maxHeight,
+          width: double.infinity,
+          decoration: const BoxDecoration(color: Color(0xFFB3D4FF)),
+          child: Opacity(
+            opacity: widget.opacity,
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.only(top: 5),
+                child: Text(
+                  'Agenda tu viaje',
+                  style: GoogleFonts.montserrat(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.black,
+                  ),
+                ),
+              ),
+            ),
+          ),
         ),
-      );
-      return;
-    }
-
-    if (origenController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Por favor ingresa el punto de origen')),
-      );
-      return;
-    }
-
-    if (_selectedDateTime == null ||
-        selectedHour == null ||
-        selectedMinute == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Por favor selecciona fecha y hora')),
-      );
-      return;
-    }
-
-    if (hasCompanion && selectedAcompananteId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Seleccione un acompañante o desmarque la casilla'),
+        Positioned(
+          left: 10,
+          bottom: 35,
+          child: IconButton(
+            icon: const Icon(
+              Icons.arrow_back_ios_new,
+              color: Color(0xFF1559B2),
+              size: 20,
+            ),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
         ),
-      );
-      return;
-    }
-
-    setState(() => _isCreatingTrip = true);
-
-    try {
-      final fechaHoraInicio = _buildFechaHoraInicio();
-      final destinos = _buildDestinosPayload();
-
-      final viajeId = await ViajeService.crearViaje(
-        puntoInicio: origenController.text.trim(),
-        destino: null,
-        destinos: destinos,
-        checkVariosDestinos: true,
-        fechaHoraInicio: fechaHoraInicio.toIso8601String(),
-        metodoPago: selectedPayment ?? 'Efectivo',
-        idMetodo: esPagoConTarjeta ? selectedTarjetaId : null,
-        especificaciones: especificaciones,
-        checkAcompanante: hasCompanion,
-        idAcompanante: hasCompanion ? selectedAcompananteId : null,
-      );
-
-      if (!mounted) return;
-
-      Navigator.pushReplacementNamed(
-        context,
-        '/principal_pasajero',
-        arguments: viajeId,
-      );
-    } catch (e) {
-      if (!mounted) return;
-      AuthHelper.manejarError(context, e);
-    } finally {
-      if (mounted) {
-        setState(() => _isCreatingTrip = false);
-      }
-    }
+        Positioned(
+          right: 20,
+          bottom: -25,
+          child: GestureDetector(
+            onTap: widget.onVoiceTap,
+            child: ScaleTransition(
+              scale: _animation,
+              child: Image.asset(
+                widget.isVoiceActive
+                    ? 'assets/escuchando.png'
+                    : 'assets/control_voz.png',
+                height: 65,
+                width: 65,
+                errorBuilder: (c, e, s) => const CircleAvatar(
+                  backgroundColor: Color(0xFF1559B2),
+                  radius: 32,
+                  child: Icon(Icons.mic, color: Colors.white, size: 30),
+                ),
+                fit: BoxFit.contain,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
   }
 }

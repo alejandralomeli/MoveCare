@@ -42,7 +42,6 @@ flutter:
     - assets/pasajero.png
     - assets/auditiva.png
     - assets/visual.png
-    - assets/control_voz.png
     - assets/silla_ruedas.png
     - assets/ine_anverso.png
     - assets/ine_reverso.png
@@ -56,3 +55,7 @@ flutter:
     - assets/historial_icon.png
     - assets/perfil_icon.png
     - assets/movecare_principal.png
+    - assets/controlvoz.png
+    - assets/escuchando.png
+    - assets/aceptado.png
+    - assets/rechazado.png

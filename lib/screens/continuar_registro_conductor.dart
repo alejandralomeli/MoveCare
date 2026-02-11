@@ -7,15 +7,18 @@ class ContinuarRegistroConductor extends StatefulWidget {
 
   @override
   State<ContinuarRegistroConductor> createState() =>
-      _ContinueDriverRegisterScreenState();
+      _ContinuarRegistroConductorState();
 }
 
-class _ContinueDriverRegisterScreenState
+class _ContinuarRegistroConductorState
     extends State<ContinuarRegistroConductor> {
   static const Color primaryBlue = Color(0xFF1559B2);
   static const Color fieldBlue = Color(0xFFD6E8FF);
 
-  // ================== IDS ==================
+  // ================== UI HELPERS ==================
+  double sp(double size, double sw) => sw * (size / 375);
+
+  // ================== IDS & LOGIC ==================
   late String idUsuario;
   String? idConductor;
 
@@ -30,7 +33,7 @@ class _ContinueDriverRegisterScreenState
     'Mercedes-Benz Sprinter',
     'Ford Transit',
     'Volkswagen Transporter',
-    'Chevrolet Express'
+    'Chevrolet Express',
   ];
 
   final List<String> colores = [
@@ -40,7 +43,7 @@ class _ContinueDriverRegisterScreenState
     'Azul Marino',
     'Rojo',
     'Arena/Beige',
-    'Verde Oscuro'
+    'Verde Oscuro',
   ];
 
   final List<String> accesorios = [
@@ -49,7 +52,7 @@ class _ContinueDriverRegisterScreenState
     'Anclajes para Silla de Ruedas',
     'Asientos Giratorios',
     'Pasamanos Adicionales',
-    'Ninguno'
+    'Ninguno',
   ];
 
   // ================== SELECCIONES ==================
@@ -61,13 +64,16 @@ class _ContinueDriverRegisterScreenState
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    idUsuario = ModalRoute.of(context)!.settings.arguments as String;
-    _obtenerIdConductor();
+    // Recuperamos el ID del argumento de la ruta
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args != null && args is String) {
+      idUsuario = args;
+      _obtenerIdConductor();
+    }
   }
 
   Future<void> _obtenerIdConductor() async {
-    final response =
-        await VehicleService.getConductorId(idUsuario: idUsuario);
+    final response = await VehicleService.getConductorId(idUsuario: idUsuario);
 
     if (response["ok"]) {
       setState(() {
@@ -78,14 +84,16 @@ class _ContinueDriverRegisterScreenState
     }
   }
 
-  // ================== UI ==================
+  // ================== UI BUILD ==================
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
+    final sw = size.width;
 
     return Scaffold(
       body: Stack(
         children: [
+          // Fondo
           Positioned(
             top: 0,
             left: 0,
@@ -93,19 +101,38 @@ class _ContinueDriverRegisterScreenState
             height: size.height * 0.4,
             child: Image.asset('assets/ruta.png', fit: BoxFit.cover),
           ),
+
+          // Botón de regresar (UI de Main)
+          Positioned(
+            top: sp(35, sw),
+            left: sp(15, sw),
+            child: Container(
+              decoration: const BoxDecoration(shape: BoxShape.circle),
+              child: IconButton(
+                icon: Icon(
+                  Icons.arrow_back_ios_new,
+                  color: primaryBlue,
+                  size: sp(22, sw),
+                ),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ),
+          ),
+
+          // Logo (UI de Main)
           Positioned(
             top: size.height * 0.15,
             left: 0,
             right: 0,
             child: Center(
               child: Container(
-                width: 100,
-                height: 100,
+                width: sp(100, sw),
+                height: sp(100, sw),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(25),
                   boxShadow: const [
-                    BoxShadow(color: Colors.black12, blurRadius: 10)
+                    BoxShadow(color: Colors.black12, blurRadius: 10),
                   ],
                 ),
                 child: Padding(
@@ -115,6 +142,8 @@ class _ContinueDriverRegisterScreenState
               ),
             ),
           ),
+
+          // Formulario
           Align(
             alignment: Alignment.bottomCenter,
             child: Container(
@@ -128,21 +157,24 @@ class _ContinueDriverRegisterScreenState
                 ),
               ),
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 30),
+                physics: const BouncingScrollPhysics(),
+                padding: EdgeInsets.symmetric(horizontal: sp(30, sw)),
                 child: Column(
                   children: [
-                    const SizedBox(height: 35),
+                    SizedBox(height: sp(35, sw)),
                     Text(
                       'Datos de mi Vehículo',
                       style: GoogleFonts.montserrat(
                         color: primaryBlue,
                         fontWeight: FontWeight.bold,
-                        fontSize: 20,
+                        fontSize: sp(20, sw),
                       ),
                     ),
-                    const SizedBox(height: 25),
+                    SizedBox(height: sp(25, sw)),
 
+                    // Campos del formulario (Estilo Main + Lógica Head)
                     _buildDropdownField(
+                      sw: sw,
                       label: 'Marca del auto (Van)',
                       options: marcas,
                       value: marcaSeleccionada,
@@ -150,14 +182,14 @@ class _ContinueDriverRegisterScreenState
                           setState(() => marcaSeleccionada = val),
                       iconColor: Colors.blue.shade900,
                     ),
-
                     _buildTextField(
+                      sw: sw,
                       label: 'Modelo (Año)',
                       iconColor: Colors.blue.shade400,
                       controller: modeloController,
                     ),
-
                     _buildDropdownField(
+                      sw: sw,
                       label: 'Color',
                       options: colores,
                       value: colorSeleccionado,
@@ -165,14 +197,14 @@ class _ContinueDriverRegisterScreenState
                           setState(() => colorSeleccionado = val),
                       iconColor: Colors.blue.shade900,
                     ),
-
                     _buildTextField(
+                      sw: sw,
                       label: 'Placas',
                       iconColor: Colors.blue.shade400,
                       controller: placasController,
                     ),
-
                     _buildDropdownField(
+                      sw: sw,
                       label: 'Accesorios especiales',
                       options: accesorios,
                       value: accesorioSeleccionado,
@@ -181,11 +213,12 @@ class _ContinueDriverRegisterScreenState
                       iconColor: Colors.blue.shade900,
                     ),
 
-                    const SizedBox(height: 30),
+                    SizedBox(height: sp(30, sw)),
 
+                    // Botón de Registrar (Estilo Main + Lógica Head)
                     SizedBox(
-                      width: size.width * 0.75,
-                      height: 55,
+                      width: sw * 0.75,
+                      height: sp(55, sw),
                       child: ElevatedButton(
                         onPressed: _registrarVehiculo,
                         style: ElevatedButton.styleFrom(
@@ -199,15 +232,14 @@ class _ContinueDriverRegisterScreenState
                           style: GoogleFonts.montserrat(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
-                            fontSize: 16,
+                            fontSize: sp(16, sw),
                           ),
                         ),
                       ),
                     ),
-
-                    const SizedBox(height: 20),
-                    _buildFooter(context),
-                    const SizedBox(height: 30),
+                    SizedBox(height: sp(20, sw)),
+                    _buildFooter(context, sw),
+                    SizedBox(height: sp(40, sw)),
                   ],
                 ),
               ),
@@ -218,10 +250,19 @@ class _ContinueDriverRegisterScreenState
     );
   }
 
-  // ================== LOGICA ==================
+  // ================== LOGICA DEL NEGOCIO ==================
   Future<void> _registrarVehiculo() async {
     if (idConductor == null) {
       _showError('No se pudo obtener el conductor');
+      return;
+    }
+
+    // Validación básica de campos vacíos
+    if (marcaSeleccionada == null ||
+        colorSeleccionado == null ||
+        modeloController.text.isEmpty ||
+        placasController.text.isEmpty) {
+      _showError('Por favor completa todos los campos requeridos');
       return;
     }
 
@@ -235,19 +276,23 @@ class _ContinueDriverRegisterScreenState
     );
 
     if (response["ok"]) {
-      Navigator.pushReplacementNamed(context, '/login');
+      if (mounted) Navigator.pushReplacementNamed(context, '/login');
     } else {
       _showError(response["error"]);
     }
   }
 
   void _showError(String message) {
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(message)));
+    if (!mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
-  // ================== WIDGETS ==================
+  // ================== WIDGETS PERSONALIZADOS ==================
+
   Widget _buildDropdownField({
+    required double sw,
     required String label,
     required List<String> options,
     required String? value,
@@ -255,7 +300,7 @@ class _ContinueDriverRegisterScreenState
     required Color iconColor,
   }) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: EdgeInsets.only(bottom: sp(12, sw)),
       child: Container(
         decoration: BoxDecoration(
           color: fieldBlue,
@@ -268,15 +313,41 @@ class _ContinueDriverRegisterScreenState
             label,
             style: GoogleFonts.montserrat(
               color: primaryBlue,
-              fontSize: 14,
+              fontSize: sp(14, sw),
               fontWeight: FontWeight.w600,
             ),
           ),
-          decoration: const InputDecoration(border: InputBorder.none),
-          items: options
-              .map((e) =>
-                  DropdownMenuItem(value: e, child: Text(e)))
-              .toList(),
+          icon: const Padding(
+            padding: EdgeInsets.only(right: 15),
+            child: Icon(Icons.arrow_drop_down, color: primaryBlue),
+          ),
+          decoration: InputDecoration(
+            border: InputBorder.none,
+            prefixIcon: UnconstrainedBox(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 15),
+                child: CircleAvatar(
+                  backgroundColor: iconColor,
+                  radius: sp(10, sw),
+                ),
+              ),
+            ),
+            contentPadding: const EdgeInsets.symmetric(vertical: 18),
+          ),
+          dropdownColor: fieldBlue,
+          borderRadius: BorderRadius.circular(20),
+          items: options.map((String option) {
+            return DropdownMenuItem<String>(
+              value: option,
+              child: Text(
+                option,
+                style: GoogleFonts.montserrat(
+                  color: primaryBlue,
+                  fontSize: sp(14, sw),
+                ),
+              ),
+            );
+          }).toList(),
           onChanged: onChanged,
         ),
       ),
@@ -284,38 +355,59 @@ class _ContinueDriverRegisterScreenState
   }
 
   Widget _buildTextField({
+    required double sw,
     required String label,
     required Color iconColor,
-    TextEditingController? controller,
+    required TextEditingController controller, // Fusionado: Agregado controller
   }) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: EdgeInsets.only(bottom: sp(12, sw)),
       child: Container(
         decoration: BoxDecoration(
           color: fieldBlue,
           borderRadius: BorderRadius.circular(20),
         ),
         child: TextField(
-          controller: controller,
+          controller: controller, // Fusionado: Usando el controller
+          style: GoogleFonts.montserrat(
+            color: primaryBlue,
+            fontSize: sp(14, sw),
+          ),
           decoration: InputDecoration(
             hintText: label,
+            hintStyle: GoogleFonts.montserrat(
+              color: primaryBlue,
+              fontSize: sp(14, sw),
+              fontWeight: FontWeight.w600,
+            ),
+            prefixIcon: UnconstrainedBox(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 15),
+                child: CircleAvatar(
+                  backgroundColor: iconColor,
+                  radius: sp(10, sw),
+                ),
+              ),
+            ),
             border: InputBorder.none,
-            contentPadding:
-                const EdgeInsets.symmetric(vertical: 18, horizontal: 20),
+            contentPadding: const EdgeInsets.symmetric(
+              vertical: 18,
+              horizontal: 20,
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildFooter(BuildContext context) {
+  Widget _buildFooter(BuildContext context, double sw) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Text(
           '¿Ya tienes cuenta? ',
           style: GoogleFonts.montserrat(
-            fontSize: 13,
+            fontSize: sp(13, sw),
             color: Colors.black54,
           ),
         ),
@@ -326,7 +418,7 @@ class _ContinueDriverRegisterScreenState
             style: GoogleFonts.montserrat(
               color: primaryBlue,
               fontWeight: FontWeight.bold,
-              fontSize: 13,
+              fontSize: sp(13, sw),
             ),
           ),
         ),
