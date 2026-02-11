@@ -5,14 +5,17 @@ class ContinuarRegistroConductor extends StatefulWidget {
   const ContinuarRegistroConductor({super.key});
 
   @override
-  State<ContinuarRegistroConductor> createState() => _ContinuarRegistroConductorState();
+  State<ContinuarRegistroConductor> createState() =>
+      _ContinuarRegistroConductorState();
 }
 
-class _ContinuarRegistroConductorState extends State<ContinuarRegistroConductor> {
+class _ContinuarRegistroConductorState
+    extends State<ContinuarRegistroConductor> {
   static const Color primaryBlue = Color(0xFF1559B2);
   static const Color fieldBlue = Color(0xFFD6E8FF);
 
-  // --- LISTAS DE OPCIONES ---
+  double sp(double size, double sw) => sw * (size / 375);
+
   final List<String> marcas = [
     'Toyota Hiace',
     'Nissan Urvan',
@@ -41,7 +44,6 @@ class _ContinuarRegistroConductorState extends State<ContinuarRegistroConductor>
     'Ninguno'
   ];
 
-  // Variables para guardar la selección
   String? marcaSeleccionada;
   String? colorSeleccionado;
   String? accesorioSeleccionado;
@@ -49,11 +51,12 @@ class _ContinuarRegistroConductorState extends State<ContinuarRegistroConductor>
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
+    final sw = size.width;
 
     return Scaffold(
       body: Stack(
         children: [
-          // 1. Fondo del Mapa
+
           Positioned(
             top: 0,
             left: 0,
@@ -65,19 +68,33 @@ class _ContinuarRegistroConductorState extends State<ContinuarRegistroConductor>
             ),
           ),
 
-          // 2. Logo Circular Centrado
-         Positioned(
+          Positioned(
+            top: sp(35, sw),
+            left: sp(15, sw),
+            child: Container(
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+              ),
+              child: IconButton(
+                icon: Icon(Icons.arrow_back_ios_new,
+                    color: primaryBlue, size: sp(22, sw)),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ),
+          ),
+
+          Positioned(
             top: size.height * 0.15,
             left: 0,
             right: 0,
             child: Center(
               child: Container(
-                width: 100,
-                height: 100,
+                width: sp(100, sw),
+                height: sp(100, sw),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(25),
-                  boxShadow: [
+                  boxShadow: const [
                     BoxShadow(color: Colors.black12, blurRadius: 10)
                   ],
                 ),
@@ -88,8 +105,7 @@ class _ContinuarRegistroConductorState extends State<ContinuarRegistroConductor>
               ),
             ),
           ),
-          
-          // 3. Tarjeta Blanca de Formulario
+
           Align(
             alignment: Alignment.bottomCenter,
             child: Container(
@@ -103,65 +119,64 @@ class _ContinuarRegistroConductorState extends State<ContinuarRegistroConductor>
                 ),
               ),
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 30),
+                physics: const BouncingScrollPhysics(),
+                padding: EdgeInsets.symmetric(horizontal: sp(30, sw)),
                 child: Column(
                   children: [
-                    const SizedBox(height: 35),
+                    SizedBox(height: sp(35, sw)),
                     Text(
                       'Datos de mi Vehículo',
                       style: GoogleFonts.montserrat(
                         color: primaryBlue,
                         fontWeight: FontWeight.bold,
-                        fontSize: 20,
+                        fontSize: sp(20, sw),
                       ),
                     ),
-                    const SizedBox(height: 25),
-
-                    // --- CAMPOS ---
+                    SizedBox(height: sp(25, sw)),
                     _buildDropdownField(
+                      sw: sw,
                       label: 'Marca del auto (Van)',
                       options: marcas,
                       value: marcaSeleccionada,
-                      onChanged: (val) => setState(() => marcaSeleccionada = val),
+                      onChanged: (val) =>
+                          setState(() => marcaSeleccionada = val),
                       iconColor: Colors.blue.shade900,
                     ),
-
                     _buildTextField(
+                      sw: sw,
                       label: 'Modelo (Año)',
                       iconColor: Colors.blue.shade400,
                     ),
-
                     _buildDropdownField(
+                      sw: sw,
                       label: 'Color',
                       options: colores,
                       value: colorSeleccionado,
-                      onChanged: (val) => setState(() => colorSeleccionado = val),
+                      onChanged: (val) =>
+                          setState(() => colorSeleccionado = val),
                       iconColor: Colors.blue.shade900,
                     ),
-
                     _buildTextField(
+                      sw: sw,
                       label: 'Placas',
                       iconColor: Colors.blue.shade400,
                     ),
-
                     _buildDropdownField(
+                      sw: sw,
                       label: 'Accesorios especiales',
                       options: accesorios,
                       value: accesorioSeleccionado,
-                      onChanged: (val) => setState(() => accesorioSeleccionado = val),
+                      onChanged: (val) =>
+                          setState(() => accesorioSeleccionado = val),
                       iconColor: Colors.blue.shade900,
                     ),
+                    SizedBox(height: sp(30, sw)),
 
-                    const SizedBox(height: 30),
-
-                    // Botón Registrarme
                     SizedBox(
-                      width: size.width * 0.75,
-                      height: 55,
+                      width: sw * 0.75,
+                      height: sp(55, sw),
                       child: ElevatedButton(
-                        onPressed: () {
-                          // Aquí iría la lógica final de registro
-                        },
+                        onPressed: () {},
                         style: ElevatedButton.styleFrom(
                           backgroundColor: primaryBlue,
                           shape: RoundedRectangleBorder(
@@ -174,15 +189,14 @@ class _ContinuarRegistroConductorState extends State<ContinuarRegistroConductor>
                           style: GoogleFonts.montserrat(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
-                            fontSize: 16,
+                            fontSize: sp(16, sw),
                           ),
                         ),
                       ),
                     ),
-
-                    const SizedBox(height: 20),
-                    _buildFooter(context),
-                    const SizedBox(height: 30),
+                    SizedBox(height: sp(20, sw)),
+                    _buildFooter(context, sw),
+                    SizedBox(height: sp(40, sw)),
                   ],
                 ),
               ),
@@ -193,8 +207,8 @@ class _ContinuarRegistroConductorState extends State<ContinuarRegistroConductor>
     );
   }
 
-  // WIDGET DROP DOWN (CORREGIDO Y CENTRADO)
   Widget _buildDropdownField({
+    required double sw,
     required String label,
     required List<String> options,
     required String? value,
@@ -202,7 +216,7 @@ class _ContinuarRegistroConductorState extends State<ContinuarRegistroConductor>
     required Color iconColor,
   }) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: EdgeInsets.only(bottom: sp(12, sw)),
       child: Container(
         decoration: BoxDecoration(
           color: fieldBlue,
@@ -215,7 +229,7 @@ class _ContinuarRegistroConductorState extends State<ContinuarRegistroConductor>
             label,
             style: GoogleFonts.montserrat(
               color: primaryBlue,
-              fontSize: 14,
+              fontSize: sp(14, sw),
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -225,17 +239,15 @@ class _ContinuarRegistroConductorState extends State<ContinuarRegistroConductor>
           ),
           decoration: InputDecoration(
             border: InputBorder.none,
-            // PrefixIcon ajustado para centrar el círculo
             prefixIcon: UnconstrainedBox(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 15),
                 child: CircleAvatar(
                   backgroundColor: iconColor,
-                  radius: 10,
+                  radius: sp(10, sw),
                 ),
               ),
             ),
-            // Padding vertical para centrar el texto seleccionado
             contentPadding: const EdgeInsets.symmetric(vertical: 18),
           ),
           dropdownColor: fieldBlue,
@@ -247,7 +259,7 @@ class _ContinuarRegistroConductorState extends State<ContinuarRegistroConductor>
                 option,
                 style: GoogleFonts.montserrat(
                   color: primaryBlue,
-                  fontSize: 14,
+                  fontSize: sp(14, sw),
                 ),
               ),
             );
@@ -258,22 +270,23 @@ class _ContinuarRegistroConductorState extends State<ContinuarRegistroConductor>
     );
   }
 
-  // WIDGET TEXTFIELD ESTÁNDAR
-  Widget _buildTextField({required String label, required Color iconColor}) {
+  Widget _buildTextField(
+      {required double sw, required String label, required Color iconColor}) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: EdgeInsets.only(bottom: sp(12, sw)),
       child: Container(
         decoration: BoxDecoration(
           color: fieldBlue,
           borderRadius: BorderRadius.circular(20),
         ),
         child: TextField(
-          style: GoogleFonts.montserrat(color: primaryBlue, fontSize: 14),
+          style:
+              GoogleFonts.montserrat(color: primaryBlue, fontSize: sp(14, sw)),
           decoration: InputDecoration(
             hintText: label,
             hintStyle: GoogleFonts.montserrat(
               color: primaryBlue,
-              fontSize: 14,
+              fontSize: sp(14, sw),
               fontWeight: FontWeight.w600,
             ),
             prefixIcon: UnconstrainedBox(
@@ -281,7 +294,7 @@ class _ContinuarRegistroConductorState extends State<ContinuarRegistroConductor>
                 padding: const EdgeInsets.symmetric(horizontal: 15),
                 child: CircleAvatar(
                   backgroundColor: iconColor,
-                  radius: 10,
+                  radius: sp(10, sw),
                 ),
               ),
             ),
@@ -293,13 +306,14 @@ class _ContinuarRegistroConductorState extends State<ContinuarRegistroConductor>
     );
   }
 
-  Widget _buildFooter(BuildContext context) {
+  Widget _buildFooter(BuildContext context, double sw) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Text(
           '¿Ya tienes cuenta? ',
-          style: GoogleFonts.montserrat(fontSize: 13, color: Colors.black54),
+          style: GoogleFonts.montserrat(
+              fontSize: sp(13, sw), color: Colors.black54),
         ),
         GestureDetector(
           onTap: () => Navigator.pushNamed(context, '/login'),
@@ -308,7 +322,7 @@ class _ContinuarRegistroConductorState extends State<ContinuarRegistroConductor>
             style: GoogleFonts.montserrat(
               color: primaryBlue,
               fontWeight: FontWeight.bold,
-              fontSize: 13,
+              fontSize: sp(13, sw),
             ),
           ),
         ),

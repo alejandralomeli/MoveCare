@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-class MiPerfilPasajero extends StatefulWidget {
-  const MiPerfilPasajero({super.key});
+class MiPerfilConductor extends StatefulWidget {
+  const MiPerfilConductor({super.key});
 
   @override
-  State<MiPerfilPasajero> createState() => MiPerfilPasajeroState();
+  State<MiPerfilConductor> createState() => MiPerfilConductorState();
 }
 
-class MiPerfilPasajeroState extends State<MiPerfilPasajero> with SingleTickerProviderStateMixin {
+class MiPerfilConductorState extends State<MiPerfilConductor> with TickerProviderStateMixin {
   static const Color primaryBlue = Color(0xFF1559B2);
   static const Color lightBlueBg = Color(0xFFB3D4FF);
   static const Color dividerColor = Color(0xFFD6E8FF);
@@ -17,40 +17,24 @@ class MiPerfilPasajeroState extends State<MiPerfilPasajero> with SingleTickerPro
   bool _isListening = false;
 
   late AnimationController _pulseController;
+  late Animation<double> _pulseAnimation;
 
   @override
   void initState() {
     super.initState();
     _pulseController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 600),
-      lowerBound: 1.0,
-      upperBound: 1.15,
-    )..addStatusListener((status) {
-        if (status == AnimationStatus.completed) {
-          _pulseController.reverse();
-        } else if (status == AnimationStatus.dismissed && _isListening) {
-          _pulseController.forward();
-        }
-      });
+      duration: const Duration(milliseconds: 800),
+    );
+    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.2).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
   }
 
   @override
   void dispose() {
     _pulseController.dispose();
     super.dispose();
-  }
-
-  void _toggleListening() {
-    setState(() {
-      _isListening = !_isListening;
-      if (_isListening) {
-        _pulseController.forward();
-      } else {
-        _pulseController.stop();
-        _pulseController.value = 1.0;
-      }
-    });
   }
 
   double sp(double size, double sw) => sw * (size / 375);
@@ -90,13 +74,23 @@ class MiPerfilPasajeroState extends State<MiPerfilPasajero> with SingleTickerPro
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       IconButton(
-                        icon: const Icon(Icons.arrow_back_ios_new, color: primaryBlue, size: 20),
+                        icon: Icon(Icons.arrow_back_ios_new, color: primaryBlue, size: 20),
                         onPressed: () => Navigator.pop(context),
                       ),
                       GestureDetector(
-                        onTap: _toggleListening,
+                        onTap: () {
+                          setState(() {
+                            _isListening = !_isListening;
+                            if (_isListening) {
+                              _pulseController.repeat(reverse: true);
+                            } else {
+                              _pulseController.stop();
+                              _pulseController.reset();
+                            }
+                          });
+                        },
                         child: ScaleTransition(
-                          scale: _pulseController,
+                          scale: _pulseAnimation,
                           child: AnimatedSwitcher(
                             duration: const Duration(milliseconds: 300),
                             child: Image.asset(
@@ -150,6 +144,8 @@ class MiPerfilPasajeroState extends State<MiPerfilPasajero> with SingleTickerPro
                             _buildDivider(),
                             _buildMenuOption('Configuración de Perfil', () => print("Configuración"), sw),
                             _buildDivider(),
+                            _buildMenuOption('Mis Métricas', () => print("Métricas"), sw),
+                            _buildDivider(),
                             _buildMenuOption('Privacidad', () => print("Privacidad"), sw),
                           ],
                         ),
@@ -179,7 +175,7 @@ class MiPerfilPasajeroState extends State<MiPerfilPasajero> with SingleTickerPro
           child: CircleAvatar(
             radius: sp(65, sw),
             backgroundColor: const Color(0xFF81D4FA),
-            backgroundImage: const AssetImage('assets/pasajero.png'),
+            backgroundImage: const AssetImage('assets/conductor.png'),
           ),
         ),
         SizedBox(height: sp(12, sw)),
