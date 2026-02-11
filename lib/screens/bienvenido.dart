@@ -57,7 +57,7 @@ class Bienvenido extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           _buildSimpleButton(
-                              context, 'Iniciar Sesión', '/login', size),
+                              context, 'Iniciar Sesión', '/iniciar_sesion', size),
                           Padding(
                             padding: EdgeInsets.symmetric(
                                 horizontal: size.width * 0.03),
@@ -71,7 +71,7 @@ class Bienvenido extends StatelessWidget {
                             ),
                           ),
                           _buildSimpleButton(
-                              context, 'Registrarse', '/register_screen', size),
+                              context, 'Registrarse', '/registro', size),
                         ],
                       ),
                     ),

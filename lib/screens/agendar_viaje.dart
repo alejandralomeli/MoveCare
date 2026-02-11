@@ -864,7 +864,7 @@ class _AgendarViajeState extends State<AgendarViaje>
                   context: context,
                   title: '¿Desea cancelar y volver al inicio?',
                   onConfirm: () =>
-                      Navigator.pushReplacementNamed(context, '/home_pasajero'),
+                      Navigator.pushReplacementNamed(context, '/principal_pasajero'),
                 );
               },
             ),
@@ -986,7 +986,7 @@ class _AgendarViajeState extends State<AgendarViaje>
           backgroundColor: Colors.green,
         ),
       );
-      Navigator.pushReplacementNamed(context, '/home_pasajero');
+      Navigator.pushReplacementNamed(context, '/principal_pasajero');
     } catch (e) {
       if (mounted) AuthHelper.manejarError(context, e);
     } finally {

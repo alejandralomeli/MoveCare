@@ -276,7 +276,7 @@ class _ContinuarRegistroConductorState
     );
 
     if (response["ok"]) {
-      if (mounted) Navigator.pushReplacementNamed(context, '/login');
+      if (mounted) Navigator.pushReplacementNamed(context, '/iniciar_sesion');
     } else {
       _showError(response["error"]);
     }
@@ -412,7 +412,7 @@ class _ContinuarRegistroConductorState
           ),
         ),
         GestureDetector(
-          onTap: () => Navigator.pushNamed(context, '/login'),
+          onTap: () => Navigator.pushNamed(context, '/iniciar_sesion'),
           child: Text(
             'Inicia Sesión',
             style: GoogleFonts.montserrat(

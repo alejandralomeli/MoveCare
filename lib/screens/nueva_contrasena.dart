@@ -126,7 +126,7 @@ class _NuevaContrasenaState extends State<NuevaContrasena> {
                       height: sp(55, sw),
                       child: ElevatedButton(
                         onPressed: () {
-                          Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+                          Navigator.pushNamedAndRemoveUntil(context, '/iniciar_sesion', (route) => false);
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: primaryBlue,
