@@ -11,19 +11,22 @@ class RegistroPasajero extends StatefulWidget {
 class _RegistroPasajeroState extends State<RegistroPasajero> {
   static const Color primaryBlue = Color(0xFF1559B2);
   static const Color fieldBlue = Color(0xFFD6E8FF);
-
-  // Estados para ocultar/mostrar contraseñas
   bool _obscurePass = true;
   bool _obscureConfirmPass = true;
+
+  double sp(double size, BuildContext context) {
+    double sw = MediaQuery.of(context).size.width;
+    return sw * (size / 375);
+  }
 
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
 
     return Scaffold(
+      backgroundColor: Colors.white,
       body: Stack(
         children: [
-          // 1. Fondo del Mapa
           Positioned(
             top: 0,
             left: 0,
@@ -35,89 +38,96 @@ class _RegistroPasajeroState extends State<RegistroPasajero> {
             ),
           ),
 
-          // 2. Logo superior flotante
           Positioned(
-            top: size.height * 0.12,
+            top: MediaQuery.of(context).padding.top + sp(35, context),
+            left: sp(10, context),
+            child: IconButton(
+              icon: Icon(
+                Icons.arrow_back_ios_new, 
+                color: primaryBlue, 
+                size: sp(20, context)
+              ),
+              onPressed: () => Navigator.pop(context),
+            ),
+          ),
+
+          Positioned(
+            top: size.height * 0.10,
             left: 0,
             right: 0,
             child: Center(
               child: Container(
-                width: 90,
-                height: 90,
+                width: sp(90, context),
+                height: sp(90, context),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(25),
+                  borderRadius: BorderRadius.circular(sp(25, context)),
                   boxShadow: const [
                     BoxShadow(color: Colors.black12, blurRadius: 10)
                   ],
                 ),
                 child: Padding(
-                  padding: const EdgeInsets.all(10),
+                  padding: EdgeInsets.all(sp(10, context)),
                   child: Image.asset('assets/movecare.png'),
                 ),
               ),
             ),
           ),
 
-          // 3. Tarjeta Blanca con Formulario
           Align(
             alignment: Alignment.bottomCenter,
             child: Container(
-              height: size.height * 0.7,
+              height: size.height * 0.72,
               width: double.infinity,
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(50),
-                  topRight: Radius.circular(50),
+                  topLeft: Radius.circular(sp(50, context)),
+                  topRight: Radius.circular(sp(50, context)),
                 ),
               ),
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 30),
+                physics: const BouncingScrollPhysics(),
+                padding: EdgeInsets.symmetric(horizontal: sp(30, context)),
                 child: Column(
                   children: [
-                    const SizedBox(height: 30),
+                    SizedBox(height: sp(30, context)),
                     Text(
                       'Crea una cuenta de Pasajero',
+                      textAlign: TextAlign.center,
                       style: GoogleFonts.montserrat(
                         color: primaryBlue,
                         fontWeight: FontWeight.bold,
-                        fontSize: 18,
+                        fontSize: sp(18, context),
                       ),
                     ),
-                    const SizedBox(height: 20),
+                    SizedBox(height: sp(20, context)),
 
-                    // Campos de Texto
-                    _buildTextField(label: 'Nombre', iconColor: Colors.blue.shade800),
-                    _buildTextField(label: 'Correo electrónico', iconColor: Colors.blue.shade400),
-                    _buildTextField(label: 'Teléfono de contacto', iconColor: Colors.blue.shade800),
-                    
-                    // Campo Contraseña con Ojo
+                    _buildTextField(context, label: 'Nombre', iconColor: Colors.blue.shade800),
+                    _buildTextField(context, label: 'Correo electrónico', iconColor: Colors.blue.shade400),
+                    _buildTextField(context, label: 'Teléfono de contacto', iconColor: Colors.blue.shade800),
                     _buildPasswordField(
+                      context: context,
                       label: 'Contraseña', 
                       iconColor: Colors.blue.shade400, 
                       isObscured: _obscurePass,
                       onToggle: () => setState(() => _obscurePass = !_obscurePass)
                     ),
 
-                    // Campo Confirmación con Ojo
                     _buildPasswordField(
+                      context: context,
                       label: 'Confirmación de contraseña', 
                       iconColor: Colors.blue.shade800, 
                       isObscured: _obscureConfirmPass,
                       onToggle: () => setState(() => _obscureConfirmPass = !_obscureConfirmPass)
                     ),
 
-                    const SizedBox(height: 25),
-
-                    // Botón Registrarme
+                    SizedBox(height: sp(25, context)),
                     SizedBox(
                       width: size.width * 0.7,
-                      height: 50,
+                      height: sp(50, context),
                       child: ElevatedButton(
                         onPressed: () {
-                          // Usamos pushNamedAndRemoveUntil para que el usuario entre al Home
-                          // y no pueda regresar al formulario de registro con el botón "atrás".
                           Navigator.pushNamedAndRemoveUntil(
                             context, 
                             '/home_passenger_screen', 
@@ -127,7 +137,7 @@ class _RegistroPasajeroState extends State<RegistroPasajero> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: primaryBlue,
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(25),
+                            borderRadius: BorderRadius.circular(sp(25, context)),
                           ),
                         ),
                         child: Text(
@@ -135,15 +145,15 @@ class _RegistroPasajeroState extends State<RegistroPasajero> {
                           style: GoogleFonts.montserrat(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
-                            fontSize: 15,
+                            fontSize: sp(15, context),
                           ),
                         ),
                       ),
                     ),
 
-                    const SizedBox(height: 20),
+                    SizedBox(height: sp(20, context)),
                     _buildFooter(context),
-                    const SizedBox(height: 20),
+                    SizedBox(height: sp(30, context)), 
                   ],
                 ),
               ),
@@ -154,24 +164,29 @@ class _RegistroPasajeroState extends State<RegistroPasajero> {
     );
   }
 
-  Widget _buildTextField({required String label, required Color iconColor}) {
+  Widget _buildTextField(BuildContext context, {required String label, required Color iconColor}) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: EdgeInsets.only(bottom: sp(12, context)),
       child: Container(
         decoration: BoxDecoration(
           color: fieldBlue,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(sp(20, context)),
         ),
         child: TextField(
+          style: GoogleFonts.montserrat(fontSize: sp(14, context)),
           decoration: InputDecoration(
             hintText: label,
-            hintStyle: GoogleFonts.montserrat(color: primaryBlue, fontSize: 14, fontWeight: FontWeight.w600),
+            hintStyle: GoogleFonts.montserrat(
+              color: primaryBlue, 
+              fontSize: sp(14, context), 
+              fontWeight: FontWeight.w600
+            ),
             prefixIcon: Padding(
-              padding: const EdgeInsets.all(12),
-              child: CircleAvatar(backgroundColor: iconColor, radius: 10),
+              padding: EdgeInsets.all(sp(12, context)),
+              child: CircleAvatar(backgroundColor: iconColor, radius: sp(10, context)),
             ),
             border: InputBorder.none,
-            contentPadding: const EdgeInsets.symmetric(vertical: 15),
+            contentPadding: EdgeInsets.symmetric(vertical: sp(15, context)),
           ),
         ),
       ),
@@ -179,33 +194,43 @@ class _RegistroPasajeroState extends State<RegistroPasajero> {
   }
 
   Widget _buildPasswordField({
+    required BuildContext context,
     required String label, 
     required Color iconColor, 
     required bool isObscured,
     required VoidCallback onToggle,
   }) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: EdgeInsets.only(bottom: sp(12, context)),
       child: Container(
         decoration: BoxDecoration(
           color: fieldBlue,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(sp(20, context)),
         ),
         child: TextField(
           obscureText: isObscured,
+          style: GoogleFonts.montserrat(fontSize: sp(14, context)),
           decoration: InputDecoration(
             hintText: label,
-            hintStyle: GoogleFonts.montserrat(color: primaryBlue, fontSize: 14, fontWeight: FontWeight.w600),
+            hintStyle: GoogleFonts.montserrat(
+              color: primaryBlue, 
+              fontSize: sp(14, context), 
+              fontWeight: FontWeight.w600
+            ),
             prefixIcon: Padding(
-              padding: const EdgeInsets.all(12),
-              child: CircleAvatar(backgroundColor: iconColor, radius: 10),
+              padding: EdgeInsets.all(sp(12, context)),
+              child: CircleAvatar(backgroundColor: iconColor, radius: sp(10, context)),
             ),
             suffixIcon: IconButton(
-              icon: Icon(isObscured ? Icons.visibility_off : Icons.visibility, color: primaryBlue),
+              icon: Icon(
+                isObscured ? Icons.visibility_off : Icons.visibility, 
+                color: primaryBlue,
+                size: sp(20, context),
+              ),
               onPressed: onToggle,
             ),
             border: InputBorder.none,
-            contentPadding: const EdgeInsets.symmetric(vertical: 15),
+            contentPadding: EdgeInsets.symmetric(vertical: sp(15, context)),
           ),
         ),
       ),
@@ -216,7 +241,7 @@ class _RegistroPasajeroState extends State<RegistroPasajero> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Text('¿Ya tienes cuenta? ', style: GoogleFonts.montserrat(fontSize: 13)),
+        Text('¿Ya tienes cuenta? ', style: GoogleFonts.montserrat(fontSize: sp(13, context))),
         GestureDetector(
           onTap: () => Navigator.pushNamed(context, '/login'),
           child: Text(
@@ -224,7 +249,7 @@ class _RegistroPasajeroState extends State<RegistroPasajero> {
             style: GoogleFonts.montserrat(
               color: primaryBlue,
               fontWeight: FontWeight.bold,
-              fontSize: 13,
+              fontSize: sp(13, context),
             ),
           ),
         ),

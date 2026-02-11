@@ -1,284 +1,205 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-class PerfilPasajero extends StatelessWidget {
+class PerfilPasajero extends StatefulWidget {
   const PerfilPasajero({super.key});
 
+  @override
+  State<PerfilPasajero> createState() => _PerfilPasajeroState();
+}
+
+class _PerfilPasajeroState extends State<PerfilPasajero> {
   static const Color primaryBlue = Color(0xFF1559B2);
   static const Color lightBlueBg = Color(0xFFB3D4FF);
-  static const Color cardBlue = Color(0xFFD6E8FF);
-  static const Color accentBlue = Color(0xFF64A1F4);
+  static const Color navBarBg = Color(0xFFD6E8FF);
+  static const Color buttonLightBlue = Color(0xFF64A1F4);
+  static const Color statusRed = Color(0xFFEF5350);
+
+  int _selectedIndex = 3;
+  double sp(double size, BuildContext context) {
+    double sw = MediaQuery.of(context).size.width;
+    double res = sw * (size / 375);
+    return (size <= 20 && res > 20) ? 20 : res;
+  }
+
+  TextStyle mExtrabold({Color color = Colors.black, double size = 14, required BuildContext context}) {
+    return GoogleFonts.montserrat(
+      color: color,
+      fontSize: sp(size, context),
+      fontWeight: FontWeight.bold,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
+    final sw = MediaQuery.of(context).size.width;
+
     return Scaffold(
       backgroundColor: Colors.white,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 10),
-              _buildHeader(),
-              const SizedBox(height: 20),
-              _buildSectionTitle('Ubicación actual'),
-              _buildMapSection(),
-              const SizedBox(height: 20),
-              _buildSectionTitle('Próximo viaje'),
-              _buildNextTripCard(context),
-              const SizedBox(height: 20),
-              _buildSectionTitle('Historial de viajes'),
-              _buildTripHistory(),
-              const SizedBox(height: 20),
-              _buildReportButton(),
-              const SizedBox(height: 20),
-            ],
-          ),
-        ),
-      ),
-      bottomNavigationBar: _buildBottomNav(context, 0),
-    );
-  }
-
-  Widget _buildHeader() {
-    return Row(
-      children: [
-        const CircleAvatar(
-          radius: 40,
-          backgroundColor: lightBlueBg,
-          backgroundImage: AssetImage('assets/usuario.png'), // Tu imagen de avatar
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Bienvenido!', style: GoogleFonts.montserrat(fontSize: 22, fontWeight: FontWeight.bold)),
-              Text('Username', style: GoogleFonts.montserrat(fontSize: 18, fontWeight: FontWeight.w500)),
-              const SizedBox(height: 4),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(color: accentBlue, borderRadius: BorderRadius.circular(10)),
-                child: Text('! Completa tu perfil', style: GoogleFonts.montserrat(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
-              ),
-            ],
-          ),
-        ),
-        _buildMicButton(),
-      ],
-    );
-  }
-
-  Widget _buildMicButton() {
-    return Container(
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: lightBlueBg,
-        shape: BoxShape.circle,
-        border: Border.all(color: Colors.black, width: 1.5),
-      ),
-      child: const Icon(Icons.mic_none, color: Colors.black, size: 30),
-    );
-  }
-
-  Widget _buildSectionTitle(String title) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Text(title, style: GoogleFonts.montserrat(fontSize: 18, fontWeight: FontWeight.bold)),
-    );
-  }
-
-  Widget _buildMapSection() {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(20),
-      child: Image.asset('assets/mapa.png', height: 130, width: double.infinity, fit: BoxFit.cover),
-    );
-  }
-
-  Widget _buildNextTripCard(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(15),
-      decoration: BoxDecoration(color: cardBlue, borderRadius: BorderRadius.circular(25)),
-      child: Column(
+      body: Column(
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+          Expanded(
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              child: Column(
                 children: [
-                  Text('Martes 28 Octubre', style: GoogleFonts.montserrat(fontWeight: FontWeight.bold, fontSize: 15)),
-                  Text('Chofer:', style: GoogleFonts.montserrat(fontWeight: FontWeight.bold, fontSize: 13)),
-                  Text('Lugar:', style: GoogleFonts.montserrat(fontWeight: FontWeight.bold, fontSize: 13)),
+                  Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Container(
+                        height: 120, 
+                        width: double.infinity,
+                        color: lightBlueBg,
+                        child: Column(
+                          children: [
+                            const SizedBox(height: 35),
+                            Align(
+                              alignment: Alignment.topLeft,
+                              child: IconButton(
+                                icon: const Icon(Icons.arrow_back_ios_new, color: primaryBlue, size: 20),
+                                onPressed: () => Navigator.pop(context),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Positioned(
+                        bottom: -50,
+                        left: 20,
+                        child: Container(
+                          width: 100,
+                          height: 100,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.white,
+                            border: Border.all(color: Colors.white, width: 2),
+                            image: const DecorationImage(
+                              image: AssetImage('assets/pasajero.png'),
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        bottom: -35,
+                        left: 130,
+                        child: Text(
+                          'Mi Perfil',
+                          style: GoogleFonts.montserrat(fontSize: 24, fontWeight: FontWeight.w900),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 70),
+
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: sw * 0.06),
+                    child: Column(
+                      children: [
+                        _profileItem(Icons.person, "Información personal", context),
+                        _profileItem(Icons.notifications, "Notificaciones", context),
+                        _profileItem(Icons.credit_card, "Métodos de pago", context),
+                        _profileItem(Icons.security, "Seguridad", context),
+                        const SizedBox(height: 30),
+                        _buildLogoutButton(context),
+                      ],
+                    ),
+                  ),
                 ],
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(color: primaryBlue, borderRadius: BorderRadius.circular(15)),
-                child: Text('9:30am', style: GoogleFonts.montserrat(color: Colors.white, fontWeight: FontWeight.bold)),
-              )
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              _smallActionBtn('Ver detalles', accentBlue, () {}),
-              const SizedBox(width: 10),
-              _smallActionBtn('Cancelar cita', accentBlue, () {}),
-            ],
-          ),
-          const SizedBox(height: 15),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _calendarDay('D', '26', false),
-              _calendarDay('L', '27', false),
-              _calendarDay('M', '28', true),
-              _calendarDay('M', '29', false),
-              _calendarDay('J', '30', false),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Align(
-            alignment: Alignment.centerRight,
-            child: ElevatedButton(
-              onPressed: () {},
-              style: ElevatedButton.styleFrom(backgroundColor: accentBlue, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))),
-              child: Text('Agendar viaje', style: GoogleFonts.montserrat(color: Colors.black, fontWeight: FontWeight.bold)),
             ),
-          )
+          ),
         ],
       ),
+      bottomNavigationBar: _buildCustomBottomNav(context),
     );
   }
 
-  Widget _calendarDay(String day, String num, bool selected) {
+  Widget _profileItem(IconData icon, String title, BuildContext context) {
     return Container(
-      width: 55,
+      margin: const EdgeInsets.only(bottom: 15),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2))],
+        color: const Color(0xFFF0F7FF),
+        borderRadius: BorderRadius.circular(15),
       ),
-      child: Column(
+      child: Row(
         children: [
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 4),
-            decoration: const BoxDecoration(
-              color: primaryBlue,
-              borderRadius: BorderRadius.only(topLeft: Radius.circular(12), topRight: Radius.circular(12)),
-            ),
-            child: Text(day, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 6),
-            child: Column(
-              children: [
-                Text(num, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: primaryBlue)),
-                if (selected) const Icon(Icons.circle, size: 6, color: Colors.red),
-                const Text('Oct', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w500)),
-              ],
-            ),
-          ),
+          Icon(icon, color: primaryBlue),
+          const SizedBox(width: 15),
+          Text(title, style: mExtrabold(size: 14, context: context)),
+          const Spacer(),
+          const Icon(Icons.arrow_forward_ios, size: 14, color: primaryBlue),
         ],
       ),
     );
   }
 
-  Widget _smallActionBtn(String title, Color color, VoidCallback onTap) {
-    return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.white)),
-          child: Text(title, textAlign: TextAlign.center, style: GoogleFonts.montserrat(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+  Widget _buildLogoutButton(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton(
+        onPressed: () {},
+        style: ElevatedButton.styleFrom(
+          backgroundColor: statusRed,
+          padding: const EdgeInsets.symmetric(vertical: 15),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+          elevation: 0,
+        ),
+        child: Text('Cerrar sesión', style: mExtrabold(color: Colors.white, size: 16, context: context)),
+      ),
+    );
+  }
+
+ 
+  Widget _buildCustomBottomNav(BuildContext context) {
+    return Container(
+      height: sp(85, context), 
+      padding: EdgeInsets.symmetric(horizontal: sp(10, context)),
+      decoration: const BoxDecoration(
+        color: navBarBg,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          _navIcon(0, Icons.home, context),
+          _navIcon(1, Icons.location_on, context),
+          _navIcon(2, Icons.history, context),
+          _navIcon(3, Icons.person, context),
+        ],
+      ),
+    );
+  }
+
+  Widget _navIcon(int index, IconData icon, BuildContext context) {
+    bool active = _selectedIndex == index;
+    return GestureDetector(
+      onTap: () {
+        setState(() => _selectedIndex = index);
+        if(index == 0) Navigator.pop(context);
+      },
+      child: Container(
+        width: sp(45, context),
+        height: sp(45, context), 
+        decoration: BoxDecoration(
+          color: active ? primaryBlue : Colors.white,
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Icon(
+          icon, 
+          color: active ? Colors.white : primaryBlue, 
+          size: sp(26, context) 
         ),
       ),
     );
   }
-
-  Widget _buildTripHistory() {
-    return Container(
-      decoration: BoxDecoration(border: Border.all(color: primaryBlue), borderRadius: BorderRadius.circular(20)),
-      child: Column(
-        children: [
-          _historyItem('Oct 13', 'Centro médico', 'En curso', true),
-          const Divider(height: 1, color: primaryBlue),
-          _historyItem('Oct 1', 'Banco', 'Finalizado', false),
-          const Divider(height: 1, color: primaryBlue),
-          _historyItem('Sep 28', 'Actividad social', 'Finalizado', false),
-        ],
-      ),
-    );
-  }
-
-  Widget _historyItem(String date, String place, String status, bool active) {
-    return Padding(
-      padding: const EdgeInsets.all(12),
-      child: Row(
-        children: [
-          Text(date, style: GoogleFonts.montserrat(fontWeight: FontWeight.bold)),
-          const SizedBox(width: 15),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(place, style: GoogleFonts.montserrat(color: primaryBlue, fontWeight: FontWeight.bold)),
-                const Text('Conductor:', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
-              ],
-            ),
-          ),
-          Text(status, style: GoogleFonts.montserrat(color: active ? Colors.redAccent : Colors.red.shade300, fontWeight: FontWeight.bold, fontSize: 12)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildReportButton() {
-    return ElevatedButton.icon(
-      onPressed: () {},
-      icon: const Icon(Icons.error, color: Colors.white),
-      label: Text('Reportar incidencia', style: GoogleFonts.montserrat(color: Colors.white, fontWeight: FontWeight.bold)),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: const Color(0xFFEF5350),
-        minimumSize: const Size(220, 45),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      ),
-    );
-  }
-}
-
-// Widget Global de Navegación para reutilizar
-Widget _buildBottomNav(BuildContext context, int currentIndex) {
-  return Container(
-    decoration: const BoxDecoration(
-      color: Color(0xFFD6E8FF),
-      borderRadius: BorderRadius.only(topLeft: Radius.circular(30), topRight: Radius.circular(30)),
-    ),
-    child: ClipRRect(
-      borderRadius: const BorderRadius.only(topLeft: Radius.circular(30), topRight: Radius.circular(30)),
-      child: BottomNavigationBar(
-        currentIndex: currentIndex,
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: const Color(0xFFD6E8FF),
-        selectedItemColor: const Color(0xFF1559B2),
-        unselectedItemColor: const Color(0xFF1559B2).withOpacity(0.5),
-        showSelectedLabels: false,
-        showUnselectedLabels: false,
-        onTap: (index) {
-          if (index == 3) Navigator.pushNamed(context, '/profile');
-          if (index == 0) Navigator.pushNamed(context, '/home_passenger');
-        },
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home, size: 35), label: ''),
-          BottomNavigationBarItem(icon: Icon(Icons.location_on, size: 35), label: ''),
-          BottomNavigationBarItem(icon: Icon(Icons.history, size: 35), label: ''),
-          BottomNavigationBarItem(icon: Icon(Icons.person, size: 35), label: ''),
-        ],
-      ),
-    ),
-  );
 }

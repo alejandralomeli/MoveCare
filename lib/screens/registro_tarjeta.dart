@@ -7,18 +7,47 @@ class RegistroTarjetaScreen extends StatefulWidget {
   @override
   State<RegistroTarjetaScreen> createState() => _RegistroTarjetaScreenState();
 }
-
-class _RegistroTarjetaScreenState extends State<RegistroTarjetaScreen> {
-  // Colores unificados
+class _RegistroTarjetaScreenState extends State<RegistroTarjetaScreen> with TickerProviderStateMixin {
   static const Color primaryBlue = Color(0xFF1559B2);
   static const Color lightBlueBg = Color(0xFFB3D4FF);
   static const Color containerBlue = Color(0xFFD6E8FF);
   static const Color accentBlue = Color(0xFF64A1F4); 
   static const Color textFieldBlue = Color(0xFFB3D4FF);
-
   int _selectedIndex = 1;
+  bool _isVoiceActive = false;
+  late AnimationController _pulseController;
+  late Animation<double> _pulseAnimation;
 
-  // Estilo base para textos normales
+  @override
+  void initState() {
+    super.initState();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.15).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    super.dispose();
+  }
+
+  void _toggleVoice() {
+    setState(() {
+      _isVoiceActive = !_isVoiceActive;
+      if (_isVoiceActive) {
+        _pulseController.repeat(reverse: true);
+      } else {
+        _pulseController.stop();
+        _pulseController.reset();
+      }
+    });
+  }
+
   TextStyle mSemibold({Color color = Colors.black, double size = 14}) {
     return GoogleFonts.montserrat(
       color: color,
@@ -27,7 +56,6 @@ class _RegistroTarjetaScreenState extends State<RegistroTarjetaScreen> {
     );
   }
 
-  // Estilo para Negritas (Bold) - Usado en títulos y botones
   TextStyle mBold({Color color = primaryBlue, double size = 14}) {
     return GoogleFonts.montserrat(
       color: color,
@@ -49,9 +77,9 @@ class _RegistroTarjetaScreenState extends State<RegistroTarjetaScreen> {
                 padding: const EdgeInsets.only(left: 25, right: 25, bottom: 20, top: 40),
                 child: Column(
                   children: [
-                    // Banner informativo superior (Modificado: más pequeño, negrita, azul claro)
+
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 15),
                       decoration: BoxDecoration(
                         color: accentBlue,
                         borderRadius: BorderRadius.circular(30),
@@ -63,14 +91,13 @@ class _RegistroTarjetaScreenState extends State<RegistroTarjetaScreen> {
                           const SizedBox(width: 8),
                           Text(
                             'Ingrese los datos de su tarjeta', 
-                            style: mBold(color: Colors.white, size: 13), // Más pequeño y negrita
+                            style: mBold(color: Colors.white, size: 13),
                           ),
                         ],
                       ),
                     ),
                     const SizedBox(height: 30),
 
-                    // CONTENEDOR PRINCIPAL SOMBREADO
                     Container(
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
@@ -86,7 +113,6 @@ class _RegistroTarjetaScreenState extends State<RegistroTarjetaScreen> {
                       ),
                       child: Column(
                         children: [
-                          // Imagen de tarjeta
                           Container(
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(20),
@@ -113,17 +139,15 @@ class _RegistroTarjetaScreenState extends State<RegistroTarjetaScreen> {
                             ),
                           ),
                           const SizedBox(height: 25),
-
-                          // Campos de entrada de datos
                           _buildTextField('Número de la tarjeta', circleColor: Colors.white),
                           const SizedBox(height: 12),
-                          _buildTextField('Nombre Completo', circleColor: primaryBlue), // Círculo Azul Oscuro
+                          _buildTextField('Nombre Completo', circleColor: primaryBlue),
                           const SizedBox(height: 12),
                           Row(
                             children: [
                               Expanded(flex: 3, child: _buildTextField('Fecha de Expiración', circleColor: Colors.white)),
                               const SizedBox(width: 10),
-                              Expanded(flex: 2, child: _buildTextField('CCV', circleColor: primaryBlue)), // Círculo Azul Oscuro
+                              Expanded(flex: 2, child: _buildTextField('CCV', circleColor: primaryBlue)),
                             ],
                           ),
                         ],
@@ -131,20 +155,19 @@ class _RegistroTarjetaScreenState extends State<RegistroTarjetaScreen> {
                     ),
                     const SizedBox(height: 40),
 
-                    // BOTÓN AGREGAR TARJETA (Modificado: azul claro y negrita)
                     SizedBox(
                       width: 200,
                       height: 50,
                       child: ElevatedButton(
                         onPressed: () {},
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: accentBlue, // Azul más claro
+                          backgroundColor: accentBlue,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
                           elevation: 5,
                         ),
                         child: Text(
                           'Agregar Tarjeta', 
-                          style: mBold(color: Colors.white, size: 15), // Negrita
+                          style: mBold(color: Colors.white, size: 15),
                         ),
                       ),
                     ),
@@ -166,7 +189,7 @@ class _RegistroTarjetaScreenState extends State<RegistroTarjetaScreen> {
         borderRadius: BorderRadius.circular(25),
       ),
       child: TextField(
-        style: mBold(size: 14), // Texto al escribir en negrita y azul oscuro
+        style: mBold(size: 14),
         decoration: InputDecoration(
           hintText: hint,
           hintStyle: mSemibold(color: primaryBlue.withOpacity(0.6), size: 13),
@@ -187,18 +210,49 @@ class _RegistroTarjetaScreenState extends State<RegistroTarjetaScreen> {
   Widget _buildHeader() {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 30),
+      height: 110, 
+      padding: const EdgeInsets.symmetric(horizontal: 30),
       decoration: const BoxDecoration(color: lightBlueBg),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.end,
+      child: Stack(
+        clipBehavior: Clip.none, 
         children: [
-          const Spacer(),
-          Transform.translate(
-            offset: const Offset(0, 50),
-            child: Image.asset(
-              'assets/control_voz.png', 
-              height: 65, width: 65, 
-              errorBuilder: (c, e, s) => const CircleAvatar(backgroundColor: primaryBlue, child: Icon(Icons.mic, color: Colors.white, size: 30)),
+          Positioned(
+            left: -15,
+            bottom: 25,
+            child: IconButton(
+              icon: const Icon(Icons.arrow_back_ios_new, color: primaryBlue, size: 20),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+          ),
+          
+          Positioned(
+            right: -15,
+            bottom: -32, 
+            child: GestureDetector(
+              onTap: _toggleVoice,
+              child: ScaleTransition(
+                scale: _pulseAnimation,
+                child: Container(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: _isVoiceActive 
+                            ? primaryBlue.withOpacity(0.4) 
+                            : Colors.black12, 
+                        blurRadius: 15, 
+                        spreadRadius: _isVoiceActive ? 4 : 2
+                      )
+                    ],
+                  ),
+                  child: Image.asset(
+                    _isVoiceActive ? 'assets/escuchando.png' : 'assets/controlvoz.png', 
+                    height: 65, 
+                    width: 65, 
+                    fit: BoxFit.contain,
+                  ),
+                ),
+              ),
             ),
           ),
         ],
@@ -206,7 +260,6 @@ class _RegistroTarjetaScreenState extends State<RegistroTarjetaScreen> {
     );
   }
 
-  // --- MENU INFERIOR ACTUALIZADO CON AZUL OSCURO ---
   Widget _buildCustomBottomNav() {
     return Container(
       height: 75,
@@ -232,13 +285,10 @@ class _RegistroTarjetaScreenState extends State<RegistroTarjetaScreen> {
         decoration: BoxDecoration(
           color: active ? primaryBlue : Colors.white, 
           shape: BoxShape.circle,
-          boxShadow: [
-            if(!active) BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 2))
-          ]
         ),
         child: Icon(
           icon, 
-          color: active ? Colors.white : primaryBlue, // Iconos inactivos en azul oscuro
+          color: active ? Colors.white : primaryBlue,
           size: 28,
         ),
       ),

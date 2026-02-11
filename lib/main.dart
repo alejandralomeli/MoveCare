@@ -23,6 +23,18 @@ import 'screens/registro_acompanante.dart';
 import 'screens/historial_viajes_pasajero.dart';
 import 'screens/viaje_confirmado.dart';
 import 'screens/estimacion_costo.dart';
+import 'screens/principal_conductor.dart';
+import 'screens/mi_perfil_conductor.dart';
+import 'screens/viaje_actual.dart';
+import 'screens/solicitud_viaje.dart';
+import 'screens/historial_viajes_conductor.dart';  
+import 'screens/completar_perfil_conductor.dart';
+import 'screens/agregar_ine.dart';
+import 'screens/agregar_licencia.dart';
+import 'screens/nueva_contrasena.dart';
+import 'screens/reporte_incidencia.dart';
+import 'screens/gestion_usuarios.dart';
+import 'screens/historial_auditoria.dart';  
 
 // Colores constantes compartidos
 const Color primaryColor = Color(0xFF2E6FFC);
@@ -55,8 +67,8 @@ class MyApp extends StatelessWidget {
         '/menu_vistas': (context) => const MenuVistas(),
 
         // Rutas existentes
-        '/': (context) => const Bienvenido(),
-        '/iniciar_sesion': (context) => const IniciarSesion(),
+        '/': (context) => Bienvenido(),
+        '/iniciar_sesion': (context) => IniciarSesion(),
         '/olvide_contrasena': (context) => const OlvideContrasena(),
         
         // Registro Principal (Selección de rol)
@@ -78,9 +90,28 @@ class MyApp extends StatelessWidget {
         '/registro_tarjeta': (context) => const RegistroTarjetaScreen(),
         '/registro_acompanante': (context) => const RegistrarAcompanante(),
         '/historial_viajes_pasajero': (context) => const HistorialViajesPasajero(),
-        '/viaje_confirmado': (context) => const ViajeConfirmado(),
+        '/viaje_confirmado': (context) => ViajeConfirmado(),
         '/estimacion_costo': (context) => const EstimacionViaje(),
+        '/nueva_contrasena': (context) => const NuevaContrasena(),
+
+        // Flujo del Conductor
+        '/principal_conductor': (context) => const PrincipalConductor(),
+        '/mi_perfil_conductor': (context) => const MiPerfilConductor(),
+        '/viaje_actual': (context) => const ViajeActualMapa(),
+        '/solicitud_viaje': (context) => const SolicitudViaje(),
+        '/historial_viajes_conductor': (context) => const HistorialViajesConductor(),
+        '/completar_perfil_conductor': (context) => const CompletarPerfilConductor(),
+        '/agregar_ine': (context) => const AgregarIne(),  
+        '/agregar_licencia': (context) => const AgregarLicencia(),
+
+        // Flujo Administrativo
+        '/reporte_incidencia': (context) => const ReporteIncidencia(),
+        '/gestion_usuarios': (context) => const GestionUsuarios(),
+        '/historial_auditorias': (context) => const HistorialAuditoria()
       },
+
+
+        
 
     );
   }
