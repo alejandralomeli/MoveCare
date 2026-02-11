@@ -98,6 +98,14 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
     fontWeight: FontWeight.w600,
   );
 
+  TextStyle oldMSemibold({Color color = Colors.black, double size = 14}) {
+    return GoogleFonts.montserrat(
+      color: color,
+      fontSize: size,
+      fontWeight: FontWeight.w600,
+    );
+  }
+
   TextStyle mExtrabold(
     double sw, {
     Color color = Colors.black,
@@ -436,6 +444,8 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
                           );
                         }),
 
+                        const SizedBox(height: 10),
+                        _buildOneDestinationButton(),
                         const SizedBox(height: 15),
                         _buildCompanionSection(sw),
                         const SizedBox(height: 10),
@@ -496,6 +506,29 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
   }
 
   // --- WIDGETS AUXILIARES ---
+
+  Widget _buildOneDestinationButton() {
+    return Center(
+      child: ElevatedButton.icon(
+        onPressed: () {
+          Navigator.pushNamed(context, '/agendar_viaje');
+        },
+        icon: const Icon(Icons.alt_route, color: Colors.white),
+        label: Text(
+          'Agendar un solo destino',
+          style: oldMSemibold(color: Colors.white),
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: primaryBlue,
+          minimumSize: const Size(260, 45),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(25),
+          ),
+          elevation: 2,
+        ),
+      ),
+    );
+  }
 
   Widget _buildDateRow(double sw) {
     return SingleChildScrollView(
@@ -909,8 +942,10 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
                   'Cancelar',
                   accentBlue,
                   sw,
-                  () =>
-                      Navigator.pushReplacementNamed(context, '/principal_pasajero'),
+                  () => Navigator.pushReplacementNamed(
+                    context,
+                    '/principal_pasajero',
+                  ),
                 ),
               ),
             ),
@@ -1116,7 +1151,7 @@ class _VoicePulseWrapperState extends State<_VoicePulseWrapper>
               child: Image.asset(
                 widget.isVoiceActive
                     ? 'assets/escuchando.png'
-                    : 'assets/control_voz.png',
+                    : 'assets/controlvoz.png',
                 height: 65,
                 width: 65,
                 errorBuilder: (c, e, s) => const CircleAvatar(

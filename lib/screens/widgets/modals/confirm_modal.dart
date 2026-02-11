@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-
+//MIRA ESTO ALE
+//Son modales que genero en la creacion de viajes
 void showConfirmModal({
   required BuildContext context,
   required String title,

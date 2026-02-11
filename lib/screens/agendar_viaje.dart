@@ -1072,7 +1072,7 @@ class _DynamicHeaderDelegate extends SliverPersistentHeaderDelegate {
                 child: Image.asset(
                   isVoiceActive
                       ? 'assets/escuchando.png'
-                      : 'assets/control_voz.png',
+                      : 'assets/controlvoz.png',
                   fit: BoxFit.contain,
                   errorBuilder: (c, e, s) => CircleAvatar(
                     backgroundColor: isVoiceActive
