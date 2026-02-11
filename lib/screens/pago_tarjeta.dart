@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class PagoTarjetaScreen extends StatefulWidget {
-  final double totalAPagar; 
+  final double totalAPagar;
 
   const PagoTarjetaScreen({super.key, this.totalAPagar = 100.00});
 
@@ -16,8 +16,8 @@ class _PagoTarjetaScreenState extends State<PagoTarjetaScreen> {
   static const Color containerBlue = Color(0xFFD6E8FF);
   static const Color accentBlue = Color(0xFF64A1F4);
 
-  int _selectedIndex = 1; 
-  String tipoTarjetaSeleccionada = 'Crédito'; 
+  int _selectedIndex = 1;
+  String tipoTarjetaSeleccionada = 'Crédito';
 
   TextStyle mSemibold({Color color = Colors.black, double size = 14}) {
     return GoogleFonts.montserrat(
@@ -48,7 +48,7 @@ class _PagoTarjetaScreenState extends State<PagoTarjetaScreen> {
                 padding: const EdgeInsets.only(
                   left: 25,
                   right: 25,
-                  bottom: 20, 
+                  bottom: 20,
                   top: 40,
                 ),
                 child: Container(
@@ -60,33 +60,50 @@ class _PagoTarjetaScreenState extends State<PagoTarjetaScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Tarjeta de crédito o débito', 
-                        style: mExtrabold(color: primaryBlue, size: 18)),
-                      Text('Seleccione un método', 
-                        style: mSemibold(size: 12)),
+                      Text(
+                        'Tarjeta de crédito o débito',
+                        style: mExtrabold(color: primaryBlue, size: 18),
+                      ),
+                      Text('Seleccione un método', style: mSemibold(size: 12)),
                       const SizedBox(height: 20),
-                      
+
                       Row(
                         children: [
-                          Expanded(child: _buildSelectorTarjeta('Crédito', 'assets/tarjeta_credito.png')),
+                          Expanded(
+                            child: _buildSelectorTarjeta(
+                              'Crédito',
+                              'assets/tarjeta_credito.png',
+                            ),
+                          ),
                           const SizedBox(width: 15),
-                          Expanded(child: _buildSelectorTarjeta('Débito', 'assets/tarjeta_debito.png')),
+                          Expanded(
+                            child: _buildSelectorTarjeta(
+                              'Débito',
+                              'assets/tarjeta_debito.png',
+                            ),
+                          ),
                         ],
                       ),
-                      
+
                       const SizedBox(height: 25),
-                      Text('Detalles de Tarjeta', 
-                        style: mExtrabold(color: primaryBlue, size: 18)),
-                      Text('Selecciona para ingresar los datos de tu tarjeta crédito / débito', 
-                        style: mSemibold(size: 11)),
+                      Text(
+                        'Detalles de Tarjeta',
+                        style: mExtrabold(color: primaryBlue, size: 18),
+                      ),
+                      Text(
+                        'Selecciona para ingresar los datos de tu tarjeta crédito / débito',
+                        style: mSemibold(size: 11),
+                      ),
                       const SizedBox(height: 15),
-                      
+
                       // CONTENEDOR DE DETALLES REDONDEADO Y CON SOMBRA
                       Center(
                         child: Container(
                           decoration: BoxDecoration(
                             color: Colors.white,
-                            borderRadius: BorderRadius.circular(25), // Redondeado solicitado
+                            borderRadius: BorderRadius.circular(
+                              25,
+                            ), // Redondeado solicitado
                             boxShadow: [
                               BoxShadow(
                                 color: Colors.black.withOpacity(0.15),
@@ -103,13 +120,17 @@ class _PagoTarjetaScreenState extends State<PagoTarjetaScreen> {
                               fit: BoxFit.contain,
                               errorBuilder: (c, e, s) => Container(
                                 height: 180,
-                                child: const Icon(Icons.credit_card, size: 80, color: primaryBlue),
+                                child: const Icon(
+                                  Icons.credit_card,
+                                  size: 80,
+                                  color: primaryBlue,
+                                ),
                               ),
                             ),
                           ),
                         ),
                       ),
-                      
+
                       const SizedBox(height: 30),
                       _buildBottomPayBar(),
                     ],
@@ -132,14 +153,18 @@ class _PagoTarjetaScreenState extends State<PagoTarjetaScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          const SizedBox(width: 45), 
+          const SizedBox(width: 45),
           Text('Pago con tarjeta', style: mExtrabold(size: 22)),
           Transform.translate(
             offset: const Offset(0, 50),
             child: Image.asset(
-              'assets/control_voz.png', 
-              height: 65, width: 65, 
-              errorBuilder: (c, e, s) => const CircleAvatar(backgroundColor: primaryBlue, child: Icon(Icons.mic, color: Colors.white)),
+              'assets/control_voz.png',
+              height: 65,
+              width: 65,
+              errorBuilder: (c, e, s) => const CircleAvatar(
+                backgroundColor: primaryBlue,
+                child: Icon(Icons.mic, color: Colors.white),
+              ),
             ),
           ),
         ],
@@ -158,19 +183,23 @@ class _PagoTarjetaScreenState extends State<PagoTarjetaScreen> {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(15),
-              border: Border.all(color: isSelected ? primaryBlue : Colors.transparent, width: 2),
+              border: Border.all(
+                color: isSelected ? primaryBlue : Colors.transparent,
+                width: 2,
+              ),
               // SOMBRA POR ABAJO PARA CRÉDITO/DÉBITO
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withOpacity(0.1),
                   blurRadius: 4,
-                  offset: const Offset(0, 3), 
+                  offset: const Offset(0, 3),
                 ),
               ],
             ),
             child: Image.asset(
               assetPath,
-              errorBuilder: (c, e, s) => const Icon(Icons.credit_card, size: 50, color: primaryBlue),
+              errorBuilder: (c, e, s) =>
+                  const Icon(Icons.credit_card, size: 50, color: primaryBlue),
             ),
           ),
           const SizedBox(height: 5),
@@ -203,18 +232,25 @@ class _PagoTarjetaScreenState extends State<PagoTarjetaScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text('Total', style: mSemibold(color: Colors.white, size: 12)),
-              Text('\$${widget.totalAPagar.toStringAsFixed(2)}', 
-                style: mExtrabold(color: Colors.white, size: 22)),
+              Text(
+                '\$${widget.totalAPagar.toStringAsFixed(2)}',
+                style: mExtrabold(color: Colors.white, size: 22),
+              ),
             ],
           ),
           ElevatedButton(
             onPressed: () {},
             style: ElevatedButton.styleFrom(
               backgroundColor: accentBlue,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(15),
+              ),
               padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 10),
             ),
-            child: Text('Pagar', style: mExtrabold(color: Colors.white, size: 16)),
+            child: Text(
+              'Pagar',
+              style: mExtrabold(color: Colors.white, size: 16),
+            ),
           ),
         ],
       ),
@@ -228,22 +264,29 @@ class _PagoTarjetaScreenState extends State<PagoTarjetaScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          _navIcon(0, Icons.home),
-          _navIcon(1, Icons.location_on),
-          _navIcon(2, Icons.history),
-          _navIcon(3, Icons.person),
+          _navIcon(0, Icons.home, '/principal_pasajero'),
+          _navIcon(1, Icons.location_on, '/agendar_viaje'),
+          _navIcon(2, Icons.history, '/historial_viajes_pasajero'),
+          _navIcon(3, Icons.person, '/mi_perfil_pasajero'),
         ],
       ),
     );
   }
 
-  Widget _navIcon(int index, IconData icon) {
+  Widget _navIcon(int index, IconData icon, String routeName) {
     bool active = _selectedIndex == index;
     return GestureDetector(
-      onTap: () => setState(() => _selectedIndex = index),
+      onTap: () {
+        if (_selectedIndex != index) {
+          Navigator.pushReplacementNamed(context, routeName);
+        }
+      },
       child: Container(
         padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(color: active ? primaryBlue : Colors.white, shape: BoxShape.circle),
+        decoration: BoxDecoration(
+          color: active ? primaryBlue : Colors.white,
+          shape: BoxShape.circle,
+        ),
         child: Icon(icon, color: active ? Colors.white : primaryBlue, size: 28),
       ),
     );

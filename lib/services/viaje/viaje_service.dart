@@ -1,5 +1,5 @@
 import 'dart:convert';
-import '../http_client.dart';
+import '../http_client.dart'; 
 
 class ViajeService {
   static Future<String> crearViaje({
@@ -9,6 +9,7 @@ class ViajeService {
     bool checkVariosDestinos = false,
     required String fechaHoraInicio,
     String? metodoPago,
+    String? idMetodo, // <--- NUEVO CAMPO PARA LA TARJETA
     String? especificaciones,
     bool checkAcompanante = false,
     String? idAcompanante,
@@ -20,6 +21,7 @@ class ViajeService {
       "punto_inicio": puntoInicio,
       "fecha_hora_inicio": fechaHoraInicio,
       "metodo_pago": metodoPago,
+      "id_metodo": idMetodo, 
       "costo": costo,
       "duracion_estimada": duracionEstimada,
       "especificaciones": especificaciones,
@@ -28,12 +30,15 @@ class ViajeService {
       "check_destinos": checkVariosDestinos,
     };
 
+    // --- LÓGICA DE DESTINOS (MANTENIDA) ---
     if (checkVariosDestinos) {
       body["destino"] = null;
-      body["destinos"] = destinos;
+      body["destinos"] = destinos; 
     } else {
       body["destino"] = destino;
+      body["destinos"] = null; 
     }
+    // -------------------------------------
 
     final response = await HttpClient.post("/viajes/crear", body);
 
@@ -47,7 +52,22 @@ class ViajeService {
     }
 
     final bodyResponse = jsonDecode(response.body);
+    print("Error Backend: $bodyResponse"); 
     throw Exception(bodyResponse["detail"] ?? "Error al crear viaje");
   }
-}
 
+  static Future<List<dynamic>> obtenerHistorial() async {
+    final response = await HttpClient.get("/viajes/historial");
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+
+    if (response.statusCode == 401) {
+      throw Exception('TOKEN_INVALIDO');
+    }
+
+    throw Exception("Error al obtener historial");
+  }
+  
+}

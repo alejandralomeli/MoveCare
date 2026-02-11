@@ -586,19 +586,23 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          _navIcon(0, Icons.home),
-          _navIcon(1, Icons.location_on),
-          _navIcon(2, Icons.history),
-          _navIcon(3, Icons.person),
+          _navIcon(0, Icons.home, '/principal_pasajero'),
+          _navIcon(1, Icons.location_on, '/agendar_viaje'),
+          _navIcon(2, Icons.history, '/historial_viajes_pasajero'),
+          _navIcon(3, Icons.person, '/mi_perfil_pasajero'),
         ],
       ),
     );
   }
 
-  Widget _navIcon(int index, IconData icon) {
+  Widget _navIcon(int index, IconData icon, String routeName) {
     bool active = _selectedIndex == index;
     return GestureDetector(
-      onTap: () => setState(() => _selectedIndex = index),
+      onTap: () {
+        if (_selectedIndex != index) {
+          Navigator.pushReplacementNamed(context, routeName);
+        }
+      },
       child: Container(
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(

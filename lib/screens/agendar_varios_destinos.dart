@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../screens/widgets/modals/confirm_modal.dart';
 import '../services/acompanante/acompanante_service.dart';
 import '../services/viaje/viaje_service.dart';
+import '../services/pagos/pagos_service.dart'; // Importado
 import '../core/utils/auth_helper.dart';
 
 class AgendarVariosDestinos extends StatefulWidget {
@@ -21,27 +22,27 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
   bool _isCreatingTrip = false;
 
   final List<TextEditingController> _destinoControllers = [];
-
   final TextEditingController origenController = TextEditingController();
-  final TextEditingController destinoController = TextEditingController();
-
-  //String origen = '';
-  //String destino = '';
 
   DateTime? fechaSeleccionada;
 
   String? metodoPago;
   String? especificaciones;
-  String? idAcompananteSeleccionado;
 
+  // ACOMPAÑANTES
+  String? idAcompananteSeleccionado;
   String? selectedAcompananteId;
   List<Map<String, String>> acompanantes = [];
   bool cargandoAcompanantes = false;
 
-  // Variables de estado
-  //String _selectedDate = '28';
+  // TARJETAS (Agregado)
+  String? selectedTarjetaId;
+  List<Map<String, String>> tarjetas = [];
+  bool cargandoTarjetas = false;
+
+  // Variables de estado UI
   int _selectedIndex = 1;
-  int _cantidadDestinos = 2; // Control de paradas dinámicas
+  int _cantidadDestinos = 2;
   DateTime _weekStart = DateTime.now();
   DateTime? _selectedDateTime;
 
@@ -97,7 +98,6 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
     'Discapacidad visual',
   ];
 
-  // Estilo base para consistencia
   TextStyle mSemibold({Color color = Colors.black, double size = 14}) {
     return GoogleFonts.montserrat(
       color: color,
@@ -117,17 +117,18 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
   @override
   void initState() {
     super.initState();
-
     _syncDestinoControllers();
-    _cargarAcompanantes();
+    _cargarDatosIniciales();
+  }
+
+  Future<void> _cargarDatosIniciales() async {
+    await Future.wait([_cargarAcompanantes(), _cargarTarjetas()]);
   }
 
   Future<void> _cargarAcompanantes() async {
     setState(() => cargandoAcompanantes = true);
-
     try {
       final List<dynamic> data = await AcompananteService.obtenerAcompanantes();
-
       acompanantes = data.map<Map<String, String>>((a) {
         return {
           "id": a["id_acompanante"].toString(),
@@ -136,20 +137,32 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
       }).toList();
     } catch (e) {
       acompanantes = [];
-      if (mounted) {
-        AuthHelper.manejarError(context, e);
-      }
+      if (mounted) AuthHelper.manejarError(context, e);
     }
+    if (mounted) setState(() => cargandoAcompanantes = false);
+  }
 
-    if (mounted) {
-      setState(() => cargandoAcompanantes = false);
+  Future<void> _cargarTarjetas() async {
+    setState(() => cargandoTarjetas = true);
+    try {
+      final List<dynamic> data = await PagosService.obtenerTarjetas();
+      tarjetas = data.map<Map<String, String>>((t) {
+        return {
+          "id": t["id_tarjeta"].toString(),
+          "texto": "${t['marca']} •••• ${t['ultimos_cuatro']}",
+        };
+      }).toList();
+    } catch (e) {
+      tarjetas = [];
+      // No mostramos error en UI para no saturar, solo log
+      print("Error cargando tarjetas: $e");
     }
+    if (mounted) setState(() => cargandoTarjetas = false);
   }
 
   @override
   void dispose() {
     origenController.dispose();
-    destinoController.dispose();
     for (var controller in _destinoControllers) {
       controller.dispose();
     }
@@ -176,6 +189,10 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
 
   @override
   Widget build(BuildContext context) {
+    bool isCardPayment =
+        selectedPayment == 'Tarjeta de crédito' ||
+        selectedPayment == 'Tarjeta de débito';
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -294,13 +311,21 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
 
                           const SizedBox(height: 10),
                           _buildOneDestinationButton(),
+
                           const SizedBox(height: 15),
                           _buildCompanionSection(),
                           const SizedBox(height: 10),
-                          _buildAcompananteDropdown(),
-                          const SizedBox(height: 15),
+
+                          if (hasCompanion) ...[
+                            _buildAcompananteDropdown(),
+                            const SizedBox(height: 10),
+                            _buildRegistrarAcompananteButton(),
+                            const SizedBox(height: 15),
+                          ],
+
                           _buildSpecialNeedDropdown(),
                           const SizedBox(height: 15),
+
                           Center(
                             child: Text(
                               'Seleccionar forma de pago',
@@ -317,8 +342,19 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
                               'Efectivo',
                             ],
                             selectedPayment,
-                            (v) => setState(() => selectedPayment = v),
+                            (v) => setState(() {
+                              selectedPayment = v;
+                              if (!isCardPayment) selectedTarjetaId = null;
+                            }),
                           ),
+
+                          // Lógica visual de Tarjetas
+                          if (isCardPayment) ...[
+                            const SizedBox(height: 15),
+                            _buildTarjetaDropdown(),
+                            const SizedBox(height: 10),
+                            _buildRegistrarTarjetaButton(),
+                          ],
                         ],
                       ),
                     ),
@@ -336,6 +372,103 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
     );
   }
 
+  // --- WIDGETS AUXILIARES ---
+
+  Widget _buildRegistrarAcompananteButton() {
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: () {
+          Navigator.pushNamed(
+            context,
+            '/registro_acompanante',
+          ).then((_) => _cargarAcompanantes());
+        },
+        icon: const Icon(Icons.person_add, size: 18, color: primaryBlue),
+        label: Text(
+          "Registrar nuevo acompañante",
+          style: mSemibold(color: primaryBlue),
+        ),
+        style: OutlinedButton.styleFrom(
+          side: const BorderSide(color: primaryBlue),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTarjetaDropdown() {
+    if (cargandoTarjetas) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    String hintText = tarjetas.isEmpty
+        ? 'Registrar Tarjeta'
+        : 'Selecciona tu tarjeta';
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 15),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: accentBlue.withOpacity(0.5)),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: selectedTarjetaId,
+          dropdownColor: Colors.white,
+          hint: Row(
+            children: [
+              const Icon(Icons.credit_card, color: primaryBlue, size: 20),
+              const SizedBox(width: 10),
+              Text(hintText, style: mSemibold(color: accentBlue)),
+            ],
+          ),
+          isExpanded: true,
+          items: tarjetas.isEmpty
+              ? []
+              : tarjetas.map((t) {
+                  return DropdownMenuItem(
+                    value: t["id"],
+                    child: Text(
+                      t["texto"]!,
+                      style: mSemibold(color: primaryBlue),
+                    ),
+                  );
+                }).toList(),
+          onChanged: tarjetas.isEmpty
+              ? null
+              : (v) => setState(() => selectedTarjetaId = v),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRegistrarTarjetaButton() {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton.icon(
+        onPressed: () {
+          Navigator.pushNamed(
+            context,
+            '/registro_tarjeta',
+          ).then((_) => _cargarTarjetas());
+        },
+        icon: const Icon(Icons.add_card, color: Colors.white, size: 18),
+        label: Text("Registrar Tarjeta", style: mSemibold(color: Colors.white)),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: accentBlue,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          elevation: 0,
+        ),
+      ),
+    );
+  }
+
   Widget _buildHeader() {
     return Container(
       width: double.infinity,
@@ -347,7 +480,7 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
           const SizedBox(width: 45),
           Text('Agenda tu viaje', style: mExtrabold(size: 22)),
           Transform.translate(
-            offset: const Offset(0, 40), // Posición exacta solicitada
+            offset: const Offset(0, 40),
             child: Image.asset(
               'assets/control_voz.png',
               height: 65,
@@ -503,7 +636,6 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
     );
   }
 
-  // --- REUTILIZACIÓN DE WIDGETS DE BASE ---
   Widget _buildTimeDropdown(
     String hint,
     List<String> items,
@@ -606,8 +738,6 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
   }
 
   Widget _buildAcompananteDropdown() {
-    if (!hasCompanion) return const SizedBox();
-
     if (cargandoAcompanantes) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -624,7 +754,7 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
           dropdownColor: Colors.white,
           hint: Text(
             acompanantes.isEmpty
-                ? 'Registra acompañantes...'
+                ? 'Sin acompañantes'
                 : 'Selecciona acompañante',
             style: mSemibold(color: accentBlue),
           ),
@@ -707,7 +837,7 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
     return Column(
       children: [
         ElevatedButton(
-          onPressed: () {}, // estimación pendiente
+          onPressed: () {},
           style: ElevatedButton.styleFrom(
             backgroundColor: primaryBlue,
             minimumSize: const Size(220, 45),
@@ -796,23 +926,27 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
   Widget _buildCustomBottomNav() {
     return Container(
       height: 75,
-      decoration: const BoxDecoration(color: containerBlue),
+      decoration: const BoxDecoration(color: Color(0xFFE3F2FD)),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          _navIcon(0, Icons.home),
-          _navIcon(1, Icons.location_on),
-          _navIcon(2, Icons.history),
-          _navIcon(3, Icons.person),
+          _navIcon(0, Icons.home, '/principal_pasajero'),
+          _navIcon(1, Icons.location_on, '/agendar_viaje'),
+          _navIcon(2, Icons.history, '/historial_viajes_pasajero'),
+          _navIcon(3, Icons.person, '/mi_perfil_pasajero'),
         ],
       ),
     );
   }
 
-  Widget _navIcon(int index, IconData icon) {
+  Widget _navIcon(int index, IconData icon, String routeName) {
     bool active = _selectedIndex == index;
     return GestureDetector(
-      onTap: () => setState(() => _selectedIndex = index),
+      onTap: () {
+        if (_selectedIndex != index) {
+          Navigator.pushReplacementNamed(context, routeName);
+        }
+      },
       child: Container(
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
@@ -846,11 +980,9 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
 
     for (int i = 0; i < _destinoControllers.length; i++) {
       final text = _destinoControllers[i].text.trim();
-
       if (text.isEmpty) {
         throw Exception('Completa todos los destinos');
       }
-
       destinos.add({"direccion": text, "orden": i + 1});
     }
 
@@ -858,8 +990,22 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
   }
 
   Future<void> _crearViaje() async {
-    // 1. Validaciones previas para no ensuciar la lógica asíncrona
     if (_isCreatingTrip) return;
+
+    // VALIDACION TARJETA
+    bool esPagoConTarjeta =
+        (selectedPayment == 'Tarjeta de crédito' ||
+        selectedPayment == 'Tarjeta de débito');
+
+    if (esPagoConTarjeta && selectedTarjetaId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Por favor selecciona una tarjeta para continuar'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
 
     if (origenController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -886,31 +1032,20 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
       return;
     }
 
-    // Validar que los destinos no estén vacíos
-    for (int i = 0; i < _cantidadDestinos; i++) {
-      if (_destinoControllers[i].text.trim().isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('El destino ${i + 1} está vacío')),
-        );
-        return;
-      }
-    }
-
     setState(() => _isCreatingTrip = true);
 
     try {
       final fechaHoraInicio = _buildFechaHoraInicio();
       final destinos = _buildDestinosPayload();
 
-      // Llamada al servicio
       final viajeId = await ViajeService.crearViaje(
         puntoInicio: origenController.text.trim(),
-        destino: null, // Correcto, es null porque hay múltiples
-        destinos:
-            destinos, // Asegúrate que el servicio reciba List<Map<String, dynamic>>
+        destino: null,
+        destinos: destinos,
         checkVariosDestinos: true,
         fechaHoraInicio: fechaHoraInicio.toIso8601String(),
-        metodoPago: selectedPayment ?? 'Efectivo', // Valor por defecto seguro
+        metodoPago: selectedPayment ?? 'Efectivo',
+        idMetodo: esPagoConTarjeta ? selectedTarjetaId : null,
         especificaciones: especificaciones,
         checkAcompanante: hasCompanion,
         idAcompanante: hasCompanion ? selectedAcompananteId : null,
@@ -918,7 +1053,6 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
 
       if (!mounted) return;
 
-      // Navegación exitosa
       Navigator.pushReplacementNamed(
         context,
         '/principal_pasajero',

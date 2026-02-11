@@ -281,30 +281,34 @@ class _CompletarPerfilPasajeroState extends State<CompletarPerfilPasajero> {
     );
   }
 
-  Widget _buildCustomBottomNav() {
+ Widget _buildCustomBottomNav() {
     return Container(
       height: 80,
-      decoration: const BoxDecoration(color: Color(0xFFD6E8FF)), // Sin redondeo
+      decoration: const BoxDecoration(color: Color(0xFFD6E8FF)),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          _navIcon(0, Icons.home_rounded),
-          _navIcon(1, Icons.location_on_rounded),
-          _navIcon(2, Icons.history_rounded),
-          _navIcon(3, Icons.person_rounded),
+          _navIcon(0, Icons.home_rounded, '/principal_pasajero'),
+          _navIcon(1, Icons.location_on_rounded, '/agendar_viaje'),
+          _navIcon(2, Icons.history_rounded, '/historial_viajes_pasajero'),
+          _navIcon(3, Icons.person_rounded, '/mi_perfil_pasajero'),
         ],
       ),
     );
   }
 
-  Widget _navIcon(int index, IconData icon) {
+  Widget _navIcon(int index, IconData icon, String routeName) {
     bool active = _selectedIndex == index;
     return GestureDetector(
-      onTap: () => setState(() => _selectedIndex = index),
+      onTap: () {
+        if (_selectedIndex != index) {
+          Navigator.pushReplacementNamed(context, routeName);
+        }
+      },
       child: Container(
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: active ? primaryBlue : Colors.white, // Círculo cambia de color
+          color: active ? primaryBlue : Colors.white,
           shape: BoxShape.circle,
           boxShadow: [
             if (!active)
@@ -313,12 +317,12 @@ class _CompletarPerfilPasajeroState extends State<CompletarPerfilPasajero> {
                 blurRadius: 4,
                 offset: const Offset(0, 2),
               )
-          ]
+          ],
         ),
         child: Icon(
-          icon, 
-          color: active ? Colors.white : primaryBlue, 
-          size: 30
+          icon,
+          color: active ? Colors.white : primaryBlue,
+          size: 30,
         ),
       ),
     );

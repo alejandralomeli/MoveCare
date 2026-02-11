@@ -25,6 +25,7 @@ import 'screens/historial_viajes_pasajero.dart';
 import 'screens/viaje_confirmado.dart';
 import 'screens/estimacion_costo.dart';
 import 'screens/confirmar_correo.dart';
+import 'screens/perfil_pasajero.dart';
 
 const Color primaryColor = Color(0xFF2E6FFC);
 const Color cardBackgroundColor = Color(0xFFE3F2FD);
@@ -38,6 +39,7 @@ void main() {
   );
 }
 
+// main.dart
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
@@ -56,11 +58,10 @@ class MyApp extends StatelessWidget {
       home: const SplashScreen(), 
 
       routes: {
+        '/bienvenido': (context) => const Bienvenido(),
+        
         // Rutas existentes
         '/menu_vistas': (context) => const MenuVistas(),
-        
-        '/': (context) => const Bienvenido(),
-        
         '/iniciar_sesion': (context) => const IniciarSesion(), 
         '/olvide_contrasena': (context) => const OlvideContrasena(),
         '/confirmar-correo': (context) => const ConfirmarCorreoScreen(),
@@ -75,19 +76,20 @@ class MyApp extends StatelessWidget {
         // Pasajero
         '/registro_pasajero': (context) => const RegistroPasajero(),
         '/principal_pasajero': (context) => const PrincipalPasajero(),
+        
+        // ... resto de tus rutas ...
+        '/codigo_verificacion': (context) => const CodigoVerificacion(), //ESTA SE ELIMINARA
 
-        '/codigo_verificacion': (context) => const CodigoVerificacion(),//SE ELIMINARA
-
-        '/completar_perfil_pasajero': (context) => const CompletarPerfilPasajero(),//VERIFICAR DETALLES
+        '/completar_perfil_pasajero': (context) => const CompletarPerfilPasajero(), //MODIFICACIONES PENDIENTES
         '/agendar_viaje': (context) => const AgendarViaje(), 
         '/mi_perfil_pasajero': (context) => const MiPerfilPasajero(),
         '/agendar_varios_destinos': (context) => const AgendarVariosDestinos(),
-        '/pago_tarjeta': (context) => const PagoTarjetaScreen(),//FALTA
+        '/pago_tarjeta': (context) => const PagoTarjetaScreen(),
         '/registro_tarjeta': (context) => const RegistroTarjetaScreen(),
         '/registro_acompanante': (context) => const RegistrarAcompanante(),
         '/historial_viajes_pasajero': (context) => const HistorialViajesPasajero(),
-        '/viaje_confirmado': (context) => const ViajeConfirmado(),
-        '/estimacion_costo': (context) => const EstimacionViaje(),//FALTA
+        '/viaje_confirmado': (context) => const ViajeConfirmado(), //ESTA ME QUEDA POR CONECTAR
+        '/estimacion_costo': (context) => const EstimacionViaje(),
       },
     );
   }
