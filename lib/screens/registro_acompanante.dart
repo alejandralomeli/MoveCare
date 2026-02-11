@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart'; // NECESARIO PARA kIsWeb
+import 'package:flutter/foundation.dart'; // Necesario para kIsWeb
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'dart:convert';
@@ -15,27 +15,31 @@ class RegistrarAcompanante extends StatefulWidget {
   State<RegistrarAcompanante> createState() => _RegistrarAcompananteState();
 }
 
-class _RegistrarAcompananteState extends State<RegistrarAcompanante> {
-  // --- COLORES RESTAURADOS (Estilo Tarjeta) ---
+class _RegistrarAcompananteState extends State<RegistrarAcompanante>
+    with TickerProviderStateMixin {
+  // --- COLORES Y ESTILO ---
   static const Color primaryBlue = Color(0xFF1559B2);
   static const Color lightBlueBg = Color(0xFFB3D4FF);
   static const Color containerBlue = Color(0xFFD6E8FF);
-  static const Color accentBlue = Color(0xFF64A1F4); // Botones
-  static const Color textFieldBlue = Color(0xFFB3D4FF); // Inputs Claros
-
-  int _selectedIndex = 3;
+  static const Color accentBlue = Color(0xFF64A1F4);
+  static const Color textFieldBlue = Color(0xFFB3D4FF);
 
   // --- CONTROLADORES Y ESTADO ---
   final TextEditingController _nombreController = TextEditingController();
   final TextEditingController _otroController = TextEditingController();
   String? selectedParentesco;
+  int _selectedIndex = 3;
+  bool _isLoading = false;
+  bool _isVoiceActive = false;
 
-  // --- CAMBIO 1: Usamos XFile para compatibilidad Web/Móvil ---
+  // --- IMÁGENES (XFile para compatibilidad Web/Móvil) ---
   XFile? _imageFrente;
   XFile? _imageReverso;
-
   final ImagePicker _picker = ImagePicker();
-  bool _isLoading = false;
+
+  // --- ANIMACIONES ---
+  late AnimationController _pulseController;
+  late Animation<double> _pulseAnimation;
 
   final List<String> parentescos = [
     'Mamá',
@@ -47,7 +51,27 @@ class _RegistrarAcompananteState extends State<RegistrarAcompanante> {
     'Otro',
   ];
 
-  // Estilos de Texto
+  @override
+  void initState() {
+    super.initState();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.15).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _nombreController.dispose();
+    _otroController.dispose();
+    _pulseController.dispose();
+    super.dispose();
+  }
+
+  // --- ESTILOS DE TEXTO ---
   TextStyle mBold({Color color = primaryBlue, double size = 14}) {
     return GoogleFonts.montserrat(
       color: color,
@@ -56,7 +80,7 @@ class _RegistrarAcompananteState extends State<RegistrarAcompanante> {
     );
   }
 
-  TextStyle mSemibold({Color color = primaryBlue, double size = 14}) {
+  TextStyle mSemibold({Color color = primaryBlue, double size = 13}) {
     return GoogleFonts.montserrat(
       color: color,
       fontSize: size,
@@ -64,22 +88,19 @@ class _RegistrarAcompananteState extends State<RegistrarAcompanante> {
     );
   }
 
-  // --- LÓGICA DE FOTOS (Web y Móvil) ---
+  // --- LÓGICA DE IMÁGENES ---
   Future<void> _pickImage(bool isFrente) async {
     try {
-      // Nota: imageQuality reduce el tamaño para que suba rápido
       final XFile? photo = await _picker.pickImage(
         source: ImageSource.gallery,
         imageQuality: 50,
       );
-
       if (photo != null) {
         setState(() {
-          if (isFrente) {
-            _imageFrente = photo; // Guardamos como XFile directo
-          } else {
+          if (isFrente)
+            _imageFrente = photo;
+          else
             _imageReverso = photo;
-          }
         });
       }
     } catch (e) {
@@ -89,10 +110,8 @@ class _RegistrarAcompananteState extends State<RegistrarAcompanante> {
     }
   }
 
-  // --- CONVERSIÓN BASE64 (Compatible Web) ---
   Future<String?> _convertImageToBase64(XFile? image) async {
     if (image == null) return null;
-    // readAsBytes funciona tanto en web como en móvil con XFile
     List<int> imageBytes = await image.readAsBytes();
     return base64Encode(imageBytes);
   }
@@ -109,11 +128,9 @@ class _RegistrarAcompananteState extends State<RegistrarAcompanante> {
     setState(() => _isLoading = true);
 
     try {
-      String parentescoFinal = selectedParentesco ?? '';
-      if (selectedParentesco == 'Otro') {
-        parentescoFinal = _otroController.text;
-      }
-
+      String parentescoFinal = (selectedParentesco == 'Otro')
+          ? _otroController.text
+          : (selectedParentesco ?? '');
       String? base64Frente = await _convertImageToBase64(_imageFrente);
       String? base64Reverso = await _convertImageToBase64(_imageReverso);
 
@@ -134,9 +151,7 @@ class _RegistrarAcompananteState extends State<RegistrarAcompanante> {
         Navigator.pop(context);
       }
     } catch (e) {
-      if (mounted) {
-        AuthHelper.manejarError(context, e);
-      }
+      if (mounted) AuthHelper.manejarError(context, e);
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -152,140 +167,18 @@ class _RegistrarAcompananteState extends State<RegistrarAcompanante> {
             _buildHeader(),
             Expanded(
               child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
                 padding: const EdgeInsets.symmetric(
                   horizontal: 25,
-                  vertical: 30,
+                  vertical: 20,
                 ),
                 child: Column(
                   children: [
-                    // Badge Informativo (Estilo Tarjeta)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 15,
-                        vertical: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: accentBlue,
-                        borderRadius: BorderRadius.circular(30),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.info_outline,
-                            color: Colors.white,
-                            size: 18,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Ingrese los datos para registrar',
-                            style: mBold(color: Colors.white, size: 13),
-                          ),
-                        ],
-                      ),
-                    ),
+                    _buildInfoBadge(),
                     const SizedBox(height: 25),
-
-                    // CONTENEDOR PRINCIPAL
-                    Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: containerBlue,
-                        borderRadius: BorderRadius.circular(30),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
-                            blurRadius: 10,
-                            offset: const Offset(0, 5),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Campo Nombre Completo
-                          _buildTextField(
-                            'Nombre completo',
-                            circleColor: Colors.white,
-                            controller: _nombreController,
-                          ),
-                          const SizedBox(height: 15),
-
-                          // Menú Desplegable Parentesco
-                          _buildParentescoDropdown(),
-
-                          if (selectedParentesco == 'Otro') ...[
-                            const SizedBox(height: 10),
-                            _buildTextField(
-                              'Especifique parentesco',
-                              circleColor: primaryBlue,
-                              controller: _otroController,
-                            ),
-                          ],
-
-                          const SizedBox(height: 25),
-                          Center(
-                            child: Text(
-                              'Foto de INE / Identificación oficial',
-                              style: mBold(size: 13, color: Colors.black),
-                            ),
-                          ),
-                          const SizedBox(height: 15),
-
-                          // FOTOS INE (Con imágenes personalizadas)
-                          Row(
-                            children: [
-                              Expanded(
-                                child: GestureDetector(
-                                  onTap: () => _pickImage(true), // Frente
-                                  child: _buildFotoINE(
-                                    'Anverso',
-                                    _imageFrente,
-                                    'assets/ine_anverso.png', // Tu imagen personalizada
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 15),
-                              Expanded(
-                                child: GestureDetector(
-                                  onTap: () => _pickImage(false), // Reverso
-                                  child: _buildFotoINE(
-                                    'Reverso',
-                                    _imageReverso,
-                                    'assets/ine_reverso.png', // Tu imagen personalizada
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
+                    _buildMainForm(),
                     const SizedBox(height: 40),
-
-                    // BOTÓN REGISTRAR
-                    SizedBox(
-                      width: 200,
-                      height: 50,
-                      child: ElevatedButton(
-                        onPressed: _isLoading ? null : _registrar,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: accentBlue,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(25),
-                          ),
-                          elevation: 5,
-                        ),
-                        child: _isLoading
-                            ? const CircularProgressIndicator(
-                                color: Colors.white,
-                              )
-                            : Text(
-                                'Registrar',
-                                style: mBold(color: Colors.white, size: 16),
-                              ),
-                      ),
-                    ),
+                    _buildSubmitButton(),
                   ],
                 ),
               ),
@@ -297,31 +190,168 @@ class _RegistrarAcompananteState extends State<RegistrarAcompanante> {
     );
   }
 
+  Widget _buildInfoBadge() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
+      decoration: BoxDecoration(
+        color: accentBlue,
+        borderRadius: BorderRadius.circular(30),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.info_outline, color: Colors.white, size: 18),
+          const SizedBox(width: 8),
+          Text(
+            'Ingrese los datos para registrar',
+            style: mBold(color: Colors.white, size: 13),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMainForm() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: containerBlue,
+        borderRadius: BorderRadius.circular(30),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          _buildTextField(
+            'Nombre completo',
+            circleColor: Colors.white,
+            controller: _nombreController,
+          ),
+          const SizedBox(height: 15),
+          _buildParentescoDropdown(),
+          if (selectedParentesco == 'Otro') ...[
+            const SizedBox(height: 10),
+            _buildTextField(
+              'Especifique parentesco',
+              circleColor: primaryBlue,
+              controller: _otroController,
+            ),
+          ],
+          const SizedBox(height: 25),
+          Text(
+            'Foto de INE / Identificación oficial',
+            style: mBold(size: 13, color: Colors.black),
+          ),
+          const SizedBox(height: 15),
+          Row(
+            children: [
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => _pickImage(true),
+                  child: _buildFotoINE(
+                    'Anverso',
+                    _imageFrente,
+                    'assets/ine_anverso.png',
+                  ),
+                ),
+              ),
+              const SizedBox(width: 15),
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => _pickImage(false),
+                  child: _buildFotoINE(
+                    'Reverso',
+                    _imageReverso,
+                    'assets/ine_reverso.png',
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSubmitButton() {
+    return SizedBox(
+      width: 180,
+      height: 50,
+      child: ElevatedButton(
+        onPressed: _isLoading ? null : _registrar,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: accentBlue,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(25),
+          ),
+          elevation: 5,
+        ),
+        child: _isLoading
+            ? const CircularProgressIndicator(color: Colors.white)
+            : Text('Registrar', style: mBold(color: Colors.white, size: 16)),
+      ),
+    );
+  }
+
   Widget _buildHeader() {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 30),
+      height: 110,
       decoration: const BoxDecoration(color: lightBlueBg),
       child: Stack(
-        alignment: Alignment.center,
+        clipBehavior: Clip.none,
         children: [
-          Text(
-            'Registrar acompañante',
-            style: mBold(size: 20, color: Colors.black),
+          Positioned(
+            left: 15,
+            bottom: 30,
+            child: IconButton(
+              icon: const Icon(
+                Icons.arrow_back_ios_new,
+                color: primaryBlue,
+                size: 20,
+              ),
+              onPressed: () => Navigator.pop(context),
+            ),
           ),
-          Align(
-            alignment: Alignment.centerRight,
-            child: Transform.translate(
-              offset: const Offset(10, 53),
-              child: Container(
-                padding: const EdgeInsets.all(8),
+          Center(
+            child: Text(
+              'Registrar acompañante',
+              style: mBold(size: 19, color: Colors.black),
+            ),
+          ),
+          Positioned(
+            right: 20,
+            bottom: -32,
+            child: GestureDetector(
+              onTap: () {
+                setState(() {
+                  _isVoiceActive = !_isVoiceActive;
+                  _isVoiceActive
+                      ? _pulseController.repeat(reverse: true)
+                      : _pulseController.reset();
+                });
+              },
+              child: ScaleTransition(
+                scale: _pulseAnimation,
                 child: Image.asset(
-                  'assets/control_voz.png',
-                  height: 60,
-                  width: 60,
-                  errorBuilder: (c, e, s) => const CircleAvatar(
-                    backgroundColor: primaryBlue,
-                    child: Icon(Icons.mic, color: Colors.white),
+                  _isVoiceActive
+                      ? 'assets/escuchando.png'
+                      : 'assets/controlvoz.png',
+                  height: 65,
+                  width: 65,
+                  errorBuilder: (c, e, s) => CircleAvatar(
+                    backgroundColor: _isVoiceActive ? Colors.red : primaryBlue,
+                    radius: 32,
+                    child: Icon(
+                      _isVoiceActive ? Icons.graphic_eq : Icons.mic,
+                      color: Colors.white,
+                      size: 30,
+                    ),
                   ),
                 ),
               ),
@@ -339,7 +369,7 @@ class _RegistrarAcompananteState extends State<RegistrarAcompanante> {
   }) {
     return Container(
       decoration: BoxDecoration(
-        color: textFieldBlue, // Color del estilo viejo
+        color: textFieldBlue,
         borderRadius: BorderRadius.circular(25),
       ),
       child: TextField(
@@ -347,7 +377,7 @@ class _RegistrarAcompananteState extends State<RegistrarAcompanante> {
         style: mBold(size: 14),
         decoration: InputDecoration(
           hintText: hint,
-          hintStyle: mSemibold(color: primaryBlue.withOpacity(0.6), size: 13),
+          hintStyle: mSemibold(color: primaryBlue.withOpacity(0.6)),
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 20,
             vertical: 15,
@@ -381,22 +411,19 @@ class _RegistrarAcompananteState extends State<RegistrarAcompanante> {
                 value: selectedParentesco,
                 hint: Text(
                   'Parentesco',
-                  style: mSemibold(
-                    color: primaryBlue.withOpacity(0.6),
-                    size: 13,
-                  ),
+                  style: mSemibold(color: primaryBlue.withOpacity(0.6)),
                 ),
                 icon: const Icon(Icons.keyboard_arrow_down, color: primaryBlue),
                 isExpanded: true,
-                items: parentescos.map((String value) {
-                  return DropdownMenuItem<String>(
-                    value: value,
-                    child: Text(value, style: mBold(size: 14)),
-                  );
-                }).toList(),
-                onChanged: (newValue) {
-                  setState(() => selectedParentesco = newValue);
-                },
+                items: parentescos
+                    .map(
+                      (v) => DropdownMenuItem(
+                        value: v,
+                        child: Text(v, style: mBold(size: 14)),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (val) => setState(() => selectedParentesco = val),
               ),
             ),
           ),
@@ -405,12 +432,11 @@ class _RegistrarAcompananteState extends State<RegistrarAcompanante> {
     );
   }
 
-  // --- WIDGET DE FOTO ACTUALIZADO (Solución Web + Assets) ---
   Widget _buildFotoINE(String label, XFile? imageFile, String assetPath) {
     return Column(
       children: [
         Container(
-          height: 110, // Un poco más alto para ver bien la INE
+          height: 110,
           width: double.infinity,
           decoration: BoxDecoration(
             color: Colors.white,
@@ -434,28 +460,9 @@ class _RegistrarAcompananteState extends State<RegistrarAcompanante> {
     );
   }
 
-  // Función auxiliar para decidir qué imagen mostrar
   Widget _getImageWidget(XFile? file, String assetPath) {
-    // 1. Si no hay foto seleccionada, mostrar la imagen por defecto (asset)
-    if (file == null) {
-      return Image.asset(
-        assetPath,
-        fit: BoxFit.contain, // Contain para que se vea toda la guía de la INE
-        errorBuilder: (context, error, stackTrace) {
-          // Si fallara al cargar el asset, mostrar icono
-          return const Center(
-            child: Icon(Icons.camera_alt, size: 40, color: Colors.grey),
-          );
-        },
-      );
-    }
-
-    // 2. Si hay foto y es WEB
-    if (kIsWeb) {
-      return Image.network(file.path, fit: BoxFit.cover);
-    }
-
-    // 3. Si hay foto y es MÓVIL (Android/iOS)
+    if (file == null) return Image.asset(assetPath, fit: BoxFit.contain);
+    if (kIsWeb) return Image.network(file.path, fit: BoxFit.cover);
     return Image.file(File(file.path), fit: BoxFit.cover);
   }
 
@@ -478,24 +485,14 @@ class _RegistrarAcompananteState extends State<RegistrarAcompanante> {
   Widget _navIcon(int index, IconData icon, String routeName) {
     bool active = _selectedIndex == index;
     return GestureDetector(
-      onTap: () {
-        if (_selectedIndex != index) {
-          Navigator.pushReplacementNamed(context, routeName);
-        }
-      },
+      onTap: () => _selectedIndex != index
+          ? Navigator.pushReplacementNamed(context, routeName)
+          : null,
       child: Container(
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
           color: active ? primaryBlue : Colors.white,
           shape: BoxShape.circle,
-          boxShadow: [
-            if (!active)
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 4,
-                offset: const Offset(0, 2),
-              ),
-          ],
         ),
         child: Icon(icon, color: active ? Colors.white : primaryBlue, size: 28),
       ),

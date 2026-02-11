@@ -13,6 +13,7 @@ class _RegistroPasajeroState extends State<RegistroPasajero> {
   static const Color primaryBlue = Color(0xFF1559B2);
   static const Color fieldBlue = Color(0xFFD6E8FF);
 
+  // Controladores funcionales (HEAD)
   final _nombreCtrl = TextEditingController();
   final _correoCtrl = TextEditingController();
   final _telefonoCtrl = TextEditingController();
@@ -23,13 +24,31 @@ class _RegistroPasajeroState extends State<RegistroPasajero> {
   bool _obscureConfirmPass = true;
   bool _loading = false;
 
+  // Función de escalado responsivo (main)
+  double sp(double size, BuildContext context) {
+    double sw = MediaQuery.of(context).size.width;
+    return sw * (size / 375);
+  }
+
+  @override
+  void dispose() {
+    _nombreCtrl.dispose();
+    _correoCtrl.dispose();
+    _telefonoCtrl.dispose();
+    _passwordCtrl.dispose();
+    _confirmCtrl.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
 
     return Scaffold(
+      backgroundColor: Colors.white,
       body: Stack(
         children: [
+          // Imagen de fondo superior
           Positioned(
             top: 0,
             left: 0,
@@ -38,82 +57,149 @@ class _RegistroPasajeroState extends State<RegistroPasajero> {
             child: Image.asset('assets/ruta.png', fit: BoxFit.cover),
           ),
 
+          // Botón de retroceso (main)
+          Positioned(
+            top: MediaQuery.of(context).padding.top + sp(15, context),
+            left: sp(10, context),
+            child: IconButton(
+              icon: Icon(
+                Icons.arrow_back_ios_new,
+                color: primaryBlue,
+                size: sp(20, context),
+              ),
+              onPressed: () => Navigator.pop(context),
+            ),
+          ),
+
+          // Logo flotante (main)
+          Positioned(
+            top: size.height * 0.10,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: Container(
+                width: sp(90, context),
+                height: sp(90, context),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(sp(25, context)),
+                  boxShadow: const [
+                    BoxShadow(color: Colors.black12, blurRadius: 10),
+                  ],
+                ),
+                child: Padding(
+                  padding: EdgeInsets.all(sp(10, context)),
+                  child: Image.asset('assets/movecare.png'),
+                ),
+              ),
+            ),
+          ),
+
+          // Contenedor de Formulario
           Align(
             alignment: Alignment.bottomCenter,
             child: Container(
-              height: size.height * 0.7,
+              height: size.height * 0.72,
               width: double.infinity,
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(50),
-                  topRight: Radius.circular(50),
+                  topLeft: Radius.circular(sp(50, context)),
+                  topRight: Radius.circular(sp(50, context)),
                 ),
               ),
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 30),
+                physics: const BouncingScrollPhysics(),
+                padding: EdgeInsets.symmetric(horizontal: sp(30, context)),
                 child: Column(
                   children: [
-                    const SizedBox(height: 30),
+                    SizedBox(height: sp(30, context)),
                     Text(
                       'Crea una cuenta de Pasajero',
+                      textAlign: TextAlign.center,
                       style: GoogleFonts.montserrat(
                         color: primaryBlue,
                         fontWeight: FontWeight.bold,
-                        fontSize: 18,
+                        fontSize: sp(18, context),
                       ),
                     ),
-                    const SizedBox(height: 20),
+                    SizedBox(height: sp(20, context)),
 
-                    _buildTextField('Nombre', Colors.blue.shade800, _nombreCtrl),
-                    _buildTextField('Correo electrónico', Colors.blue.shade400, _correoCtrl),
-                    _buildTextField('Teléfono de contacto', Colors.blue.shade800, _telefonoCtrl),
-
-                    _buildPasswordField(
-                      'Contraseña',
-                      Colors.blue.shade400,
-                      _passwordCtrl,
-                      _obscurePass,
-                      () => setState(() => _obscurePass = !_obscurePass),
+                    // Campos de texto con controladores
+                    _buildTextField(
+                      context,
+                      label: 'Nombre',
+                      iconColor: Colors.blue.shade800,
+                      ctrl: _nombreCtrl,
+                    ),
+                    _buildTextField(
+                      context,
+                      label: 'Correo electrónico',
+                      iconColor: Colors.blue.shade400,
+                      ctrl: _correoCtrl,
+                    ),
+                    _buildTextField(
+                      context,
+                      label: 'Teléfono de contacto',
+                      iconColor: Colors.blue.shade800,
+                      ctrl: _telefonoCtrl,
                     ),
 
                     _buildPasswordField(
-                      'Confirmación de contraseña',
-                      Colors.blue.shade800,
-                      _confirmCtrl,
-                      _obscureConfirmPass,
-                      () => setState(() => _obscureConfirmPass = !_obscureConfirmPass),
+                      context: context,
+                      label: 'Contraseña',
+                      iconColor: Colors.blue.shade400,
+                      ctrl: _passwordCtrl,
+                      isObscured: _obscurePass,
+                      onToggle: () =>
+                          setState(() => _obscurePass = !_obscurePass),
                     ),
 
-                    const SizedBox(height: 25),
+                    _buildPasswordField(
+                      context: context,
+                      label: 'Confirmación de contraseña',
+                      iconColor: Colors.blue.shade800,
+                      ctrl: _confirmCtrl,
+                      isObscured: _obscureConfirmPass,
+                      onToggle: () => setState(
+                        () => _obscureConfirmPass = !_obscureConfirmPass,
+                      ),
+                    ),
 
+                    SizedBox(height: sp(25, context)),
+
+                    // Botón de Registro con lógica de carga
                     SizedBox(
                       width: size.width * 0.7,
-                      height: 50,
+                      height: sp(50, context),
                       child: ElevatedButton(
                         onPressed: _loading ? null : _register,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: primaryBlue,
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(25),
+                            borderRadius: BorderRadius.circular(
+                              sp(25, context),
+                            ),
                           ),
                         ),
                         child: _loading
-                            ? const CircularProgressIndicator(color: Colors.white)
+                            ? const CircularProgressIndicator(
+                                color: Colors.white,
+                              )
                             : Text(
                                 'Registrarme',
                                 style: GoogleFonts.montserrat(
                                   color: Colors.white,
                                   fontWeight: FontWeight.bold,
-                                  fontSize: 15,
+                                  fontSize: sp(15, context),
                                 ),
                               ),
                       ),
                     ),
 
-                    const SizedBox(height: 20),
+                    SizedBox(height: sp(20, context)),
                     _buildFooter(context),
-                    const SizedBox(height: 20),
+                    SizedBox(height: sp(30, context)),
                   ],
                 ),
               ),
@@ -124,55 +210,87 @@ class _RegistroPasajeroState extends State<RegistroPasajero> {
     );
   }
 
-  Widget _buildTextField(String label, Color color, TextEditingController ctrl) {
+  Widget _buildTextField(
+    BuildContext context, {
+    required String label,
+    required Color iconColor,
+    required TextEditingController ctrl,
+  }) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: EdgeInsets.only(bottom: sp(12, context)),
       child: Container(
-        decoration: BoxDecoration(color: fieldBlue, borderRadius: BorderRadius.circular(20)),
+        decoration: BoxDecoration(
+          color: fieldBlue,
+          borderRadius: BorderRadius.circular(sp(20, context)),
+        ),
         child: TextField(
           controller: ctrl,
+          style: GoogleFonts.montserrat(fontSize: sp(14, context)),
           decoration: InputDecoration(
             hintText: label,
-            hintStyle: GoogleFonts.montserrat(color: primaryBlue, fontWeight: FontWeight.w600),
+            hintStyle: GoogleFonts.montserrat(
+              color: primaryBlue,
+              fontSize: sp(14, context),
+              fontWeight: FontWeight.w600,
+            ),
             prefixIcon: Padding(
-              padding: const EdgeInsets.all(12),
-              child: CircleAvatar(backgroundColor: color, radius: 10),
+              padding: EdgeInsets.all(sp(12, context)),
+              child: CircleAvatar(
+                backgroundColor: iconColor,
+                radius: sp(10, context),
+              ),
             ),
             border: InputBorder.none,
-            contentPadding: const EdgeInsets.symmetric(vertical: 15),
+            contentPadding: EdgeInsets.symmetric(vertical: sp(15, context)),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildPasswordField(
-    String label,
-    Color color,
-    TextEditingController ctrl,
-    bool obscure,
-    VoidCallback toggle,
-  ) {
+  Widget _buildPasswordField({
+    required BuildContext context,
+    required String label,
+    required Color iconColor,
+    required TextEditingController ctrl,
+    required bool isObscured,
+    required VoidCallback onToggle,
+  }) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: EdgeInsets.only(bottom: sp(12, context)),
       child: Container(
-        decoration: BoxDecoration(color: fieldBlue, borderRadius: BorderRadius.circular(20)),
+        decoration: BoxDecoration(
+          color: fieldBlue,
+          borderRadius: BorderRadius.circular(sp(20, context)),
+        ),
         child: TextField(
           controller: ctrl,
-          obscureText: obscure,
+          obscureText: isObscured,
+          style: GoogleFonts.montserrat(fontSize: sp(14, context)),
           decoration: InputDecoration(
             hintText: label,
-            hintStyle: GoogleFonts.montserrat(color: primaryBlue, fontWeight: FontWeight.w600),
+            hintStyle: GoogleFonts.montserrat(
+              color: primaryBlue,
+              fontSize: sp(14, context),
+              fontWeight: FontWeight.w600,
+            ),
             prefixIcon: Padding(
-              padding: const EdgeInsets.all(12),
-              child: CircleAvatar(backgroundColor: color, radius: 10),
+              padding: EdgeInsets.all(sp(12, context)),
+              child: CircleAvatar(
+                backgroundColor: iconColor,
+                radius: sp(10, context),
+              ),
             ),
             suffixIcon: IconButton(
-              icon: Icon(obscure ? Icons.visibility_off : Icons.visibility, color: primaryBlue),
-              onPressed: toggle,
+              icon: Icon(
+                isObscured ? Icons.visibility_off : Icons.visibility,
+                color: primaryBlue,
+                size: sp(20, context),
+              ),
+              onPressed: onToggle,
             ),
             border: InputBorder.none,
-            contentPadding: const EdgeInsets.symmetric(vertical: 15),
+            contentPadding: EdgeInsets.symmetric(vertical: sp(15, context)),
           ),
         ),
       ),
@@ -183,7 +301,10 @@ class _RegistroPasajeroState extends State<RegistroPasajero> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Text('¿Ya tienes cuenta? ', style: GoogleFonts.montserrat(fontSize: 13)),
+        Text(
+          '¿Ya tienes cuenta? ',
+          style: GoogleFonts.montserrat(fontSize: sp(13, context)),
+        ),
         GestureDetector(
           onTap: () => Navigator.pushNamed(context, '/iniciar_sesion'),
           child: Text(
@@ -191,7 +312,7 @@ class _RegistroPasajeroState extends State<RegistroPasajero> {
             style: GoogleFonts.montserrat(
               color: primaryBlue,
               fontWeight: FontWeight.bold,
-              fontSize: 13,
+              fontSize: sp(13, context),
             ),
           ),
         ),
@@ -219,7 +340,7 @@ class _RegistroPasajeroState extends State<RegistroPasajero> {
     if (result['ok']) {
       _alert(
         'Registro exitoso',
-        'Revisa tu correo para verificar tu cuenta',
+        'Tu cuenta ha sido creada. Ahora puedes iniciar sesión.',
       );
     } else {
       _alert('Error', result['error'].toString());
@@ -233,7 +354,10 @@ class _RegistroPasajeroState extends State<RegistroPasajero> {
         title: Text(title),
         content: Text(msg),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Aceptar')),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Aceptar'),
+          ),
         ],
       ),
     );

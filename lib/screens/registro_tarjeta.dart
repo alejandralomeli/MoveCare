@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-
-// Importaciones de tu lógica
 import '../services/pagos/pagos_service.dart';
 import '../core/utils/auth_helper.dart';
 
@@ -12,8 +10,8 @@ class RegistroTarjetaScreen extends StatefulWidget {
   State<RegistroTarjetaScreen> createState() => _RegistroTarjetaScreenState();
 }
 
-class _RegistroTarjetaScreenState extends State<RegistroTarjetaScreen> {
-  // Colores unificados
+class _RegistroTarjetaScreenState extends State<RegistroTarjetaScreen>
+    with TickerProviderStateMixin {
   static const Color primaryBlue = Color(0xFF1559B2);
   static const Color lightBlueBg = Color(0xFFB3D4FF);
   static const Color containerBlue = Color(0xFFD6E8FF);
@@ -21,15 +19,53 @@ class _RegistroTarjetaScreenState extends State<RegistroTarjetaScreen> {
   static const Color textFieldBlue = Color(0xFFB3D4FF);
 
   int _selectedIndex = 1;
-  bool _isLoading = false; // Variable de carga
+  bool _isLoading = false;
+  bool _isVoiceActive = false;
 
-  // --- CONTROLLERS (Para capturar el texto) ---
+  // Animaciones para el control de voz
+  late AnimationController _pulseController;
+  late Animation<double> _pulseAnimation;
+
+  // Controllers de lógica funcional
   final TextEditingController _numeroCtrl = TextEditingController();
   final TextEditingController _nombreCtrl = TextEditingController();
   final TextEditingController _expiraCtrl = TextEditingController();
   final TextEditingController _cvvCtrl = TextEditingController();
 
-  // Estilos
+  @override
+  void initState() {
+    super.initState();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.15).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    _numeroCtrl.dispose();
+    _nombreCtrl.dispose();
+    _expiraCtrl.dispose();
+    _cvvCtrl.dispose();
+    super.dispose();
+  }
+
+  void _toggleVoice() {
+    setState(() {
+      _isVoiceActive = !_isVoiceActive;
+      if (_isVoiceActive) {
+        _pulseController.repeat(reverse: true);
+      } else {
+        _pulseController.stop();
+        _pulseController.reset();
+      }
+    });
+  }
+
   TextStyle mSemibold({Color color = Colors.black, double size = 14}) {
     return GoogleFonts.montserrat(
       color: color,
@@ -46,14 +82,12 @@ class _RegistroTarjetaScreenState extends State<RegistroTarjetaScreen> {
     );
   }
 
-  // --- LÓGICA DE GUARDADO ---
   Future<void> _guardarTarjeta() async {
     final numero = _numeroCtrl.text.trim();
     final nombre = _nombreCtrl.text.trim();
     final expira = _expiraCtrl.text.trim();
     final cvv = _cvvCtrl.text.trim();
 
-    // Validación simple
     if (numero.length < 16 ||
         nombre.isEmpty ||
         expira.isEmpty ||
@@ -67,15 +101,12 @@ class _RegistroTarjetaScreenState extends State<RegistroTarjetaScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // Simulación de datos para el servicio
       final ultimos4 = numero.substring(numero.length - 4);
       final tokenSimulado = "tok_${DateTime.now().millisecondsSinceEpoch}";
+      String marca = numero.startsWith("4")
+          ? "visa"
+          : (numero.startsWith("5") ? "mastercard" : "Desconocida");
 
-      String marca = "Desconocida";
-      if (numero.startsWith("4")) marca = "visa";
-      if (numero.startsWith("5")) marca = "mastercard";
-
-      // Llamada al servicio
       await PagosService.agregarTarjeta(
         token: tokenSimulado,
         ultimosCuatro: ultimos4,
@@ -84,15 +115,13 @@ class _RegistroTarjetaScreenState extends State<RegistroTarjetaScreen> {
       );
 
       if (!mounted) return;
-
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text("¡Tarjeta guardada con éxito!"),
           backgroundColor: Colors.green,
         ),
       );
-
-      Navigator.pop(context); // Regresar atrás
+      Navigator.pop(context);
     } catch (e) {
       if (mounted) AuthHelper.manejarError(context, e);
     } finally {
@@ -110,19 +139,16 @@ class _RegistroTarjetaScreenState extends State<RegistroTarjetaScreen> {
             _buildHeader(),
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.only(
-                  left: 25,
-                  right: 25,
-                  bottom: 20,
-                  top: 40,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 25,
+                  vertical: 40,
                 ),
                 child: Column(
                   children: [
-                    // Banner informativo
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 15,
-                        vertical: 8,
+                        vertical: 12,
                       ),
                       decoration: BoxDecoration(
                         color: accentBlue,
@@ -145,8 +171,6 @@ class _RegistroTarjetaScreenState extends State<RegistroTarjetaScreen> {
                       ),
                     ),
                     const SizedBox(height: 30),
-
-                    // CONTENEDOR PRINCIPAL SOMBREADO
                     Container(
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
@@ -162,40 +186,27 @@ class _RegistroTarjetaScreenState extends State<RegistroTarjetaScreen> {
                       ),
                       child: Column(
                         children: [
-                          // Imagen de tarjeta (Estática como pediste)
                           Container(
-                            height:
-                                180, // Altura fija para evitar errores si no carga la imagen
+                            height: 180,
                             width: double.infinity,
                             decoration: BoxDecoration(
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(20),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.15),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ],
                             ),
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(20),
                               child: Image.asset(
-                                'assets/tarjeta.png', // Asegúrate de tener este asset o cambia por un Icon
+                                'assets/tarjeta.png',
                                 fit: BoxFit.cover,
-                                errorBuilder: (c, e, s) => const Center(
-                                  child: Icon(
-                                    Icons.credit_card,
-                                    size: 80,
-                                    color: primaryBlue,
-                                  ),
+                                errorBuilder: (c, e, s) => const Icon(
+                                  Icons.credit_card,
+                                  size: 80,
+                                  color: primaryBlue,
                                 ),
                               ),
                             ),
                           ),
                           const SizedBox(height: 25),
-
-                          // CAMPOS DE ENTRADA (Conectados a Controllers)
                           _buildTextField(
                             'Número de la tarjeta',
                             circleColor: Colors.white,
@@ -208,11 +219,8 @@ class _RegistroTarjetaScreenState extends State<RegistroTarjetaScreen> {
                             'Nombre Completo',
                             circleColor: primaryBlue,
                             controller: _nombreCtrl,
-                            inputType: TextInputType.name,
                           ),
                           const SizedBox(height: 12),
-
-                          // FILA CON DOS CAMPOS AL MISMO TIEMPO
                           Row(
                             children: [
                               Expanded(
@@ -241,15 +249,11 @@ class _RegistroTarjetaScreenState extends State<RegistroTarjetaScreen> {
                       ),
                     ),
                     const SizedBox(height: 40),
-
-                    // BOTÓN CON LÓGICA DE CARGA
                     SizedBox(
                       width: 200,
                       height: 50,
                       child: ElevatedButton(
-                        onPressed: _isLoading
-                            ? null
-                            : _guardarTarjeta, // Desactiva si carga
+                        onPressed: _isLoading ? null : _guardarTarjeta,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: accentBlue,
                           shape: RoundedRectangleBorder(
@@ -278,11 +282,10 @@ class _RegistroTarjetaScreenState extends State<RegistroTarjetaScreen> {
     );
   }
 
-  // Widget TextField mejorado para recibir controladores
   Widget _buildTextField(
     String hint, {
     required Color circleColor,
-    required TextEditingController controller, // Ahora requiere controller
+    required TextEditingController controller,
     TextInputType inputType = TextInputType.text,
     int? maxLength,
   }) {
@@ -297,7 +300,7 @@ class _RegistroTarjetaScreenState extends State<RegistroTarjetaScreen> {
         maxLength: maxLength,
         style: mBold(size: 14),
         decoration: InputDecoration(
-          counterText: "", // Oculta el contador de caracteres
+          counterText: "",
           hintText: hint,
           hintStyle: mSemibold(color: primaryBlue.withOpacity(0.6), size: 13),
           contentPadding: const EdgeInsets.symmetric(
@@ -317,19 +320,62 @@ class _RegistroTarjetaScreenState extends State<RegistroTarjetaScreen> {
   Widget _buildHeader() {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 30),
+      height: 110,
+      padding: const EdgeInsets.symmetric(horizontal: 30),
       decoration: const BoxDecoration(color: lightBlueBg),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.end,
+      child: Stack(
+        clipBehavior: Clip.none,
         children: [
-          const Spacer(),
-          Transform.translate(
-            offset: const Offset(0, 50),
-            child: CircleAvatar(
-              // Cambié a un placeholder por si no tienes el asset 'control_voz'
-              backgroundColor: primaryBlue,
-              radius: 30,
-              child: const Icon(Icons.mic, color: Colors.white, size: 30),
+          Positioned(
+            left: -15,
+            bottom: 25,
+            child: IconButton(
+              icon: const Icon(
+                Icons.arrow_back_ios_new,
+                color: primaryBlue,
+                size: 20,
+              ),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+          ),
+          Positioned(
+            right: -15,
+            bottom: -32,
+            child: GestureDetector(
+              onTap: _toggleVoice,
+              child: ScaleTransition(
+                scale: _pulseAnimation,
+                child: Container(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: _isVoiceActive
+                            ? primaryBlue.withOpacity(0.4)
+                            : Colors.black12,
+                        blurRadius: 15,
+                        spreadRadius: _isVoiceActive ? 4 : 2,
+                      ),
+                    ],
+                  ),
+                  child: Image.asset(
+                    _isVoiceActive
+                        ? 'assets/escuchando.png'
+                        : 'assets/controlvoz.png',
+                    height: 65,
+                    width: 65,
+                    fit: BoxFit.contain,
+                    errorBuilder: (c, e, s) => CircleAvatar(
+                      radius: 32,
+                      backgroundColor: primaryBlue,
+                      child: Icon(
+                        _isVoiceActive ? Icons.mic : Icons.mic_none,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             ),
           ),
         ],
@@ -357,9 +403,8 @@ class _RegistroTarjetaScreenState extends State<RegistroTarjetaScreen> {
     bool active = _selectedIndex == index;
     return GestureDetector(
       onTap: () {
-        if (_selectedIndex != index) {
+        if (_selectedIndex != index)
           Navigator.pushReplacementNamed(context, routeName);
-        }
       },
       child: Container(
         padding: const EdgeInsets.all(10),

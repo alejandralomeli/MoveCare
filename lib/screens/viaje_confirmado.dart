@@ -8,20 +8,40 @@ class ViajeConfirmado extends StatefulWidget {
   @override
   State<ViajeConfirmado> createState() => _ViajeConfirmadoState();
 }
-
-class _ViajeConfirmadoState extends State<ViajeConfirmado> {
+class _ViajeConfirmadoState extends State<ViajeConfirmado> with TickerProviderStateMixin {
   static const Color primaryBlue = Color(0xFF1559B2);
   static const Color lightBlueBg = Color(0xFFB3D4FF);
   static const Color containerBlue = Color(0xFFD6E8FF);
   static const Color accentBlue = Color(0xFF64A1F4);
 
   int _selectedIndex = 1;
+  bool _isVoiceActive = false;
+  late AnimationController _pulseController;
+  late Animation<double> _pulseAnimation;
 
-  TextStyle mBold({Color color = primaryBlue, double size = 14}) {
+  @override
+  void initState() {
+    super.initState();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.2).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    super.dispose();
+  }
+
+  TextStyle mBold({Color color = primaryBlue, double size = 14, FontWeight weight = FontWeight.w800}) {
     return GoogleFonts.montserrat(
       color: color,
       fontSize: size,
-      fontWeight: FontWeight.w800,
+      fontWeight: weight,
     );
   }
 
@@ -32,7 +52,6 @@ class _ViajeConfirmadoState extends State<ViajeConfirmado> {
       body: SafeArea(
         child: Stack(
           children: [
-            // 1. Imagen de fondo (Mapa/Ruta)
             Positioned.fill(
               child: Image.asset(
                 'assets/ruta.png',
@@ -41,39 +60,69 @@ class _ViajeConfirmadoState extends State<ViajeConfirmado> {
               ),
             ),
 
-            // 2. Micrófono (Sin header, posicionado arriba a la derecha)
             Positioned(
               top: 20,
-              right: 20,
-              child: Image.asset(
-                'assets/control_voz.png',
-                height: 65,
-                width: 65,
-                errorBuilder: (c, e, s) => const CircleAvatar(
-                  backgroundColor: Colors.white,
-                  child: Icon(Icons.mic, color: primaryBlue, size: 35),
+              left: 20,
+              child: Container(
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                ),
+                child: IconButton(
+                  icon: const Icon(Icons.arrow_back_ios_new, color: primaryBlue, size: 22),
+                  onPressed: () => Navigator.of(context).pop(),
                 ),
               ),
             ),
 
-            // 3. Título central
             Positioned(
-              top: 200,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: Text(
-                  'Viaje confirmado',
-                  style: GoogleFonts.montserrat(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w900,
-                    color: Colors.black,
+              top: 20,
+              right: 20,
+              child: GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _isVoiceActive = !_isVoiceActive;
+                    if (_isVoiceActive) {
+                      _pulseController.repeat(reverse: true);
+                    } else {
+                      _pulseController.stop();
+                      _pulseController.reset();
+                    }
+                  });
+                },
+                child: ScaleTransition(
+                  scale: _pulseAnimation,
+                  child: Image.asset(
+                    _isVoiceActive ? 'assets/escuchando.png' : 'assets/controlvoz.png',
+                    height: 65,
+                    width: 65,
+                    errorBuilder: (c, e, s) => CircleAvatar(
+                      backgroundColor: _isVoiceActive ? Colors.red : Colors.white,
+                      radius: 32,
+                      child: Icon(
+                        _isVoiceActive ? Icons.graphic_eq : Icons.mic,
+                        color: _isVoiceActive ? Colors.white : primaryBlue,
+                        size: 35,
+                      ),
+                    ),
                   ),
                 ),
               ),
             ),
 
-            // 4. Card de Detalles (Centrado)
+            // 4. Título central
+            Positioned(
+              top: 180,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: Text(
+                  'Viaje confirmado',
+                  style: mBold(size: 22, color: Colors.black, weight: FontWeight.w900),
+                ),
+              ),
+            ),
+
+            // 5. Card de Detalles 
             Align(
               alignment: Alignment.center,
               child: _buildInfoCard(),
@@ -110,7 +159,6 @@ class _ViajeConfirmadoState extends State<ViajeConfirmado> {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Columna izquierda: Información del viaje
               Expanded(
                 flex: 3,
                 child: Column(
@@ -124,13 +172,12 @@ class _ViajeConfirmadoState extends State<ViajeConfirmado> {
                   ],
                 ),
               ),
-              // Columna derecha: QR Sombreado
               Expanded(
                 flex: 2,
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const SizedBox(height: 60), // Ajuste para alinear con el centro de la lista
+                    const SizedBox(height: 60), 
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
@@ -182,7 +229,7 @@ class _ViajeConfirmadoState extends State<ViajeConfirmado> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(title, style: mBold(size: 11, color: accentBlue)),
-              Text(subtitle, style: GoogleFonts.montserrat(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.black87)),
+              Text(subtitle, style: mBold(size: 13, color: Colors.black87, weight: FontWeight.w600)),
               if (hasLine) ...[
                 const SizedBox(height: 5),
                 const Text('-------------------------------------', 
@@ -202,7 +249,7 @@ class _ViajeConfirmadoState extends State<ViajeConfirmado> {
         children: [
           Icon(icon, color: accentBlue, size: 26),
           const SizedBox(width: 12),
-          Text(text, style: mBold(size: 13, color: Colors.black87)),
+          Text(text, style: mBold(size: 13, color: Colors.black87, weight: FontWeight.w600)),
         ],
       ),
     );
@@ -211,7 +258,7 @@ class _ViajeConfirmadoState extends State<ViajeConfirmado> {
 Widget _buildCustomBottomNav() {
     return Container(
       height: 75,
-      decoration: const BoxDecoration(color: Color(0xFFE3F2FD)),
+      decoration: const BoxDecoration(color: Color(0xFFD6E8FF)),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [

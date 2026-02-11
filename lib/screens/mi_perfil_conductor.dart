@@ -1,56 +1,40 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-class MiPerfilPasajero extends StatefulWidget {
-  const MiPerfilPasajero({super.key});
+class MiPerfilConductor extends StatefulWidget {
+  const MiPerfilConductor({super.key});
 
   @override
-  State<MiPerfilPasajero> createState() => MiPerfilPasajeroState();
+  State<MiPerfilConductor> createState() => MiPerfilConductorState();
 }
 
-class MiPerfilPasajeroState extends State<MiPerfilPasajero> with SingleTickerProviderStateMixin {
+class MiPerfilConductorState extends State<MiPerfilConductor> with TickerProviderStateMixin {
   static const Color primaryBlue = Color(0xFF1559B2);
   static const Color lightBlueBg = Color(0xFFB3D4FF);
   static const Color dividerColor = Color(0xFFD6E8FF);
-  static const Color containerBlue = Color(0xFFD6E8FF);
 
-  int _selectedIndex = 3; // Índice para "Perfil"
+  int _selectedIndex = 3;
   bool _isListening = false;
+
   late AnimationController _pulseController;
+  late Animation<double> _pulseAnimation;
 
   @override
   void initState() {
     super.initState();
     _pulseController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 600),
-      lowerBound: 1.0,
-      upperBound: 1.15,
-    )..addStatusListener((status) {
-        if (status == AnimationStatus.completed) {
-          _pulseController.reverse();
-        } else if (status == AnimationStatus.dismissed && _isListening) {
-          _pulseController.forward();
-        }
-      });
+      duration: const Duration(milliseconds: 800),
+    );
+    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.2).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
   }
 
   @override
   void dispose() {
     _pulseController.dispose();
     super.dispose();
-  }
-
-  void _toggleListening() {
-    setState(() {
-      _isListening = !_isListening;
-      if (_isListening) {
-        _pulseController.forward();
-      } else {
-        _pulseController.stop();
-        _pulseController.value = 1.0;
-      }
-    });
   }
 
   double sp(double size, double sw) => sw * (size / 375);
@@ -70,12 +54,11 @@ class MiPerfilPasajeroState extends State<MiPerfilPasajero> with SingleTickerPro
     return Scaffold(
       body: Stack(
         children: [
-          // Fondo de imagen con opacidad
+          // Fondo
           Positioned.fill(
             child: Image.asset(
               'assets/ruta.png',
               fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) => Container(color: lightBlueBg),
             ),
           ),
           Positioned.fill(
@@ -85,17 +68,45 @@ class MiPerfilPasajeroState extends State<MiPerfilPasajero> with SingleTickerPro
           SafeArea(
             child: Column(
               children: [
-                // Header con botón volver y voz
                 Padding(
                   padding: EdgeInsets.symmetric(horizontal: sp(15, sw), vertical: sp(15, sw)),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       IconButton(
-                        icon: const Icon(Icons.arrow_back_ios_new, color: primaryBlue, size: 20),
+                        icon: Icon(Icons.arrow_back_ios_new, color: primaryBlue, size: 20),
                         onPressed: () => Navigator.pop(context),
                       ),
-                      _buildVoiceButton(sw),
+                      GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _isListening = !_isListening;
+                            if (_isListening) {
+                              _pulseController.repeat(reverse: true);
+                            } else {
+                              _pulseController.stop();
+                              _pulseController.reset();
+                            }
+                          });
+                        },
+                        child: ScaleTransition(
+                          scale: _pulseAnimation,
+                          child: AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 300),
+                            child: Image.asset(
+                              _isListening ? 'assets/escuchando.png' : 'assets/controlvoz.png',
+                              key: ValueKey<bool>(_isListening),
+                              width: sp(60, sw),
+                              height: sp(60, sw),
+                              errorBuilder: (c, e, s) => CircleAvatar(
+                                backgroundColor: _isListening ? Colors.red : primaryBlue,
+                                radius: sp(30, sw),
+                                child: Icon(_isListening ? Icons.graphic_eq : Icons.mic, color: Colors.white),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -104,7 +115,6 @@ class MiPerfilPasajeroState extends State<MiPerfilPasajero> with SingleTickerPro
 
                 SizedBox(height: sp(30, sw)),
 
-                // Contenedor de opciones de menú
                 Expanded(
                   child: Padding(
                     padding: EdgeInsets.symmetric(horizontal: sp(25, sw)),
@@ -128,11 +138,13 @@ class MiPerfilPasajeroState extends State<MiPerfilPasajero> with SingleTickerPro
                           padding: EdgeInsets.zero,
                           physics: const BouncingScrollPhysics(),
                           children: [
-                            _buildMenuOption('Mi Historial', () => Navigator.pushNamed(context, '/historial_viajes_pasajero'), sw),
+                            _buildMenuOption('Mi Historial', () => print("Historial"), sw),
                             _buildDivider(),
                             _buildMenuOption('Notificaciones', () => print("Notificaciones"), sw),
                             _buildDivider(),
                             _buildMenuOption('Configuración de Perfil', () => print("Configuración"), sw),
+                            _buildDivider(),
+                            _buildMenuOption('Mis Métricas', () => print("Métricas"), sw),
                             _buildDivider(),
                             _buildMenuOption('Privacidad', () => print("Privacidad"), sw),
                           ],
@@ -150,29 +162,6 @@ class MiPerfilPasajeroState extends State<MiPerfilPasajero> with SingleTickerPro
     );
   }
 
-  Widget _buildVoiceButton(double sw) {
-    return GestureDetector(
-      onTap: _toggleListening,
-      child: ScaleTransition(
-        scale: _pulseController,
-        child: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 300),
-          child: Image.asset(
-            _isListening ? 'assets/escuchando.png' : 'assets/controlvoz.png',
-            key: ValueKey<bool>(_isListening),
-            width: sp(60, sw),
-            height: sp(60, sw),
-            errorBuilder: (c, e, s) => CircleAvatar(
-              backgroundColor: _isListening ? Colors.red : primaryBlue,
-              radius: sp(30, sw),
-              child: Icon(_isListening ? Icons.graphic_eq : Icons.mic, color: Colors.white),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildProfileHeader(double sw) {
     return Column(
       children: [
@@ -186,7 +175,7 @@ class MiPerfilPasajeroState extends State<MiPerfilPasajero> with SingleTickerPro
           child: CircleAvatar(
             radius: sp(65, sw),
             backgroundColor: const Color(0xFF81D4FA),
-            backgroundImage: const AssetImage('assets/pasajero.png'),
+            backgroundImage: const AssetImage('assets/conductor.png'),
           ),
         ),
         SizedBox(height: sp(12, sw)),
@@ -223,7 +212,10 @@ class MiPerfilPasajeroState extends State<MiPerfilPasajero> with SingleTickerPro
       onTap: onTap,
       splashColor: primaryBlue.withOpacity(0.2),
       contentPadding: EdgeInsets.symmetric(horizontal: sp(30, sw), vertical: sp(5, sw)),
-      title: Text(title, style: mBold(size: 17, sw: sw)),
+      title: Text(
+        title,
+        style: mBold(size: 17, sw: sw),
+      ),
       trailing: Icon(Icons.chevron_right, color: Colors.grey.withOpacity(0.3), size: sp(20, sw)),
     );
   }
@@ -241,27 +233,25 @@ class MiPerfilPasajeroState extends State<MiPerfilPasajero> with SingleTickerPro
   Widget _buildCustomBottomNav(double sw) {
     return Container(
       height: sp(75, sw),
-      decoration: const BoxDecoration(color: containerBlue),
+      decoration: const BoxDecoration(
+        color: Color(0xFFD6E8FF),
+      ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          _navIcon(0, Icons.home, sw, '/principal_pasajero'),
-          _navIcon(1, Icons.location_on, sw, '/agendar_viaje'),
-          _navIcon(2, Icons.history, sw, '/historial_viajes_pasajero'),
-          _navIcon(3, Icons.person, sw, '/mi_perfil_pasajero'),
+          _navIcon(0, Icons.home, sw),
+          _navIcon(1, Icons.location_on, sw),
+          _navIcon(2, Icons.bar_chart, sw),
+          _navIcon(3, Icons.person, sw),
         ],
       ),
     );
   }
 
-  Widget _navIcon(int index, IconData icon, double sw, String routeName) {
+  Widget _navIcon(int index, IconData icon, double sw) {
     bool active = _selectedIndex == index;
     return GestureDetector(
-      onTap: () {
-        if (_selectedIndex != index) {
-          Navigator.pushReplacementNamed(context, routeName);
-        }
-      },
+      onTap: () => setState(() => _selectedIndex = index),
       child: Container(
         padding: EdgeInsets.all(sp(10, sw)),
         decoration: BoxDecoration(
