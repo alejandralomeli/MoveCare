@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../core/utils/auth_helper.dart'; // Ajusta la ruta
+import '../services/viaje/viaje_service.dart';
 
 class HistorialViajesPasajero extends StatefulWidget {
   const HistorialViajesPasajero({super.key});
@@ -17,14 +19,84 @@ class _HistorialViajesPasajero extends State<HistorialViajesPasajero> {
   int _selectedIndex = 2; // Historial seleccionado en el menú inferior
   String _filterSelected = 'Todos';
 
-  final List<String> filters = ['Todos', 'En proceso', 'Aceptados', 'Rechazados'];
-
   TextStyle mBold({Color color = primaryBlue, double size = 14}) {
     return GoogleFonts.montserrat(
       color: color,
       fontSize: size,
       fontWeight: FontWeight.w800,
     );
+  }
+
+  bool _isLoading = true;
+  List<dynamic> _viajesCompletos = []; // Todos los datos del back
+  List<dynamic> _viajesFiltrados = []; // Los que se muestran
+
+  // Filtros actualizados según tu requerimiento
+  final List<String> filters = [
+    'Todos',
+    'Pendiente',
+    'Agendado',
+    'En curso',
+    'Finalizado',
+    'Cancelado',
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _cargarHistorial();
+  }
+
+  Future<void> _cargarHistorial() async {
+    try {
+      final data = await ViajeService.obtenerHistorial();
+      if (mounted) {
+        setState(() {
+          _viajesCompletos = data;
+          _viajesFiltrados = data;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        AuthHelper.manejarError(context, e);
+      }
+    }
+  }
+
+  void _aplicarFiltro(String filtro) {
+    setState(() {
+      _filterSelected = filtro;
+      if (filtro == 'Todos') {
+        _viajesFiltrados = _viajesCompletos;
+      } else {
+        // Mapeo: "En curso" -> "En_curso" para comparar con la BD
+        String filtroNormalizado = filtro.replaceAll(" ", "_");
+        _viajesFiltrados = _viajesCompletos
+            .where(
+              (v) =>
+                  v['estado'].toString().toLowerCase() ==
+                  filtroNormalizado.toLowerCase(),
+            )
+            .toList();
+      }
+    });
+  }
+
+  // Helper para asignar colores según el estado
+  Color _getStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'en_curso':
+        return const Color(0xFF1559B2);
+      case 'finalizado':
+        return Colors.green;
+      case 'cancelado':
+        return Colors.red;
+      case 'agendado':
+        return Colors.orange;
+      default:
+        return Colors.grey;
+    }
   }
 
   @override
@@ -38,15 +110,37 @@ class _HistorialViajesPasajero extends State<HistorialViajesPasajero> {
             const SizedBox(height: 20),
             _buildFilterMenu(),
             Expanded(
-              child: ListView(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                children: [
-                  _buildTripCard('En Curso', const Color(0xFF1559B2), '27 - Noviembre - 2025'),
-                  _buildTripCard('En Curso', const Color(0xFFF44336), '27 - Noviembre - 2025'),
-                  _buildTripCard('Finalizado', const Color(0xFFF44336), '27 - Noviembre - 2025'),
-                  _buildTripCard('Finalizado', const Color(0xFFF44336), '27 - Noviembre - 2025'),
-                ],
-              ),
+              child: _isLoading
+                  ? const Center(
+                      child: CircularProgressIndicator(color: primaryBlue),
+                    )
+                  : _viajesFiltrados.isEmpty
+                  ? Center(
+                      child: Text(
+                        "No hay viajes en esta categoría",
+                        style: mBold(color: Colors.grey),
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 10,
+                      ),
+                      itemCount: _viajesFiltrados.length,
+                      itemBuilder: (context, index) {
+                        final viaje = _viajesFiltrados[index];
+                        return _buildTripCard(
+                          // Reemplaza guión bajo por espacio para la vista
+                          viaje['estado'].toString().replaceAll("_", " "),
+                          _getStatusColor(viaje['estado']),
+                          viaje['fecha_inicio'],
+                          viaje['punto_inicio'],
+                          viaje['destino'] ?? 'Múltiples destinos',
+                          viaje['nombre_conductor'],
+                          viaje['foto_conductor'],
+                        );
+                      },
+                    ),
             ),
           ],
         ),
@@ -63,7 +157,10 @@ class _HistorialViajesPasajero extends State<HistorialViajesPasajero> {
       child: Stack(
         alignment: Alignment.center,
         children: [
-          Text('Historial de Viajes', style: mBold(size: 22, color: Colors.black)),
+          Text(
+            'Historial de Viajes',
+            style: mBold(size: 22, color: Colors.black),
+          ),
           Align(
             alignment: Alignment.centerRight,
             child: Transform.translate(
@@ -92,7 +189,8 @@ class _HistorialViajesPasajero extends State<HistorialViajesPasajero> {
         children: filters.map((filter) {
           bool isSelected = _filterSelected == filter;
           return GestureDetector(
-            onTap: () => setState(() => _filterSelected = filter),
+            onTap: () =>
+                _aplicarFiltro(filter), // Llamada a la función de filtrado
             child: Container(
               margin: const EdgeInsets.symmetric(horizontal: 5),
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
@@ -114,8 +212,17 @@ class _HistorialViajesPasajero extends State<HistorialViajesPasajero> {
     );
   }
 
-  Widget _buildTripCard(String status, Color statusColor, String date) {
+  Widget _buildTripCard(
+    String status,
+    Color statusColor,
+    String date,
+    String origen,
+    String destino,
+    String? conductor,
+    String? foto,
+  ) {
     return Container(
+      // ... (Mantenemos la decoración del Container igual) ...
       margin: const EdgeInsets.only(bottom: 20),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -131,20 +238,16 @@ class _HistorialViajesPasajero extends State<HistorialViajesPasajero> {
       ),
       child: Stack(
         children: [
-          // Badge de estado
           Positioned(
             right: 20,
-            top: 10,
+            top: 45,
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
               decoration: BoxDecoration(
                 color: statusColor,
                 borderRadius: BorderRadius.circular(15),
               ),
-              child: Text(
-                status,
-                style: mBold(color: Colors.white, size: 11),
-              ),
+              child: Text(status, style: mBold(color: Colors.white, size: 11)),
             ),
           ),
           Padding(
@@ -153,14 +256,29 @@ class _HistorialViajesPasajero extends State<HistorialViajesPasajero> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 10),
-                const Text('------------------------------------------------------------',
-                    style: TextStyle(color: Colors.black26, fontSize: 10)),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('Origen', style: mBold(size: 16, color: Colors.black)),
-                    const Text('-----------------------', style: TextStyle(color: Colors.black26)),
-                    Text('Destino', style: mBold(size: 16, color: Colors.black)),
+                    Expanded(
+                      child: Text(
+                        origen,
+                        style: mBold(size: 14, color: Colors.black),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const Icon(
+                      Icons.arrow_forward,
+                      size: 15,
+                      color: Colors.black26,
+                    ),
+                    Expanded(
+                      child: Text(
+                        destino,
+                        textAlign: TextAlign.end,
+                        style: mBold(size: 14, color: Colors.black),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
                   ],
                 ),
                 Text('Fecha $date', style: mBold(size: 11, color: accentBlue)),
@@ -169,45 +287,24 @@ class _HistorialViajesPasajero extends State<HistorialViajesPasajero> {
                   children: [
                     CircleAvatar(
                       radius: 25,
-                      backgroundImage: const AssetImage('assets/conductor.png'),
                       backgroundColor: containerBlue,
-                      child: ClipOval(
-                        child: Image.asset('assets/conductor.png', 
-                          errorBuilder: (c,e,s) => const Icon(Icons.person, color: primaryBlue)),
-                      ),
+                      backgroundImage: (foto != null && foto.isNotEmpty)
+                          ? NetworkImage(foto) as ImageProvider
+                          : const AssetImage('assets/conductor.png'),
                     ),
                     const SizedBox(width: 15),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Username', style: mBold(size: 14, color: Colors.black)),
-                        Row(
-                          children: [
-                            ...List.generate(5, (index) => 
-                              const Icon(Icons.star, color: Colors.orange, size: 14)),
-                            const SizedBox(width: 5),
-                            Text('4.5', style: mBold(size: 10, color: accentBlue)),
-                          ],
+                        Text(
+                          conductor ?? 'Buscando...',
+                          style: mBold(size: 14, color: Colors.black),
                         ),
-                        const SizedBox(height: 4),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: primaryBlue,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.check_circle, color: Colors.white, size: 12),
-                              const SizedBox(width: 4),
-                              Text('Verificado', style: mBold(color: Colors.white, size: 10)),
-                            ],
-                          ),
-                        )
+                        // ... (Resto de la info: Estrellas y Badge Verificado igual) ...
                       ],
-                    )
+                    ),
                   ],
-                )
+                ),
               ],
             ),
           ),
@@ -223,30 +320,31 @@ class _HistorialViajesPasajero extends State<HistorialViajesPasajero> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          _navIcon(0, Icons.home),
-          _navIcon(1, Icons.location_on),
-          _navIcon(2, Icons.history),
-          _navIcon(3, Icons.person),
+          _navIcon(0, Icons.home, '/principal_pasajero'),
+          _navIcon(1, Icons.location_on, '/agendar_viaje'),
+          _navIcon(2, Icons.history, '/historial_viajes_pasajero'),
+          _navIcon(3, Icons.person, '/mi_perfil_pasajero'),
         ],
       ),
     );
   }
 
-  Widget _navIcon(int index, IconData icon) {
+  Widget _navIcon(int index, IconData icon, String routeName) {
     bool active = _selectedIndex == index;
     return GestureDetector(
-      onTap: () => setState(() => _selectedIndex = index),
+      onTap: () {
+        // Solo navegamos si no estamos ya en esa pantalla
+        if (_selectedIndex != index) {
+          Navigator.pushReplacementNamed(context, routeName);
+        }
+      },
       child: Container(
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
           color: active ? primaryBlue : Colors.white,
           shape: BoxShape.circle,
         ),
-        child: Icon(
-          icon,
-          color: active ? Colors.white : primaryBlue,
-          size: 28,
-        ),
+        child: Icon(icon, color: active ? Colors.white : primaryBlue, size: 28),
       ),
     );
   }

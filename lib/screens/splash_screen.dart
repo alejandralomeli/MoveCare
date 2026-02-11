@@ -1,3 +1,4 @@
+// screens/splash_screen.dart
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../core/storage/secure_storage.dart'; 
@@ -17,35 +18,32 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> _verificarSesion() async {
-    // 1. Simular carga mínima para ver el logo (2 segundos)
+    // 1. Simular carga
     await Future.delayed(const Duration(seconds: 2));
 
-    // 2. Preguntar al SecureStorage si hay token
+    // 2. Verificar token
     final token = await SecureStorage.getToken();
 
     if (!mounted) return;
 
     if (token != null && token.isNotEmpty) {
-      // ✅ HAY SESIÓN: Vamos directo al Home del Pasajero
-      // (Nota: Más adelante, si guardas el "rol", aquí decidirías si ir a Pasajero o Conductor)
+      // ✅ HAY SESIÓN: Vamos al Home del Pasajero
       Navigator.of(context).pushReplacementNamed('/principal_pasajero');
     } else {
-      // ❌ NO HAY SESIÓN: Vamos a la pantalla de Bienvenida/Login
-      // Usamos 'Bienvenido' porque es la portada donde elige registrarse o iniciar sesión
-      Navigator.of(context).pushReplacementNamed('/'); 
+      // ❌ NO HAY SESIÓN: Vamos a Bienvenido
+      // CORRECCIÓN: Apuntamos a '/bienvenido' en lugar de '/'
+      Navigator.of(context).pushReplacementNamed('/bienvenido'); 
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // Usamos tu color primario definido en main
       backgroundColor: const Color(0xFF2E6FFC), 
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Aquí puedes poner tu logo real: Image.asset('assets/logo.png')
             Container(
               padding: const EdgeInsets.all(20),
               decoration: const BoxDecoration(

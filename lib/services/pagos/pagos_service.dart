@@ -5,7 +5,6 @@ class PagosService {
   
   /// Registra la tarjeta en el backend.
   /// En un entorno real, el 'token' te lo da Stripe. 
-  /// Aquí lo simularemos desde la vista.
   static Future<bool> agregarTarjeta({
     required String token,
     required String ultimosCuatro,

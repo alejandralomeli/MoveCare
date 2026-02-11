@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../services/pagos/pagos_service.dart'; 
-// 1. IMPORTAR AUTH HELPER (Ajusta la ruta si es necesario)
+// Importaciones de tu lógica
+import '../services/pagos/pagos_service.dart';
 import '../core/utils/auth_helper.dart';
 
 class RegistroTarjetaScreen extends StatefulWidget {
@@ -21,9 +21,9 @@ class _RegistroTarjetaScreenState extends State<RegistroTarjetaScreen> {
   static const Color textFieldBlue = Color(0xFFB3D4FF);
 
   int _selectedIndex = 1;
-  bool _isLoading = false; 
+  bool _isLoading = false; // Variable de carga
 
-  // --- CONTROLLERS ---
+  // --- CONTROLLERS (Para capturar el texto) ---
   final TextEditingController _numeroCtrl = TextEditingController();
   final TextEditingController _nombreCtrl = TextEditingController();
   final TextEditingController _expiraCtrl = TextEditingController();
@@ -32,22 +32,34 @@ class _RegistroTarjetaScreenState extends State<RegistroTarjetaScreen> {
   // Estilos
   TextStyle mSemibold({Color color = Colors.black, double size = 14}) {
     return GoogleFonts.montserrat(
-        color: color, fontSize: size, fontWeight: FontWeight.w600);
+      color: color,
+      fontSize: size,
+      fontWeight: FontWeight.w600,
+    );
   }
 
   TextStyle mBold({Color color = primaryBlue, double size = 14}) {
     return GoogleFonts.montserrat(
-        color: color, fontSize: size, fontWeight: FontWeight.w800);
+      color: color,
+      fontSize: size,
+      fontWeight: FontWeight.w800,
+    );
   }
 
-  // --- LÓGICA DE GUARDADO CON AUTH HELPER ---
+  // --- LÓGICA DE GUARDADO ---
   Future<void> _guardarTarjeta() async {
     final numero = _numeroCtrl.text.trim();
     final nombre = _nombreCtrl.text.trim();
+    final expira = _expiraCtrl.text.trim();
+    final cvv = _cvvCtrl.text.trim();
 
-    if (numero.length < 16 || nombre.isEmpty) {
+    // Validación simple
+    if (numero.length < 16 ||
+        nombre.isEmpty ||
+        expira.isEmpty ||
+        cvv.length < 3) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Por favor verifica los datos")),
+        const SnackBar(content: Text("Por favor verifica todos los campos")),
       );
       return;
     }
@@ -55,42 +67,34 @@ class _RegistroTarjetaScreenState extends State<RegistroTarjetaScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // 1. SIMULACIÓN DE TOKENIZACIÓN 
+      // Simulación de datos para el servicio
       final ultimos4 = numero.substring(numero.length - 4);
-      final tokenSimulado = "tok_simulado_${DateTime.now().millisecondsSinceEpoch}";
-      
+      final tokenSimulado = "tok_${DateTime.now().millisecondsSinceEpoch}";
+
       String marca = "Desconocida";
       if (numero.startsWith("4")) marca = "visa";
       if (numero.startsWith("5")) marca = "mastercard";
 
-      // 2. ENVIAR AL BACKEND
-      // Nota: El servicio usa HttpClient internamente, el cual inyecta el token Auth.
+      // Llamada al servicio
       await PagosService.agregarTarjeta(
         token: tokenSimulado,
         ultimosCuatro: ultimos4,
         marca: marca,
-        alias: "Tarjeta de $nombre", 
+        alias: "Tarjeta de $nombre",
       );
 
       if (!mounted) return;
-      
-      // Éxito
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text("¡Tarjeta guardada con éxito!"),
           backgroundColor: Colors.green,
         ),
       );
-      
-      Navigator.pop(context); 
 
+      Navigator.pop(context); // Regresar atrás
     } catch (e) {
-      // 3. USO DEL AUTH HELPER PARA ERRORES
-      if (mounted) {
-        // Esto validará si es 'TOKEN_INVALIDO' (401) y expulsará al usuario,
-        // o mostrará un SnackBar normal si es otro error.
-        AuthHelper.manejarError(context, e);
-      }
+      if (mounted) AuthHelper.manejarError(context, e);
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -106,12 +110,20 @@ class _RegistroTarjetaScreenState extends State<RegistroTarjetaScreen> {
             _buildHeader(),
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 40),
+                padding: const EdgeInsets.only(
+                  left: 25,
+                  right: 25,
+                  bottom: 20,
+                  top: 40,
+                ),
                 child: Column(
                   children: [
                     // Banner informativo
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 15,
+                        vertical: 8,
+                      ),
                       decoration: BoxDecoration(
                         color: accentBlue,
                         borderRadius: BorderRadius.circular(30),
@@ -119,7 +131,11 @@ class _RegistroTarjetaScreenState extends State<RegistroTarjetaScreen> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.info_outline, color: Colors.white, size: 18),
+                          const Icon(
+                            Icons.info_outline,
+                            color: Colors.white,
+                            size: 18,
+                          ),
                           const SizedBox(width: 8),
                           Text(
                             'Ingrese los datos de su tarjeta',
@@ -130,7 +146,7 @@ class _RegistroTarjetaScreenState extends State<RegistroTarjetaScreen> {
                     ),
                     const SizedBox(height: 30),
 
-                    // CONTENEDOR PRINCIPAL
+                    // CONTENEDOR PRINCIPAL SOMBREADO
                     Container(
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
@@ -146,42 +162,65 @@ class _RegistroTarjetaScreenState extends State<RegistroTarjetaScreen> {
                       ),
                       child: Column(
                         children: [
-                          // Imagen tarjeta (Placeholder)
+                          // Imagen de tarjeta (Estática como pediste)
                           Container(
-                            height: 180,
+                            height:
+                                180, // Altura fija para evitar errores si no carga la imagen
                             width: double.infinity,
                             decoration: BoxDecoration(
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(20),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.15),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
                             ),
-                            child: const Center(
-                              child: Icon(Icons.credit_card, size: 80, color: primaryBlue),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(20),
+                              child: Image.asset(
+                                'assets/tarjeta.png', // Asegúrate de tener este asset o cambia por un Icon
+                                fit: BoxFit.cover,
+                                errorBuilder: (c, e, s) => const Center(
+                                  child: Icon(
+                                    Icons.credit_card,
+                                    size: 80,
+                                    color: primaryBlue,
+                                  ),
+                                ),
+                              ),
                             ),
                           ),
                           const SizedBox(height: 25),
 
-                          // CAMPOS CON CONTROLLERS
+                          // CAMPOS DE ENTRADA (Conectados a Controllers)
                           _buildTextField(
                             'Número de la tarjeta',
-                            controller: _numeroCtrl,
                             circleColor: Colors.white,
+                            controller: _numeroCtrl,
                             inputType: TextInputType.number,
+                            maxLength: 16,
                           ),
                           const SizedBox(height: 12),
                           _buildTextField(
                             'Nombre Completo',
-                            controller: _nombreCtrl,
                             circleColor: primaryBlue,
+                            controller: _nombreCtrl,
+                            inputType: TextInputType.name,
                           ),
                           const SizedBox(height: 12),
+
+                          // FILA CON DOS CAMPOS AL MISMO TIEMPO
                           Row(
                             children: [
                               Expanded(
                                 flex: 3,
                                 child: _buildTextField(
                                   'Fecha Exp (MM/AA)',
-                                  controller: _expiraCtrl,
                                   circleColor: Colors.white,
+                                  controller: _expiraCtrl,
                                   inputType: TextInputType.datetime,
                                 ),
                               ),
@@ -190,9 +229,10 @@ class _RegistroTarjetaScreenState extends State<RegistroTarjetaScreen> {
                                 flex: 2,
                                 child: _buildTextField(
                                   'CVV',
-                                  controller: _cvvCtrl,
                                   circleColor: primaryBlue,
+                                  controller: _cvvCtrl,
                                   inputType: TextInputType.number,
+                                  maxLength: 4,
                                 ),
                               ),
                             ],
@@ -202,20 +242,29 @@ class _RegistroTarjetaScreenState extends State<RegistroTarjetaScreen> {
                     ),
                     const SizedBox(height: 40),
 
-                    // BOTÓN CON ACCIÓN
+                    // BOTÓN CON LÓGICA DE CARGA
                     SizedBox(
                       width: 200,
                       height: 50,
                       child: ElevatedButton(
-                        onPressed: _isLoading ? null : _guardarTarjeta, 
+                        onPressed: _isLoading
+                            ? null
+                            : _guardarTarjeta, // Desactiva si carga
                         style: ElevatedButton.styleFrom(
                           backgroundColor: accentBlue,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(25),
+                          ),
                           elevation: 5,
                         ),
-                        child: _isLoading 
-                          ? const CircularProgressIndicator(color: Colors.white)
-                          : Text('Agregar Tarjeta', style: mBold(color: Colors.white, size: 15)),
+                        child: _isLoading
+                            ? const CircularProgressIndicator(
+                                color: Colors.white,
+                              )
+                            : Text(
+                                'Agregar Tarjeta',
+                                style: mBold(color: Colors.white, size: 15),
+                              ),
                       ),
                     ),
                   ],
@@ -229,10 +278,13 @@ class _RegistroTarjetaScreenState extends State<RegistroTarjetaScreen> {
     );
   }
 
-  Widget _buildTextField(String hint, {
+  // Widget TextField mejorado para recibir controladores
+  Widget _buildTextField(
+    String hint, {
     required Color circleColor,
-    required TextEditingController controller, 
-    TextInputType inputType = TextInputType.text, 
+    required TextEditingController controller, // Ahora requiere controller
+    TextInputType inputType = TextInputType.text,
+    int? maxLength,
   }) {
     return Container(
       decoration: BoxDecoration(
@@ -240,21 +292,22 @@ class _RegistroTarjetaScreenState extends State<RegistroTarjetaScreen> {
         borderRadius: BorderRadius.circular(25),
       ),
       child: TextField(
-        controller: controller, 
-        keyboardType: inputType, 
+        controller: controller,
+        keyboardType: inputType,
+        maxLength: maxLength,
         style: mBold(size: 14),
         decoration: InputDecoration(
+          counterText: "", // Oculta el contador de caracteres
           hintText: hint,
-          // ignore: deprecated_member_use
           hintStyle: mSemibold(color: primaryBlue.withOpacity(0.6), size: 13),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 20,
+            vertical: 15,
+          ),
           border: InputBorder.none,
           prefixIcon: Padding(
             padding: const EdgeInsets.all(12),
-            child: CircleAvatar(
-              backgroundColor: circleColor,
-              radius: 10,
-            ),
+            child: CircleAvatar(backgroundColor: circleColor, radius: 10),
           ),
         ),
       ),
@@ -272,10 +325,11 @@ class _RegistroTarjetaScreenState extends State<RegistroTarjetaScreen> {
           const Spacer(),
           Transform.translate(
             offset: const Offset(0, 50),
-            child: const CircleAvatar( 
+            child: CircleAvatar(
+              // Cambié a un placeholder por si no tienes el asset 'control_voz'
               backgroundColor: primaryBlue,
               radius: 30,
-              child: Icon(Icons.mic, color: Colors.white, size: 30),
+              child: const Icon(Icons.mic, color: Colors.white, size: 30),
             ),
           ),
         ],
@@ -290,33 +344,38 @@ class _RegistroTarjetaScreenState extends State<RegistroTarjetaScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          _navIcon(0, Icons.home),
-          _navIcon(1, Icons.location_on),
-          _navIcon(2, Icons.history),
-          _navIcon(3, Icons.person),
+          _navIcon(0, Icons.home, '/principal_pasajero'),
+          _navIcon(1, Icons.location_on, '/agendar_viaje'),
+          _navIcon(2, Icons.history, '/historial_viajes_pasajero'),
+          _navIcon(3, Icons.person, '/mi_perfil_pasajero'),
         ],
       ),
     );
   }
 
-  Widget _navIcon(int index, IconData icon) {
+  Widget _navIcon(int index, IconData icon, String routeName) {
     bool active = _selectedIndex == index;
     return GestureDetector(
-      onTap: () => setState(() => _selectedIndex = index),
+      onTap: () {
+        if (_selectedIndex != index) {
+          Navigator.pushReplacementNamed(context, routeName);
+        }
+      },
       child: Container(
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-            color: active ? primaryBlue : Colors.white,
-            shape: BoxShape.circle,
-            boxShadow: [
-              if (!active)
-                BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 2))
-            ]),
-        child: Icon(
-          icon,
-          color: active ? Colors.white : primaryBlue,
-          size: 28,
+          color: active ? primaryBlue : Colors.white,
+          shape: BoxShape.circle,
+          boxShadow: [
+            if (!active)
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+          ],
         ),
+        child: Icon(icon, color: active ? Colors.white : primaryBlue, size: 28),
       ),
     );
   }
