@@ -330,9 +330,9 @@ class _IniciarSesionState extends State<IniciarSesion> {
       if (rol == 'pasajero') {
         Navigator.pushReplacementNamed(context, '/principal_pasajero');
       } else if (rol == 'conductor') {
-        Navigator.pushReplacementNamed(context, '/home_conductor_screen');
+        Navigator.pushReplacementNamed(context, '/principal_conductor');
       } else if (rol == 'administrador') {
-        Navigator.pushReplacementNamed(context, '/home_admin_screen');
+        Navigator.pushReplacementNamed(context, '/gestion_usuarios');//TEMPORAL
       } else {
         _showAlert('Error', 'Rol no reconocido');
       }

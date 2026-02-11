@@ -910,7 +910,7 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
                   accentBlue,
                   sw,
                   () =>
-                      Navigator.pushReplacementNamed(context, '/home_pasajero'),
+                      Navigator.pushReplacementNamed(context, '/principal_pasajero'),
                 ),
               ),
             ),

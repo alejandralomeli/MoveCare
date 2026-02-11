@@ -311,7 +311,7 @@ class _DriverRegisterScreenState extends State<RegistroConductor> {
           style: GoogleFonts.montserrat(fontSize: sp(13, context)),
         ),
         GestureDetector(
-          onTap: () => Navigator.pushNamed(context, '/login'),
+          onTap: () => Navigator.pushNamed(context, '/iniciar_sesion'),
           child: Text(
             'Inicia Sesión',
             style: GoogleFonts.montserrat(
