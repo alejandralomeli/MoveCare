@@ -82,7 +82,7 @@ class MyApp extends StatelessWidget {
         '/iniciar_sesion': (context) => const IniciarSesion(), 
         '/olvide_contrasena': (context) => const OlvideContrasena(),
         '/nueva_contrasena': (context) => const NuevaContrasena(),
-        '/confirmar-correo': (context) => const ConfirmarCorreoScreen(),
+        '/confirmar-correo': (context) => const ConfirmarCorreoScreen(), //MIRA ESTO ALE
         '/menu_vistas': (context) => const MenuVistas(),
         '/registro': (context) => const Registro(),
         '/codigo_verificacion': (context) => const CodigoVerificacion(), // ESTA SE ELIMINARA

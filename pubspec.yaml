@@ -31,7 +31,6 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-
   assets:
     - assets/ruta.png
     - assets/movecare.png

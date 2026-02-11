@@ -28,7 +28,8 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero>
   bool _loadingHome = true;
   bool _isListening = false;
   String _selectedDateNum = '';
-  
+  int _selectedIndex = 0;
+
   List<DateTime> _calendarDates = [];
   Map<String, dynamic>? _viajeProximo;
   List<dynamic> _historialViajes = [];
@@ -43,18 +44,19 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero>
   }
 
   void _initAnimation() {
-    _pulseController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 600),
-      lowerBound: 1.0,
-      upperBound: 1.15,
-    )..addStatusListener((status) {
-        if (status == AnimationStatus.completed) {
-          _pulseController.reverse();
-        } else if (status == AnimationStatus.dismissed && _isListening) {
-          _pulseController.forward();
-        }
-      });
+    _pulseController =
+        AnimationController(
+          vsync: this,
+          duration: const Duration(milliseconds: 600),
+          lowerBound: 1.0,
+          upperBound: 1.15,
+        )..addStatusListener((status) {
+          if (status == AnimationStatus.completed) {
+            _pulseController.reverse();
+          } else if (status == AnimationStatus.dismissed && _isListening) {
+            _pulseController.forward();
+          }
+        });
   }
 
   @override
@@ -71,7 +73,9 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero>
       userProvider.setUserFromJson(homeData["usuario"]);
 
       if (homeData['viaje_proximo'] != null) {
-        final fechaViaje = DateTime.parse(homeData['viaje_proximo']['fecha_hora_inicio']);
+        final fechaViaje = DateTime.parse(
+          homeData['viaje_proximo']['fecha_hora_inicio'],
+        );
         _viajeProximo = homeData['viaje_proximo'];
         _buildCalendarDates(fechaViaje);
       } else {
@@ -86,7 +90,10 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero>
   }
 
   void _buildCalendarDates(DateTime baseDate) {
-    _calendarDates = List.generate(5, (i) => baseDate.add(Duration(days: i - 2)));
+    _calendarDates = List.generate(
+      5,
+      (i) => baseDate.add(Duration(days: i - 2)),
+    );
     _selectedDateNum = baseDate.day.toString();
   }
 
@@ -145,7 +152,9 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const SizedBox(height: 60), // Espacio para el header flotante
+                      const SizedBox(
+                        height: 60,
+                      ), // Espacio para el header flotante
                       Text('Ubicación actual', style: mExtrabold(size: 18)),
                       const SizedBox(height: 10),
                       _buildMapSection(),
@@ -176,6 +185,7 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero>
           _buildVoiceButton(),
         ],
       ),
+      bottomNavigationBar: _buildCustomBottomNav(context),
     );
   }
 
@@ -204,7 +214,13 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Bienvenido!', style: GoogleFonts.montserrat(fontSize: 22, fontWeight: FontWeight.w900)),
+              Text(
+                'Bienvenido!',
+                style: GoogleFonts.montserrat(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
               Text(name, style: mExtrabold(size: 18, color: primaryBlue)),
             ],
           ),
@@ -222,7 +238,7 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero>
         child: ScaleTransition(
           scale: _pulseController,
           child: Image.asset(
-            _isListening ? 'assets/escuchando.png' : 'assets/control_voz.png',
+            _isListening ? 'assets/escuchando.png' : 'assets/controlvoz.png',
             width: 65,
             height: 65,
           ),
@@ -245,11 +261,17 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero>
 
   Widget _buildNextTripCard() {
     if (_viajeProximo == null) {
-      return Text("No tienes viajes programados", style: mExtrabold(color: Colors.grey));
+      return Text(
+        "No tienes viajes programados",
+        style: mExtrabold(color: Colors.grey),
+      );
     }
     return Container(
       padding: const EdgeInsets.all(15),
-      decoration: BoxDecoration(color: cardBlue, borderRadius: BorderRadius.circular(25)),
+      decoration: BoxDecoration(
+        color: cardBlue,
+        borderRadius: BorderRadius.circular(25),
+      ),
       child: Column(
         children: [
           Row(
@@ -259,17 +281,34 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(_viajeProximo!['destino'] ?? 'Destino', style: mExtrabold(size: 16)),
-                    Text('Conductor: ${_viajeProximo!['nombre_conductor'] ?? 'Asignando...'}', 
-                      style: GoogleFonts.montserrat(fontSize: 13, fontWeight: FontWeight.w500)),
+                    Text(
+                      _viajeProximo!['destino'] ?? 'Destino',
+                      style: mExtrabold(size: 16),
+                    ),
+                    Text(
+                      'Conductor: ${_viajeProximo!['nombre_conductor'] ?? 'Asignando...'}',
+                      style: GoogleFonts.montserrat(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
                   ],
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                decoration: BoxDecoration(color: darkBlue, borderRadius: BorderRadius.circular(10)),
-                child: Text('9:30 AM', style: mExtrabold(color: Colors.white, size: 12)),
-              )
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 5,
+                ),
+                decoration: BoxDecoration(
+                  color: darkBlue,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  '9:30 AM',
+                  style: mExtrabold(color: Colors.white, size: 12),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 10),
@@ -279,7 +318,7 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero>
               const SizedBox(width: 10),
               _actionBtn('Cancelar'),
             ],
-          )
+          ),
         ],
       ),
     );
@@ -304,7 +343,10 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero>
         decoration: BoxDecoration(
           color: const Color(0xFFE3F2FD),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: isSelected ? primaryBlue : Colors.transparent, width: 2),
+          border: Border.all(
+            color: isSelected ? primaryBlue : Colors.transparent,
+            width: 2,
+          ),
         ),
         child: Column(
           children: [
@@ -313,12 +355,23 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero>
               padding: const EdgeInsets.symmetric(vertical: 2),
               decoration: BoxDecoration(
                 color: primaryBlue,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(10),
+                ),
               ),
-              child: Text(dayLetter, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white, fontSize: 10)),
+              child: Text(
+                dayLetter,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.white, fontSize: 10),
+              ),
             ),
             Expanded(
-              child: Center(child: Text(date.day.toString(), style: mExtrabold(color: primaryBlue, size: 16))),
+              child: Center(
+                child: Text(
+                  date.day.toString(),
+                  style: mExtrabold(color: primaryBlue, size: 16),
+                ),
+              ),
             ),
           ],
         ),
@@ -344,10 +397,21 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero>
       padding: const EdgeInsets.all(12),
       child: Row(
         children: [
-          Text("Oct 28", style: mExtrabold(size: 12)), // Deberías parsear viaje['fecha']
+          Text(
+            "Oct 28",
+            style: mExtrabold(size: 12),
+          ), // Deberías parsear viaje['fecha']
           const SizedBox(width: 15),
-          Expanded(child: Text(viaje['destino'] ?? 'Viaje', style: mExtrabold(color: primaryBlue, size: 13))),
-          Text(viaje['estado'] ?? 'Finalizado', style: mExtrabold(color: statusRed, size: 10)),
+          Expanded(
+            child: Text(
+              viaje['destino'] ?? 'Viaje',
+              style: mExtrabold(color: primaryBlue, size: 13),
+            ),
+          ),
+          Text(
+            viaje['estado'] ?? 'Finalizado',
+            style: mExtrabold(color: statusRed, size: 10),
+          ),
         ],
       ),
     );
@@ -357,7 +421,10 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero>
     return Expanded(
       child: ElevatedButton(
         onPressed: () {},
-        style: ElevatedButton.styleFrom(backgroundColor: buttonLightBlue, elevation: 0),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: buttonLightBlue,
+          elevation: 0,
+        ),
         child: Text(label, style: mExtrabold(color: Colors.white, size: 11)),
       ),
     );
@@ -366,7 +433,10 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero>
   Widget _buildAgendarButton() {
     return ElevatedButton(
       onPressed: () => _mostrarPanelAgendar(context),
-      style: ElevatedButton.styleFrom(backgroundColor: buttonLightBlue, shape: StadiumBorder()),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: buttonLightBlue,
+        shape: StadiumBorder(),
+      ),
       child: Text('Agendar viaje', style: mExtrabold(color: Colors.black)),
     );
   }
@@ -377,8 +447,14 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero>
       child: ElevatedButton.icon(
         onPressed: () {},
         icon: const Icon(Icons.error, color: Colors.white),
-        label: Text('Reportar incidencia', style: mExtrabold(color: Colors.white, size: 15)),
-        style: ElevatedButton.styleFrom(backgroundColor: statusRed, padding: const EdgeInsets.symmetric(vertical: 12)),
+        label: Text(
+          'Reportar incidencia',
+          style: mExtrabold(color: Colors.white, size: 15),
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: statusRed,
+          padding: const EdgeInsets.symmetric(vertical: 12),
+        ),
       ),
     );
   }
@@ -393,26 +469,111 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text('Tipo de Viaje', style: GoogleFonts.montserrat(fontSize: 24, fontWeight: FontWeight.w900, color: Colors.white)),
+          Text(
+            'Tipo de Viaje',
+            style: GoogleFonts.montserrat(
+              fontSize: 24,
+              fontWeight: FontWeight.w900,
+              color: Colors.white,
+            ),
+          ),
           const SizedBox(height: 30),
-          _optionBtn('Un destino', Colors.white, context),
+
+          // BOTÓN 1: Un destino -> /agendar_viaje
+          _optionBtn('Un destino', Colors.white, context, () {
+            Navigator.pop(context); // Cierra el BottomSheet primero
+            Navigator.pushNamed(context, '/agendar_viaje');
+          }),
+
           const SizedBox(height: 15),
-          _optionBtn('Dos o más destinos', buttonLightBlue, context),
+
+          // BOTÓN 2: Varios destinos -> /agendar_varios_destinos
+          _optionBtn(
+            'Dos o más destinos',
+            buttonLightBlue, // Asegúrate de tener definido este color o usa uno como Color(0xFF64A1F4)
+            context,
+            () {
+              Navigator.pop(context); // Cierra el BottomSheet primero
+              Navigator.pushNamed(context, '/agendar_varios_destinos');
+            },
+          ),
         ],
       ),
     );
   }
 
-  Widget _optionBtn(String label, Color circleColor, BuildContext context) {
+  Widget _optionBtn(
+    String text,
+    Color color,
+    BuildContext context,
+    VoidCallback onPressed,
+  ) {
+    // Calculamos el color del texto: si el botón es blanco, texto azul; si no, texto blanco.
+    final Color textColor = (color == Colors.white)
+        ? primaryBlue
+        : Colors.white;
+
+    return SizedBox(
+      width:
+          MediaQuery.of(context).size.width * 0.8, // 80% del ancho de pantalla
+      height: 55,
+      child: ElevatedButton(
+        onPressed:
+            onPressed, // Aquí se ejecuta la navegación que definimos arriba
+        style: ElevatedButton.styleFrom(
+          backgroundColor: color,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(30),
+          ),
+          elevation: 5,
+        ),
+        child: Text(
+          text,
+          style: GoogleFonts.montserrat(
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+            color: textColor,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCustomBottomNav(BuildContext context) {
     return Container(
-      width: MediaQuery.of(context).size.width * 0.8,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: lightBlueBg.withOpacity(0.8), borderRadius: BorderRadius.circular(25)),
+      height: 70,
+      color: const Color(0xFFD6E8FF),
       child: Row(
-        children: [
-          CircleAvatar(backgroundColor: circleColor, radius: 15),
-          Expanded(child: Text(label, textAlign: TextAlign.center, style: mExtrabold(color: primaryBlue))),
-        ],
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: List.generate(
+          4,
+          (index) => _navIcon(
+            index,
+            [Icons.home, Icons.location_on, Icons.history, Icons.person][index],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _navIcon(int index, IconData icon) {
+    bool active = _selectedIndex == index;
+    return GestureDetector(
+      onTap: () {
+        setState(() => _selectedIndex = index);
+        // Mapeo directo: [0:Home, 1:Viaje, 2:Historial, 3:Perfil]
+        Navigator.pushNamed(
+          context,
+          ['/principal_pasajero', '/agendar_viaje', '//historial_viajes_pasajero', '/mi_perfil_pasajero'][index],
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: active ? primaryBlue : Colors.white,
+          shape: BoxShape.circle,
+        ),
+        child: Icon(icon, color: active ? Colors.white : primaryBlue, size: 26),
       ),
     );
   }

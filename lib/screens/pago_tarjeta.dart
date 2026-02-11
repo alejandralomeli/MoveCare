@@ -350,7 +350,7 @@ class _PulseVoiceButtonState extends State<_PulseVoiceButton> with SingleTickerP
             ],
           ),
           child: Image.asset(
-            widget.isActive ? 'assets/escuchando.png' : 'assets/control_voz.png',
+            widget.isActive ? 'assets/escuchando.png' : 'assets/controlvoz.png',
             errorBuilder: (c, e, s) => CircleAvatar(
               backgroundColor: widget.isActive ? Colors.red : const Color(0xFF1559B2),
               child: Icon(
