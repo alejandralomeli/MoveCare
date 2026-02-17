@@ -146,7 +146,7 @@ class _CompletarPerfilPasajeroState extends State<CompletarPerfilPasajero>
                           ),
                           child: Text('Registrar un acompañante',
                               style:
-                                  mBold(context, color: Colors.white, size: 14)),
+                                  mBold(context, color: Colors.white, size: 12)),
                         ),
                       ),
                       const SizedBox(height: 40),
@@ -322,12 +322,16 @@ class _CompletarPerfilPasajeroState extends State<CompletarPerfilPasajero>
       {'label': 'Discapacidad\nvisual', 'icon': 'assets/visual.png'},
     ];
 
-    return Wrap(
-      spacing: 12,
-      runSpacing: 20,
-      children: needs
-          .map((n) => _buildNeedItem(context, n['label']!, n['icon']!))
-          .toList(),
+    return Center( 
+      child: Wrap(
+        alignment: WrapAlignment.center, 
+        runAlignment: WrapAlignment.center,
+        spacing: 15,    
+        runSpacing: 20, 
+        children: needs
+            .map((n) => _buildNeedItem(context, n['label']!, n['icon']!))
+            .toList(),
+      ),
     );
   }
 

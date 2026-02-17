@@ -1,5 +1,7 @@
+import 'dart:io'; // NUEVO para manejar el archivo de imagen
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart'; // Requiere la dependencia image_picker
 import '../../services/auth/auth_service.dart';
 
 class RegistroConductor extends StatefulWidget {
@@ -17,8 +19,12 @@ class _DriverRegisterScreenState extends State<RegistroConductor> {
   final _nombreController = TextEditingController();
   final _correoController = TextEditingController();
   final _telefonoController = TextEditingController();
+  final _direccionController = TextEditingController(); // NUEVO controlador
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+
+  File? _imageFile; // NUEVO para almacenar la foto
+  final ImagePicker _picker = ImagePicker();
 
   bool _loading = false;
   bool _obscurePass = true;
@@ -35,9 +41,45 @@ class _DriverRegisterScreenState extends State<RegistroConductor> {
     _nombreController.dispose();
     _correoController.dispose();
     _telefonoController.dispose();
+    _direccionController.dispose(); // NUEVO dispose
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
+  }
+
+  // Lógica para seleccionar imagen (NUEVO)
+  Future<void> _pickImage(ImageSource source) async {
+    final pickedFile = await _picker.pickImage(source: source);
+    if (pickedFile != null) {
+      setState(() => _imageFile = File(pickedFile.path));
+    }
+    if (mounted) Navigator.pop(context);
+  }
+
+  // Menú de opciones para foto (NUEVO)
+  void _showImageSourceActionSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_library, color: primaryBlue),
+              title: const Text('Elegir de Fototeca'),
+              onTap: () => _pickImage(ImageSource.gallery),
+            ),
+            ListTile(
+              leading: const Icon(Icons.camera_alt, color: primaryBlue),
+              title: const Text('Tomar Foto'),
+              onTap: () => _pickImage(ImageSource.camera),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -49,7 +91,7 @@ class _DriverRegisterScreenState extends State<RegistroConductor> {
       backgroundColor: Colors.white,
       body: Stack(
         children: [
-          // Imagen de fondo superior (main height)
+          // Imagen de fondo superior
           Positioned(
             top: 0,
             left: 0,
@@ -63,44 +105,57 @@ class _DriverRegisterScreenState extends State<RegistroConductor> {
             top: MediaQuery.of(context).padding.top + 35,
             left: 15,
             child: IconButton(
-              icon: const Icon(
-                Icons.arrow_back_ios_new,
-                color: primaryBlue,
-                size: 20,
-              ),
+              icon: const Icon(Icons.arrow_back_ios_new, color: primaryBlue, size: 20),
               onPressed: () => Navigator.pop(context),
             ),
           ),
 
-          // Logo MoveCare con sombra mejorada (main)
+          // Logo/Foto de perfil interactiva (MODIFICADO)
           Positioned(
-            top: size.height * 0.12,
+            top: size.height * 0.10,
             left: 0,
             right: 0,
             child: Center(
-              child: Container(
-                width: sp(100, context),
-                height: sp(100, context),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(25),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Colors.black12,
-                      blurRadius: 10,
-                      offset: Offset(0, 5),
+              child: GestureDetector(
+                onTap: () => _showImageSourceActionSheet(context),
+                child: Stack(
+                  children: [
+                    Container(
+                      width: sp(110, context),
+                      height: sp(110, context),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        boxShadow: const [
+                          BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, 5)),
+                        ],
+                        image: _imageFile != null
+                            ? DecorationImage(image: FileImage(_imageFile!), fit: BoxFit.cover)
+                            : null,
+                      ),
+                      child: _imageFile == null
+                          ? Padding(
+                              padding: const EdgeInsets.all(15),
+                              child: Image.asset('assets/movecare.png'),
+                            )
+                          : null,
+                    ),
+                    Positioned(
+                      bottom: 0,
+                      right: 0,
+                      child: CircleAvatar(
+                        backgroundColor: primaryBlue,
+                        radius: 18,
+                        child: const Icon(Icons.camera_alt, color: Colors.white, size: 18),
+                      ),
                     ),
                   ],
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Image.asset('assets/movecare.png'),
                 ),
               ),
             ),
           ),
 
-          // Formulario con bordes redondeados
+          // Formulario
           Align(
             alignment: Alignment.bottomCenter,
             child: Container(
@@ -130,52 +185,33 @@ class _DriverRegisterScreenState extends State<RegistroConductor> {
                     ),
                     SizedBox(height: sp(25, context)),
 
-                    // Campos de texto vinculados a controladores
-                    _buildTextField(
-                      context,
-                      label: 'Nombre',
-                      iconColor: Colors.blue.shade800,
-                      controller: _nombreController,
-                    ),
-                    _buildTextField(
-                      context,
-                      label: 'Correo electrónico',
-                      iconColor: Colors.blue.shade400,
-                      controller: _correoController,
-                    ),
-                    _buildTextField(
-                      context,
-                      label: 'Teléfono de contacto',
-                      iconColor: Colors.blue.shade800,
-                      controller: _telefonoController,
-                    ),
+                    _buildTextField(context, label: 'Nombre', iconColor: Colors.blue.shade800, controller: _nombreController),
+                    _buildTextField(context, label: 'Correo electrónico', iconColor: Colors.blue.shade400, controller: _correoController),
+                    _buildTextField(context, label: 'Teléfono de contacto', iconColor: Colors.blue.shade800, controller: _telefonoController),
+                    _buildTextField(context, label: 'Dirección particular', iconColor: Colors.blue.shade400, controller: _direccionController), // NUEVO
 
                     _buildTextField(
                       context,
                       label: 'Contraseña',
-                      iconColor: Colors.blue.shade400,
+                      iconColor: Colors.blue.shade800,
                       isPassword: true,
                       controller: _passwordController,
                       obscure: _obscurePass,
-                      onToggle: () =>
-                          setState(() => _obscurePass = !_obscurePass),
+                      onToggle: () => setState(() => _obscurePass = !_obscurePass),
                     ),
 
                     _buildTextField(
                       context,
                       label: 'Confirmación de contraseña',
-                      iconColor: Colors.blue.shade800,
+                      iconColor: Colors.blue.shade400,
                       isPassword: true,
                       controller: _confirmPasswordController,
                       obscure: _obscureConfirmPass,
-                      onToggle: () => setState(
-                        () => _obscureConfirmPass = !_obscureConfirmPass,
-                      ),
+                      onToggle: () => setState(() => _obscureConfirmPass = !_obscureConfirmPass),
                     ),
 
                     SizedBox(height: sp(25, context)),
 
-                    // Botón de acción con estado Loading
                     SizedBox(
                       width: sw * 0.75,
                       height: 55,
@@ -184,14 +220,10 @@ class _DriverRegisterScreenState extends State<RegistroConductor> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: primaryBlue,
                           elevation: 3,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(30),
-                          ),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
                         ),
                         child: _loading
-                            ? const CircularProgressIndicator(
-                                color: Colors.white,
-                              )
+                            ? const CircularProgressIndicator(color: Colors.white)
                             : Text(
                                 'Continuar con mi registro',
                                 style: GoogleFonts.montserrat(
@@ -216,30 +248,22 @@ class _DriverRegisterScreenState extends State<RegistroConductor> {
     );
   }
 
-  // Lógica de registro (HEAD)
+  // Lógica de registro (HEAD - SIN CAMBIOS DE LÓGICA)
   Future<void> _registerDriver() async {
     if (_passwordController.text != _confirmPasswordController.text) {
       _showMessage('Las contraseñas no coinciden');
       return;
     }
-
     setState(() => _loading = true);
-
     final result = await AuthService.registerDriver(
       nombreCompleto: _nombreController.text,
       correo: _correoController.text,
       telefono: _telefonoController.text,
       password: _passwordController.text,
     );
-
     setState(() => _loading = false);
-
     if (result["ok"]) {
-      Navigator.pushNamed(
-        context,
-        '/continue_driver_register_screen',
-        arguments: result["id_usuario"],
-      );
+      Navigator.pushNamed(context, '/continue_driver_register_screen', arguments: result["id_usuario"]);
     } else {
       _showMessage(result["error"]);
     }
@@ -249,48 +273,25 @@ class _DriverRegisterScreenState extends State<RegistroConductor> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
-  // Widget unificado de TextField
-  Widget _buildTextField(
-    BuildContext context, {
-    required String label,
-    required Color iconColor,
-    required TextEditingController controller,
-    bool isPassword = false,
-    bool? obscure,
-    VoidCallback? onToggle,
-  }) {
+  Widget _buildTextField(BuildContext context, {required String label, required Color iconColor, required TextEditingController controller, bool isPassword = false, bool? obscure, VoidCallback? onToggle}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Container(
-        decoration: BoxDecoration(
-          color: fieldBlue,
-          borderRadius: BorderRadius.circular(20),
-        ),
+        decoration: BoxDecoration(color: fieldBlue, borderRadius: BorderRadius.circular(20)),
         child: TextField(
           controller: controller,
           obscureText: isPassword ? (obscure ?? true) : false,
-          style: GoogleFonts.montserrat(
-            fontSize: sp(14, context),
-            color: Colors.black87,
-          ),
+          style: GoogleFonts.montserrat(fontSize: sp(14, context), color: Colors.black87),
           decoration: InputDecoration(
             hintText: label,
-            hintStyle: GoogleFonts.montserrat(
-              color: primaryBlue.withOpacity(0.7),
-              fontSize: sp(13, context),
-              fontWeight: FontWeight.w600,
-            ),
+            hintStyle: GoogleFonts.montserrat(color: primaryBlue.withOpacity(0.7), fontSize: sp(13, context), fontWeight: FontWeight.w600),
             prefixIcon: Padding(
               padding: const EdgeInsets.all(12),
               child: CircleAvatar(backgroundColor: iconColor, radius: 8),
             ),
             suffixIcon: isPassword
                 ? IconButton(
-                    icon: Icon(
-                      obscure! ? Icons.visibility_off : Icons.visibility,
-                      color: primaryBlue,
-                      size: 20,
-                    ),
+                    icon: Icon(obscure! ? Icons.visibility_off : Icons.visibility, color: primaryBlue, size: 20),
                     onPressed: onToggle,
                   )
                 : null,
@@ -306,20 +307,10 @@ class _DriverRegisterScreenState extends State<RegistroConductor> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Text(
-          '¿Ya tienes cuenta? ',
-          style: GoogleFonts.montserrat(fontSize: sp(13, context)),
-        ),
+        Text('¿Ya tienes cuenta? ', style: GoogleFonts.montserrat(fontSize: sp(13, context))),
         GestureDetector(
           onTap: () => Navigator.pushNamed(context, '/iniciar_sesion'),
-          child: Text(
-            'Inicia Sesión',
-            style: GoogleFonts.montserrat(
-              color: primaryBlue,
-              fontWeight: FontWeight.bold,
-              fontSize: sp(13, context),
-            ),
-          ),
+          child: Text('Inicia Sesión', style: GoogleFonts.montserrat(color: primaryBlue, fontWeight: FontWeight.bold, fontSize: sp(13, context))),
         ),
       ],
     );

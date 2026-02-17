@@ -11,7 +11,6 @@ import 'screens/registro.dart';
 import 'screens/olvide_contrasena.dart';
 import 'screens/confirmar_correo.dart';
 import 'screens/nueva_contrasena.dart';
-import 'screens/codigo_verificacion.dart';
 import 'screens/menu_vistas.dart';
 
 // Screens Pasajero
@@ -82,15 +81,14 @@ class MyApp extends StatelessWidget {
         '/iniciar_sesion': (context) => const IniciarSesion(), 
         '/olvide_contrasena': (context) => const OlvideContrasena(),
         '/nueva_contrasena': (context) => const NuevaContrasena(),
-        '/confirmar-correo': (context) => const ConfirmarCorreoScreen(), //MIRA ESTO ALE
+        '/confirmar-correo': (context) => const ConfirmarCorreoScreen(), 
         '/menu_vistas': (context) => const MenuVistas(),
         '/registro': (context) => const Registro(),
-        '/codigo_verificacion': (context) => const CodigoVerificacion(), // ESTA SE ELIMINARA
 
         // Módulo Pasajero
         '/registro_pasajero': (context) => const RegistroPasajero(),
         '/principal_pasajero': (context) => const PrincipalPasajero(),
-        '/completar_perfil_pasajero': (context) => const CompletarPerfilPasajero(), // MODIFICACIONES PENDIENTES
+        '/completar_perfil_pasajero': (context) => const CompletarPerfilPasajero(),
         '/perfil_pasajero': (context) => const PerfilPasajero(),
         '/mi_perfil_pasajero': (context) => const MiPerfilPasajero(),
         '/agendar_viaje': (context) => const AgendarViaje(), 
