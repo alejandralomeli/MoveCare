@@ -5,6 +5,9 @@ import '../services/acompanante/acompanante_service.dart';
 import '../services/viaje/viaje_service.dart';
 import '../services/pagos/pagos_service.dart';
 import '../core/utils/auth_helper.dart';
+import 'package:latlong2/latlong.dart';
+import '../services/map/osm_service.dart';
+import '../screens/widgets/route_map_widget.dart';
 
 class AgendarVariosDestinos extends StatefulWidget {
   const AgendarVariosDestinos({super.key});
@@ -34,6 +37,16 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
   DateTime? _selectedDateTime;
   String? selectedHour;
   String? selectedMinute;
+
+  // Variables de Mapa y Ruta
+  LatLng? startCoord;
+  LatLng? endCoord;
+  List<LatLng> routePoints = [];
+  List<LatLng> paradasCoords = [];
+  double? distanciaTotalKm;
+  int? duracionMin;
+  String? polylineRuta;
+  bool calculandoRuta = false;
 
   // Listas para Dropdowns
   final List<String> hoursList = List.generate(
@@ -210,12 +223,72 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
     );
   }
 
-  List<Map<String, dynamic>> _buildDestinosPayload() {
+  Future<void> _calcularRutaMultiDestino() async {
+    final originText = origenController.text.trim();
+    final destTexts = _destinoControllers.map((c) => c.text.trim()).toList();
+
+    if (originText.isEmpty || destTexts.any((t) => t.isEmpty)) return;
+
+    setState(() => calculandoRuta = true);
+
+    try {
+      // 1. Obtenemos el origen
+      LatLng? start = await OsmService.obtenerCoordenadas(originText);
+      if (start == null) return;
+
+      List<LatLng> coordenadasRuta = [start];
+      List<LatLng> paradasTemp = [];
+
+      // 2. Procesamos cada destino con una pausa obligatoria para no bloquear Nominatim
+      for (String destText in destTexts) {
+        // 🔥 EL TEMPORIZADOR: Esperamos 1.5 segundos entre cada petición a la API
+        await Future.delayed(const Duration(milliseconds: 1500));
+
+        LatLng? dest = await OsmService.obtenerCoordenadas(destText);
+        if (dest != null) {
+          coordenadasRuta.add(dest);
+          paradasTemp.add(dest); // Guardamos la parada para dibujarle su pin
+        }
+      }
+
+      // 3. Calculamos la ruta
+      if (coordenadasRuta.length >= 2) {
+        final routeData = await OsmService.obtenerRutaMultiple(coordenadasRuta);
+
+        if (routeData != null && mounted) {
+          setState(() {
+            startCoord = start;
+            endCoord = coordenadasRuta.last;
+            routePoints = routeData['puntos'];
+            distanciaTotalKm = routeData['distancia'];
+            duracionMin = routeData['duracion'];
+            paradasCoords =
+                paradasTemp; // <--- Actualizamos la lista de paradas
+          });
+        }
+      }
+    } catch (e) {
+      print("Error calculando ruta multidestino: $e");
+    } finally {
+      if (mounted) setState(() => calculandoRuta = false);
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> _buildDestinosPayload() async {
     final List<Map<String, dynamic>> destinos = [];
     for (int i = 0; i < _destinoControllers.length; i++) {
       final text = _destinoControllers[i].text.trim();
       if (text.isEmpty) throw Exception('Completa todos los destinos');
-      destinos.add({"direccion": text, "orden": i + 1});
+
+      // Obtenemos las coordenadas de cada destino antes de guardarlo
+      LatLng? coords = await OsmService.obtenerCoordenadas(text);
+
+      destinos.add({
+        "direccion": text,
+        "lat": coords?.latitude,
+        "lng": coords?.longitude,
+        "orden": i + 1,
+      });
     }
     return destinos;
   }
@@ -260,15 +333,46 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
       return;
     }
 
+    // Validamos que el mapa ya haya calculado la ruta
+    if (startCoord == null || endCoord == null || distanciaTotalKm == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Por favor espera a que se calcule la ruta en el mapa'),
+        ),
+      );
+      return;
+    }
+
     setState(() => _isCreatingTrip = true);
 
     try {
       final fechaHoraInicio = _buildFechaHoraInicio();
-      final destinos = _buildDestinosPayload();
+
+      // 🔥 Ahora le ponemos 'await' para que termine de armar los destinos con lat/lng
+      final destinos = await _buildDestinosPayload();
+
+      // 🔥 ARMAMOS EL JSON DE LA RUTA PARA EL BACKEND
+      Map<String, dynamic> rutaPayload = {
+        "origen": {
+          "lat": startCoord!.latitude,
+          "lng": startCoord!.longitude,
+          "direccion": origenController.text.trim(),
+        },
+        "destino": {
+          // Usamos el ÚLTIMO destino como destino final para la ruta
+          "lat": endCoord!.latitude,
+          "lng": endCoord!.longitude,
+          "direccion": _destinoControllers.last.text.trim(),
+        },
+        "distancia_km": double.parse(distanciaTotalKm!.toStringAsFixed(2)),
+        "duracion_min": duracionMin ?? 0,
+        "polyline": "ruta_multidestino", // Texto indicativo
+      };
 
       final viajeId = await ViajeService.crearViaje(
+        ruta: rutaPayload, // <--- AQUÍ LE PASAMOS LA RUTA
         puntoInicio: origenController.text.trim(),
-        destino: null, // Es null porque usamos 'destinos' (lista)
+        destino: null,
         destinos: destinos,
         checkVariosDestinos: true,
         fechaHoraInicio: fechaHoraInicio.toIso8601String(),
@@ -277,6 +381,8 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
         especificaciones: especificaciones,
         checkAcompanante: hasCompanion,
         idAcompanante: hasCompanion ? selectedAcompananteId : null,
+        costo: null,
+        duracionEstimada: duracionMin, // <--- TAMBIÉN ENVIAMOS LA DURACIÓN
       );
 
       if (!mounted) return;
@@ -302,7 +408,6 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
   List<DateTime> get _diasSemana =>
       List.generate(7, (i) => _weekStart.add(Duration(days: i)));
 
-  // --- BUILD UI ---
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
@@ -375,7 +480,8 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
                   Container(
                     padding: EdgeInsets.all(sw * 0.05),
                     decoration: BoxDecoration(
-                      color: containerBlue,
+                      color:
+                          containerBlue, // O la variable que uses para el color
                       borderRadius: BorderRadius.circular(30),
                     ),
                     child: Column(
@@ -409,10 +515,15 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
                         const SizedBox(height: 15),
                         Text('Lugar', style: mSemibold(sw)),
                         const SizedBox(height: 8),
+
+                        // ORIGEN
                         _buildZMGAutocomplete(
-                          'Ubicación actual',
-                          origenController,
-                          sw,
+                          hint: 'Ubicación actual',
+                          controller: origenController,
+                          sw: sw,
+                          onSelected: (String ubicacion) {
+                            _calcularRutaMultiDestino();
+                          },
                         ),
 
                         const SizedBox(height: 15),
@@ -423,7 +534,7 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
                                 'Cantidad de destinos',
                                 style: mSemibold(
                                   sw,
-                                  color: primaryBlue,
+                                  color: primaryBlue, // O la variable que uses
                                   size: 12,
                                 ),
                               ),
@@ -437,14 +548,32 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
                           return Padding(
                             padding: const EdgeInsets.only(top: 8),
                             child: _buildZMGAutocomplete(
-                              'Parada ${index + 1}',
-                              _destinoControllers[index],
-                              sw,
+                              hint: 'Parada ${index + 1}',
+                              controller: _destinoControllers[index],
+                              sw: sw,
+                              onSelected: (String ubicacion) {
+                                _calcularRutaMultiDestino();
+                              },
                             ),
                           );
                         }),
 
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 15),
+
+                        // 🔥 MAPA INTEGRADO AQUÍ 🔥
+                        RouteMapWidget(
+                          startCoord: startCoord,
+                          endCoord:
+                              endCoord, // En multidestino este suele ser el último punto
+                          routePoints:
+                              routePoints ?? [], // Manejo seguro de nulos
+                          paradas: paradasCoords,
+                          distanciaTotalKm: distanciaTotalKm,
+                          isLoading:
+                              calculandoRuta, // Pasamos el booleano que indica la carga
+                        ),
+                        const SizedBox(height: 15),
+
                         _buildOneDestinationButton(),
                         const SizedBox(height: 15),
                         _buildCompanionSection(sw),
@@ -645,11 +774,12 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
     );
   }
 
-  Widget _buildZMGAutocomplete(
-    String hint,
-    TextEditingController controller,
-    double sw,
-  ) {
+  Widget _buildZMGAutocomplete({
+    required double sw,
+    required String hint,
+    required TextEditingController controller,
+    required Function(String) onSelected,
+  }) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 15),
       decoration: BoxDecoration(
@@ -657,27 +787,65 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
         borderRadius: BorderRadius.circular(20),
       ),
       child: Autocomplete<String>(
-        optionsBuilder: (v) => v.text.isEmpty
-            ? const Iterable.empty()
-            : zmgLocations.where(
-                (l) => l.toLowerCase().contains(v.text.toLowerCase()),
-              ),
-        onSelected: (v) => controller.text = v,
-        fieldViewBuilder: (c, ct, f, o) {
-          if (ct.text.isEmpty && controller.text.isNotEmpty)
-            ct.text = controller.text;
-          return TextField(
-            controller: ct,
-            focusNode: f,
-            onChanged: (text) => controller.text = text,
-            decoration: InputDecoration(
-              hintText: hint,
-              hintStyle: labelStyle(sw),
-              icon: const Icon(Icons.location_on, color: primaryBlue, size: 20),
-              border: InputBorder.none,
-            ),
+        optionsBuilder: (TextEditingValue value) {
+          if (value.text.isEmpty) return const Iterable<String>.empty();
+          return zmgLocations.where(
+            (loc) => loc.toLowerCase().contains(value.text.toLowerCase()),
           );
         },
+        onSelected: (selection) {
+          controller.text = selection;
+          onSelected(selection);
+          FocusManager.instance.primaryFocus?.unfocus();
+        },
+        fieldViewBuilder:
+            (context, textController, focusNode, onFieldSubmitted) {
+              if (controller.text.isNotEmpty && textController.text.isEmpty) {
+                textController.text = controller.text;
+              }
+
+              return TextField(
+                controller: textController,
+                focusNode: focusNode,
+                textInputAction: TextInputAction.search,
+                onChanged: (value) {
+                  controller.text = value;
+                },
+                onSubmitted: (value) {
+                  if (value.isNotEmpty) {
+                    controller.text = value;
+                    onSelected(value);
+                    onFieldSubmitted();
+                  }
+                },
+
+                style: mSemibold(sw, color: primaryBlue),
+                decoration: InputDecoration(
+                  hintText: hint,
+                  hintStyle: mSemibold(sw, color: accentBlue, size: 13),
+                  icon: const Icon(
+                    Icons.location_on,
+                    color: primaryBlue,
+                    size: 20,
+                  ),
+                  border: InputBorder.none,
+                  suffixIcon: IconButton(
+                    icon: const Icon(
+                      Icons.search,
+                      color: primaryBlue,
+                      size: 20,
+                    ),
+                    onPressed: () {
+                      if (textController.text.isNotEmpty) {
+                        controller.text = textController.text;
+                        onSelected(textController.text);
+                        FocusManager.instance.primaryFocus?.unfocus();
+                      }
+                    },
+                  ),
+                ),
+              );
+            },
       ),
     );
   }

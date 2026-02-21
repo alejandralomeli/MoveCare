@@ -88,22 +88,22 @@ class MyApp extends StatelessWidget {
         // Módulo Pasajero
         '/registro_pasajero': (context) => const RegistroPasajero(),
         '/principal_pasajero': (context) => const PrincipalPasajero(),
-        '/completar_perfil_pasajero': (context) => const CompletarPerfilPasajero(),
-        '/perfil_pasajero': (context) => const PerfilPasajero(),
-        '/mi_perfil_pasajero': (context) => const MiPerfilPasajero(),
+        '/completar_perfil_pasajero': (context) => const CompletarPerfilPasajero(), //PARA HOY
+        '/perfil_pasajero': (context) => const PerfilPasajero(), //PARA HOY
+        '/mi_perfil_pasajero': (context) => const MiPerfilPasajero(), //PARA HOY
         '/agendar_viaje': (context) => const AgendarViaje(), 
         '/agendar_varios_destinos': (context) => const AgendarVariosDestinos(),
-        '/pago_tarjeta': (context) => const PagoTarjetaScreen(),
+        '/pago_tarjeta': (context) => const PagoTarjetaScreen(), //ESTO AL FINAL
         '/registro_tarjeta': (context) => const RegistroTarjetaScreen(),
         '/registro_acompanante': (context) => const RegistrarAcompanante(),
         '/historial_viajes_pasajero': (context) => const HistorialViajesPasajero(),
-        '/viaje_confirmado': (context) => const ViajeConfirmado(), // ESTA ME QUEDA POR CONECTAR
-        '/estimacion_costo': (context) => const EstimacionViaje(),
+        '/viaje_confirmado': (context) => const ViajeConfirmado(), //ESTO AL FINAL
+        '/estimacion_costo': (context) => const EstimacionViaje(), //PENDIENTE A LA IA
 
         // Módulo Conductor
         '/registro_conductor': (context) => const RegistroConductor(),
         '/continue_driver_register_screen': (context) => const ContinuarRegistroConductor(),
-        '/principal_conductor': (context) => const PrincipalConductor(),
+        '/principal_conductor': (context) => const PrincipalConductor(), //PARA HOY
         '/mi_perfil_conductor': (context) => const MiPerfilConductor(),
         '/viaje_actual': (context) => const ViajeActualMapa(),
         '/solicitud_viaje': (context) => const SolicitudViaje(),

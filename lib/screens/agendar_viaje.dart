@@ -5,6 +5,9 @@ import '../services/acompanante/acompanante_service.dart';
 import '../services/viaje/viaje_service.dart';
 import '../services/pagos/pagos_service.dart';
 import '../core/utils/auth_helper.dart';
+import 'package:latlong2/latlong.dart';
+import '../services/map/osm_service.dart';
+import '../screens/widgets/route_map_widget.dart';
 
 class AgendarViaje extends StatefulWidget {
   const AgendarViaje({super.key});
@@ -51,6 +54,15 @@ class _AgendarViajeState extends State<AgendarViaje>
   String? selectedTarjetaId;
   List<Map<String, String>> tarjetas = [];
   bool cargandoTarjetas = false;
+
+  // Variables de Mapa y Ruta
+  LatLng? startCoord;
+  LatLng? endCoord;
+  List<LatLng> routePoints = [];
+  double? distanciaTotalKm;
+  int? duracionMin;
+  String? polylineRuta;
+  bool calculandoRuta = false;
 
   // Listas Estáticas
   final List<String> hoursList = List.generate(
@@ -263,7 +275,7 @@ class _AgendarViajeState extends State<AgendarViaje>
                   Center(child: _buildDateRow(sw)),
                   const SizedBox(height: 20),
 
-                  // Contenedor Azul Claro
+                  // Contenedor Azul Claro (Todo el formulario y el mapa)
                   Container(
                     padding: EdgeInsets.all(sw * 0.05),
                     decoration: BoxDecoration(
@@ -302,20 +314,40 @@ class _AgendarViajeState extends State<AgendarViaje>
 
                         Text('Lugar', style: mSemibold(sw)),
                         const SizedBox(height: 8),
+                        // Lugar de Origen
                         _buildZMGAutocomplete(
                           sw: sw,
                           hint: 'Ubicación actual',
                           controller: origenController,
-                          onSelected: (val) => origen = val,
+                          onSelected: (val) {
+                            origen = val;
+                            _calcularRutaYDistancia();
+                          },
                         ),
                         const SizedBox(height: 8),
+
+                        // Lugar de Destino
                         _buildZMGAutocomplete(
                           sw: sw,
                           hint: 'Lugar de destino',
                           controller: destinoController,
-                          onSelected: (val) => destino = val,
+                          onSelected: (val) {
+                            destino = val;
+                            _calcularRutaYDistancia();
+                          },
                         ),
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 15),
+
+                        // 🔥 MAPA INTEGRADO DENTRO DEL CONTENEDOR AZUL 🔥
+                        RouteMapWidget(
+                          startCoord: startCoord,
+                          endCoord: endCoord,
+                          routePoints: routePoints ?? [], // Manejo seguro
+                          distanciaTotalKm: distanciaTotalKm,
+                          isLoading: calculandoRuta,
+                        ),
+                        const SizedBox(height: 15),
+
                         _buildMultipleDestinationsButton(sw),
                         const SizedBox(height: 15),
 
@@ -368,6 +400,7 @@ class _AgendarViajeState extends State<AgendarViaje>
                     ),
                   ),
                   const SizedBox(height: 25),
+                  // Botones de acción fuera del contenedor azul
                   _buildActionButtons(sw),
                   const SizedBox(height: 40),
                 ],
@@ -523,22 +556,49 @@ class _AgendarViajeState extends State<AgendarViaje>
         onSelected: (selection) {
           controller.text = selection;
           onSelected(selection);
+          FocusManager.instance.primaryFocus?.unfocus();
         },
-        fieldViewBuilder: (context, textController, focusNode, _) {
+        fieldViewBuilder: (context, textController, focusNode, onFieldSubmitted) {
           if (controller.text.isNotEmpty && textController.text.isEmpty) {
             textController.text = controller.text;
           }
+
           return TextField(
             controller: textController,
             focusNode: focusNode,
+            textInputAction: TextInputAction.search,
+            onChanged: (value) {
+              controller.text = value;
+            },
+            onSubmitted: (value) {
+              if (value.isNotEmpty) {
+                controller.text = value;
+                onSelected(value);
+                onFieldSubmitted();
+              }
+            },
+
+            // 🔥 QUITAMOS onEditingComplete por ahora.
+            // A veces onSubmitted y onEditingComplete se disparan juntos
+            // cuando ocultas el teclado, enviando 2 peticiones al mismo tiempo y
+            // provocando el bloqueo 425 de Nominatim.
             style: mSemibold(sw, color: primaryBlue),
             decoration: InputDecoration(
               hintText: hint,
               hintStyle: mSemibold(sw, color: accentBlue, size: 13),
               icon: const Icon(Icons.location_on, color: primaryBlue, size: 20),
               border: InputBorder.none,
+              suffixIcon: IconButton(
+                icon: const Icon(Icons.search, color: primaryBlue, size: 20),
+                onPressed: () {
+                  if (textController.text.isNotEmpty) {
+                    controller.text = textController.text;
+                    onSelected(textController.text);
+                    FocusManager.instance.primaryFocus?.unfocus();
+                  }
+                },
+              ),
             ),
-            onChanged: (value) => onSelected(value),
           );
         },
       ),
@@ -863,8 +923,10 @@ class _AgendarViajeState extends State<AgendarViaje>
                 showConfirmModal(
                   context: context,
                   title: '¿Desea cancelar y volver al inicio?',
-                  onConfirm: () =>
-                      Navigator.pushReplacementNamed(context, '/principal_pasajero'),
+                  onConfirm: () => Navigator.pushReplacementNamed(
+                    context,
+                    '/principal_pasajero',
+                  ),
                 );
               },
             ),
@@ -926,14 +988,39 @@ class _AgendarViajeState extends State<AgendarViaje>
     );
   }
 
+  Future<void> _calcularRutaYDistancia() async {
+    // Solo calculamos si tenemos ambos textos
+    if (origenController.text.isEmpty || destinoController.text.isEmpty) return;
+
+    setState(() => calculandoRuta = true);
+
+    // 1. Buscar coordenadas
+    startCoord = await OsmService.obtenerCoordenadas(origenController.text);
+    endCoord = await OsmService.obtenerCoordenadas(destinoController.text);
+
+    // 2. Si encontró ambos puntos, pedir la ruta a OSRM
+    if (startCoord != null && endCoord != null) {
+      final rutaData = await OsmService.obtenerRuta(startCoord!, endCoord!);
+      if (rutaData != null) {
+        setState(() {
+          distanciaTotalKm = rutaData['distancia'];
+          routePoints = rutaData['puntos'];
+        });
+      }
+    }
+
+    setState(() => calculandoRuta = false);
+  }
+
   // --- LÓGICA DE ENVÍO AL BACKEND ---
   Future<void> _crearViaje() async {
     if (_isCreatingTrip) return;
 
-    // 1. VALIDACIÓN
+    // 1. VALIDACIONES INICIALES
     bool esPagoConTarjeta =
         (selectedPayment == 'Tarjeta de crédito' ||
         selectedPayment == 'Tarjeta de débito');
+
     if (esPagoConTarjeta && selectedTarjetaId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -947,7 +1034,23 @@ class _AgendarViajeState extends State<AgendarViaje>
         selectedHour == null ||
         selectedMinute == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Por favor selecciona fecha y hora')),
+        const SnackBar(
+          content: Text('Por favor selecciona fecha y hora'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    // <-- NUEVA VALIDACIÓN: Asegurar que hay ruta calculada -->
+    if (startCoord == null || endCoord == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Por favor escribe ubicaciones válidas y presiona buscar para calcular la ruta.',
+          ),
+          backgroundColor: Colors.orange,
+        ),
       );
       return;
     }
@@ -964,13 +1067,28 @@ class _AgendarViajeState extends State<AgendarViaje>
         int.parse(selectedMinute!),
       );
 
+      // <-- ARMADO DEL OBJETO RUTA JSON -->
+      Map<String, dynamic> rutaJson = {
+        "origen": {
+          "lat": startCoord!.latitude,
+          "lng": startCoord!.longitude,
+          "direccion": origenController.text,
+        },
+        "destino": {
+          "lat": endCoord!.latitude,
+          "lng": endCoord!.longitude,
+          "direccion": destinoController.text,
+        },
+        "polyline": polylineRuta ?? "sin_datos_de_polyline",
+        "distancia_km": double.parse(
+          (distanciaTotalKm ?? 0.0).toStringAsFixed(2),
+        ),
+        "duracion_min": duracionMin ?? 0,
+      };
+
+      // Llamada al servicio modificada
       await ViajeService.crearViaje(
-        puntoInicio: origenController.text.isNotEmpty
-            ? origenController.text
-            : origen,
-        destino: destinoController.text.isNotEmpty
-            ? destinoController.text
-            : destino,
+        ruta: rutaJson, // <-- Enviamos el objeto JSON completo
         fechaHoraInicio: fechaHoraInicio.toIso8601String(),
         metodoPago: selectedPayment,
         idMetodo: esPagoConTarjeta ? selectedTarjetaId : null,

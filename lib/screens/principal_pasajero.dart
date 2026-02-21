@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:latlong2/latlong.dart'; // 🔥 NUEVO: Necesario para las coordenadas
 
 import 'widgets/map_widget.dart';
+import 'widgets/route_map_widget.dart'; // 🔥 NUEVO: Tu widget inteligente de rutas (verifica que la ruta del archivo sea correcta)
 import '../providers/user_provider.dart';
 import '../services/home/home_service.dart';
 import '../core/utils/auth_helper.dart';
@@ -33,6 +35,11 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero>
   List<DateTime> _calendarDates = [];
   Map<String, dynamic>? _viajeProximo;
   List<dynamic> _historialViajes = [];
+
+  // 🔥 NUEVO: Variables para almacenar la ruta del viaje próximo
+  LatLng? _startCoord;
+  LatLng? _endCoord;
+  List<LatLng> _routePoints = [];
 
   late AnimationController _pulseController;
 
@@ -73,11 +80,40 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero>
       userProvider.setUserFromJson(homeData["usuario"]);
 
       if (homeData['viaje_proximo'] != null) {
-        final fechaViaje = DateTime.parse(
-          homeData['viaje_proximo']['fecha_hora_inicio'],
-        );
         _viajeProximo = homeData['viaje_proximo'];
+        
+        final fechaViaje = DateTime.parse(_viajeProximo!['fecha_hora_inicio']);
         _buildCalendarDates(fechaViaje);
+
+        // 🔥 NUEVO: Lógica para extraer la ruta guardada en el backend
+        if (_viajeProximo!['ruta'] != null) {
+          try {
+            List<dynamic> rutaJson = _viajeProximo!['ruta'];
+            _routePoints = rutaJson.map((punto) {
+              // Asumiendo que guardaste la ruta como un JSON array de mapas: [{'lat': 20.6, 'lng': -103.3}, ...]
+              // o array de arrays [[20.6, -103.3], ...]
+              if (punto is Map) {
+                 return LatLng(
+                   (punto['lat'] ?? punto[1]) * 1.0, // Ajusta según tus llaves del JSON
+                   (punto['lng'] ?? punto['lon'] ?? punto[0]) * 1.0
+                 );
+              } else if (punto is List) {
+                 // Si OSRM lo guardó como [lon, lat], cámbialo a LatLng(punto[1], punto[0])
+                 return LatLng(punto[0] * 1.0, punto[1] * 1.0); 
+              }
+              return const LatLng(0, 0);
+            }).toList();
+
+            if (_routePoints.isNotEmpty) {
+              // Tomamos el primer y último punto de la ruta para dibujar los pines
+              _startCoord = _routePoints.first;
+              _endCoord = _routePoints.last;
+            }
+          } catch (e) {
+            print("Error al decodificar la ruta del viaje próximo: $e");
+          }
+        }
+
       } else {
         _buildCalendarDates(DateTime.now());
       }
@@ -132,7 +168,7 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero>
   @override
   Widget build(BuildContext context) {
     if (_loadingHome) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(body: Center(child: CircularProgressIndicator(color: primaryBlue)));
     }
 
     final user = context.watch<UserProvider>().user;
@@ -152,12 +188,17 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const SizedBox(
-                        height: 60,
-                      ), // Espacio para el header flotante
-                      Text('Ubicación actual', style: mExtrabold(size: 18)),
+                      const SizedBox(height: 60), 
+                      
+                      // 🔥 NUEVO: Cambia el título dependiendo de si hay viaje o no
+                      Text(
+                        _viajeProximo != null ? 'Ruta de tu próximo viaje' : 'Ubicación actual', 
+                        style: mExtrabold(size: 18)
+                      ),
                       const SizedBox(height: 10),
+                      
                       _buildMapSection(),
+                      
                       const SizedBox(height: 25),
                       Text('Próximo viaje', style: mExtrabold(size: 18)),
                       const SizedBox(height: 10),
@@ -247,6 +288,7 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero>
     );
   }
 
+  // 🔥 NUEVO: Aquí ocurre la magia para elegir qué mapa pintar
   Widget _buildMapSection() {
     return Container(
       height: 150,
@@ -254,7 +296,16 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero>
       decoration: BoxDecoration(borderRadius: BorderRadius.circular(20)),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(20),
-        child: const MapWidget(),
+        child: (_viajeProximo != null && _routePoints.isNotEmpty)
+            // Si hay viaje y tenemos los puntos de la ruta, dibujamos la ruta
+            ? RouteMapWidget(
+                startCoord: _startCoord,
+                endCoord: _endCoord,
+                routePoints: _routePoints,
+                isLoading: false,
+              )
+            // Si no, dibujamos el mapa de ubicación actual normal
+            : const MapWidget(),
       ),
     );
   }
@@ -400,7 +451,7 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero>
           Text(
             "Oct 28",
             style: mExtrabold(size: 12),
-          ), // Deberías parsear viaje['fecha']
+          ), 
           const SizedBox(width: 15),
           Expanded(
             child: Text(
@@ -478,22 +529,17 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero>
             ),
           ),
           const SizedBox(height: 30),
-
-          // BOTÓN 1: Un destino -> /agendar_viaje
           _optionBtn('Un destino', Colors.white, context, () {
-            Navigator.pop(context); // Cierra el BottomSheet primero
+            Navigator.pop(context);
             Navigator.pushNamed(context, '/agendar_viaje');
           }),
-
           const SizedBox(height: 15),
-
-          // BOTÓN 2: Varios destinos -> /agendar_varios_destinos
           _optionBtn(
             'Dos o más destinos',
-            buttonLightBlue, // Asegúrate de tener definido este color o usa uno como Color(0xFF64A1F4)
+            buttonLightBlue, 
             context,
             () {
-              Navigator.pop(context); // Cierra el BottomSheet primero
+              Navigator.pop(context);
               Navigator.pushNamed(context, '/agendar_varios_destinos');
             },
           ),
@@ -508,18 +554,15 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero>
     BuildContext context,
     VoidCallback onPressed,
   ) {
-    // Calculamos el color del texto: si el botón es blanco, texto azul; si no, texto blanco.
     final Color textColor = (color == Colors.white)
         ? primaryBlue
         : Colors.white;
 
     return SizedBox(
-      width:
-          MediaQuery.of(context).size.width * 0.8, // 80% del ancho de pantalla
+      width: MediaQuery.of(context).size.width * 0.8,
       height: 55,
       child: ElevatedButton(
-        onPressed:
-            onPressed, // Aquí se ejecuta la navegación que definimos arriba
+        onPressed: onPressed,
         style: ElevatedButton.styleFrom(
           backgroundColor: color,
           shape: RoundedRectangleBorder(
@@ -561,10 +604,9 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero>
     return GestureDetector(
       onTap: () {
         setState(() => _selectedIndex = index);
-        // Mapeo directo: [0:Home, 1:Viaje, 2:Historial, 3:Perfil]
         Navigator.pushNamed(
           context,
-          ['/principal_pasajero', '/agendar_viaje', '//historial_viajes_pasajero', '/mi_perfil_pasajero'][index],
+          ['/principal_pasajero', '/agendar_viaje', '/historial_viajes_pasajero', '/mi_perfil_pasajero'][index],
         );
       },
       child: Container(
