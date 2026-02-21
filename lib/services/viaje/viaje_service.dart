@@ -4,7 +4,7 @@ import '../http_client.dart';
 class ViajeService {
   static Future<String> crearViaje({
     Map<String, dynamic>? ruta,
-    String? puntoInicio, 
+    String? puntoInicio,
     String? destino,
     List<Map<String, dynamic>>? destinos,
     bool checkVariosDestinos = false,
@@ -19,14 +19,16 @@ class ViajeService {
   }) async {
     final Map<String, dynamic> body = {
       // Extraemos el texto del origen de la ruta si no nos pasan 'puntoInicio' explícitamente
-      "punto_inicio": puntoInicio ?? (ruta != null ? ruta["origen"]["direccion"] : ""),
+      "punto_inicio":
+          puntoInicio ?? (ruta != null ? ruta["origen"]["direccion"] : ""),
       "ruta": ruta, // <--- AQUÍ MANDAMOS EL JSONB COMPLETO AL BACKEND
       "fecha_hora_inicio": fechaHoraInicio,
       "metodo_pago": metodoPago,
       "id_metodo": idMetodo,
       "costo": costo,
       // Usamos la duración de la ruta si no nos pasan una explícita
-      "duracion_estimada": duracionEstimada ?? (ruta != null ? ruta["duracion_min"] : null),
+      "duracion_estimada":
+          duracionEstimada ?? (ruta != null ? ruta["duracion_min"] : null),
       "especificaciones": especificaciones,
       "check_acompanante": checkAcompanante,
       "id_acompanante": idAcompanante,
@@ -35,12 +37,14 @@ class ViajeService {
 
     if (checkVariosDestinos) {
       body["destino"] = null;
-      body["destinos"] = destinos ?? []; 
+      body["destinos"] = destinos ?? [];
     } else {
-      body["destino"] = destino ?? (ruta != null ? ruta["destino"]["direccion"] : null);
-      
+      body["destino"] =
+          destino ?? (ruta != null ? ruta["destino"]["direccion"] : null);
+
       // ---> ESTA ES LA LÍNEA QUE CAMBIAMOS <---
-      body["destinos"] = []; // Le mandamos una lista vacía en lugar de null para complacer a FastAPI
+      body["destinos"] =
+          []; // Le mandamos una lista vacía en lugar de null para complacer a FastAPI
     }
 
     final response = await HttpClient.post("/viajes/crear", body);
@@ -71,5 +75,21 @@ class ViajeService {
     }
 
     throw Exception("Error al obtener historial");
+  }
+
+  static Future<void> cancelarViaje(String idViaje) async {
+    // Llamamos al endpoint que acabamos de crear en el backend
+    final response = await HttpClient.put("/viajes/$idViaje/cancelar", {});
+
+    if (response.statusCode == 200) {
+      return; // Todo salió bien
+    }
+
+    if (response.statusCode == 401) {
+      throw Exception('TOKEN_INVALIDO');
+    }
+
+    final bodyResponse = jsonDecode(response.body);
+    throw Exception(bodyResponse["detail"] ?? "Error al cancelar viaje");
   }
 }

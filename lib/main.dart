@@ -79,18 +79,18 @@ class MyApp extends StatelessWidget {
         // Rutas de Autenticación y Sistema
         '/bienvenido': (context) => const Bienvenido(),
         '/iniciar_sesion': (context) => const IniciarSesion(), 
-        '/olvide_contrasena': (context) => const OlvideContrasena(),
-        '/nueva_contrasena': (context) => const NuevaContrasena(),
+        '/olvide_contrasena': (context) => const OlvideContrasena(), //PENDIENTE
+        '/nueva_contrasena': (context) => const NuevaContrasena(),//PENDIENTE
         '/confirmar-correo': (context) => const ConfirmarCorreoScreen(), 
         '/menu_vistas': (context) => const MenuVistas(),
         '/registro': (context) => const Registro(),
 
         // Módulo Pasajero
         '/registro_pasajero': (context) => const RegistroPasajero(),
-        '/principal_pasajero': (context) => const PrincipalPasajero(),
-        '/completar_perfil_pasajero': (context) => const CompletarPerfilPasajero(), //PARA HOY
-        '/perfil_pasajero': (context) => const PerfilPasajero(), //PARA HOY
-        '/mi_perfil_pasajero': (context) => const MiPerfilPasajero(), //PARA HOY
+        '/principal_pasajero': (context) => const PrincipalPasajero(), //EL BOTON DE VOZ SE MUEVE POR TODA LA PANTALLA AL BAJAR
+        '/completar_perfil_pasajero': (context) => const CompletarPerfilPasajero(),
+        '/perfil_pasajero': (context) => const PerfilPasajero(),
+        '/mi_perfil_pasajero': (context) => const MiPerfilPasajero(),
         '/agendar_viaje': (context) => const AgendarViaje(), 
         '/agendar_varios_destinos': (context) => const AgendarVariosDestinos(),
         '/pago_tarjeta': (context) => const PagoTarjetaScreen(), //ESTO AL FINAL
@@ -101,9 +101,10 @@ class MyApp extends StatelessWidget {
         '/estimacion_costo': (context) => const EstimacionViaje(), //PENDIENTE A LA IA
 
         // Módulo Conductor
+        //LO VOY A REPROGRAMAR PARA UNA SEMANA MÁS
         '/registro_conductor': (context) => const RegistroConductor(),
         '/continue_driver_register_screen': (context) => const ContinuarRegistroConductor(),
-        '/principal_conductor': (context) => const PrincipalConductor(), //PARA HOY
+        '/principal_conductor': (context) => const PrincipalConductor(),
         '/mi_perfil_conductor': (context) => const MiPerfilConductor(),
         '/viaje_actual': (context) => const ViajeActualMapa(),
         '/solicitud_viaje': (context) => const SolicitudViaje(),
@@ -113,6 +114,7 @@ class MyApp extends StatelessWidget {
         '/agregar_licencia': (context) => const AgregarLicencia(),
 
         // Módulo Administrativo
+        //ALE FALTA EL PRINCIPAL DE PASAJERO
         '/reporte_incidencia': (context) => const ReporteIncidencia(),
         '/gestion_usuarios': (context) => const GestionUsuarios(),
         '/historial_auditorias': (context) => const HistorialAuditoria(),
