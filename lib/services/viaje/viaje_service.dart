@@ -1,44 +1,47 @@
 import 'dart:convert';
-import '../http_client.dart'; 
+import '../http_client.dart';
 
 class ViajeService {
   static Future<String> crearViaje({
-    required String puntoInicio,
+    Map<String, dynamic>? ruta,
+    String? puntoInicio, 
     String? destino,
     List<Map<String, dynamic>>? destinos,
     bool checkVariosDestinos = false,
     required String fechaHoraInicio,
     String? metodoPago,
-    String? idMetodo, // <--- NUEVO CAMPO PARA LA TARJETA
+    String? idMetodo,
     String? especificaciones,
     bool checkAcompanante = false,
     String? idAcompanante,
     double? costo,
     int? duracionEstimada,
   }) async {
-
     final Map<String, dynamic> body = {
-      "punto_inicio": puntoInicio,
+      // Extraemos el texto del origen de la ruta si no nos pasan 'puntoInicio' explícitamente
+      "punto_inicio": puntoInicio ?? (ruta != null ? ruta["origen"]["direccion"] : ""),
+      "ruta": ruta, // <--- AQUÍ MANDAMOS EL JSONB COMPLETO AL BACKEND
       "fecha_hora_inicio": fechaHoraInicio,
       "metodo_pago": metodoPago,
-      "id_metodo": idMetodo, 
+      "id_metodo": idMetodo,
       "costo": costo,
-      "duracion_estimada": duracionEstimada,
+      // Usamos la duración de la ruta si no nos pasan una explícita
+      "duracion_estimada": duracionEstimada ?? (ruta != null ? ruta["duracion_min"] : null),
       "especificaciones": especificaciones,
       "check_acompanante": checkAcompanante,
       "id_acompanante": idAcompanante,
       "check_destinos": checkVariosDestinos,
     };
 
-    // --- LÓGICA DE DESTINOS (MANTENIDA) ---
     if (checkVariosDestinos) {
       body["destino"] = null;
-      body["destinos"] = destinos; 
+      body["destinos"] = destinos ?? []; 
     } else {
-      body["destino"] = destino;
-      body["destinos"] = null; 
+      body["destino"] = destino ?? (ruta != null ? ruta["destino"]["direccion"] : null);
+      
+      // ---> ESTA ES LA LÍNEA QUE CAMBIAMOS <---
+      body["destinos"] = []; // Le mandamos una lista vacía en lugar de null para complacer a FastAPI
     }
-    // -------------------------------------
 
     final response = await HttpClient.post("/viajes/crear", body);
 
@@ -52,7 +55,7 @@ class ViajeService {
     }
 
     final bodyResponse = jsonDecode(response.body);
-    print("Error Backend: $bodyResponse"); 
+    print("Error Backend: $bodyResponse");
     throw Exception(bodyResponse["detail"] ?? "Error al crear viaje");
   }
 
@@ -69,5 +72,4 @@ class ViajeService {
 
     throw Exception("Error al obtener historial");
   }
-  
 }
