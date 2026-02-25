@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../services/auth/auth_service.dart';
+import 'widgets/modals/terminos_modal.dart';
 
 class PerfilPasajero extends StatefulWidget {
   const PerfilPasajero({super.key});
@@ -22,7 +24,11 @@ class _PerfilPasajeroState extends State<PerfilPasajero> {
     return (size <= 20 && res > 20) ? 20 : res;
   }
 
-  TextStyle mExtrabold({Color color = Colors.black, double size = 14, required BuildContext context}) {
+  TextStyle mExtrabold({
+    Color color = Colors.black,
+    double size = 14,
+    required BuildContext context,
+  }) {
     return GoogleFonts.montserrat(
       color: color,
       fontSize: sp(size, context),
@@ -47,7 +53,7 @@ class _PerfilPasajeroState extends State<PerfilPasajero> {
                     clipBehavior: Clip.none,
                     children: [
                       Container(
-                        height: 120, 
+                        height: 120,
                         width: double.infinity,
                         color: lightBlueBg,
                         child: Column(
@@ -56,7 +62,11 @@ class _PerfilPasajeroState extends State<PerfilPasajero> {
                             Align(
                               alignment: Alignment.topLeft,
                               child: IconButton(
-                                icon: const Icon(Icons.arrow_back_ios_new, color: primaryBlue, size: 20),
+                                icon: const Icon(
+                                  Icons.arrow_back_ios_new,
+                                  color: primaryBlue,
+                                  size: 20,
+                                ),
                                 onPressed: () => Navigator.pop(context),
                               ),
                             ),
@@ -85,7 +95,10 @@ class _PerfilPasajeroState extends State<PerfilPasajero> {
                         left: 130,
                         child: Text(
                           'Mi Perfil',
-                          style: GoogleFonts.montserrat(fontSize: 24, fontWeight: FontWeight.w900),
+                          style: GoogleFonts.montserrat(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w900,
+                          ),
                         ),
                       ),
                     ],
@@ -97,10 +110,46 @@ class _PerfilPasajeroState extends State<PerfilPasajero> {
                     padding: EdgeInsets.symmetric(horizontal: sw * 0.06),
                     child: Column(
                       children: [
-                        _profileItem(Icons.person, "Información personal", context),
-                        _profileItem(Icons.notifications, "Notificaciones", context),
-                        _profileItem(Icons.credit_card, "Métodos de pago", context),
-                        _profileItem(Icons.security, "Seguridad", context),
+                        _profileItem(
+                          Icons.person,
+                          "Información personal",
+                          context,
+                          onTap: () {
+                            Navigator.pushNamed(
+                              context,
+                              '/completar_perfil_pasajero',
+                            );
+                          },
+                        ),
+                        _profileItem(
+                          Icons.notifications,
+                          "Notificaciones",
+                          context,
+                        ),
+                        _profileItem(
+                          Icons.credit_card,
+                          "Métodos de pago",
+                          context,
+                          onTap: () {
+                            Navigator.pushNamed(context, '/metodos_pago_lista');
+                          },
+                        ),
+                        // _profileItem(Icons.security, "Seguridad", context),
+                        _profileItem(
+                          Icons
+                              .policy, // Cambiamos el icono para que haga sentido
+                          "Términos y Privacidad",
+                          context,
+                          onTap: () {
+                            showModalBottomSheet(
+                              context: context,
+                              backgroundColor: Colors
+                                  .transparent, // Transparente para que se vean las esquinas redondeadas
+                              isScrollControlled: true,
+                              builder: (context) => const TerminosModal(),
+                            );
+                          },
+                        ),
                         const SizedBox(height: 30),
                         _buildLogoutButton(context),
                       ],
@@ -116,22 +165,31 @@ class _PerfilPasajeroState extends State<PerfilPasajero> {
     );
   }
 
-  Widget _profileItem(IconData icon, String title, BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 15),
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF0F7FF),
-        borderRadius: BorderRadius.circular(15),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: primaryBlue),
-          const SizedBox(width: 15),
-          Text(title, style: mExtrabold(size: 14, context: context)),
-          const Spacer(),
-          const Icon(Icons.arrow_forward_ios, size: 14, color: primaryBlue),
-        ],
+  Widget _profileItem(
+    IconData icon,
+    String title,
+    BuildContext context, {
+    VoidCallback? onTap,
+  }) {
+    // 🔥 Envolvemos todo en un GestureDetector para que sea clickeable
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 15),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF0F7FF),
+          borderRadius: BorderRadius.circular(15),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: primaryBlue),
+            const SizedBox(width: 15),
+            Text(title, style: mExtrabold(size: 14, context: context)),
+            const Spacer(),
+            const Icon(Icons.arrow_forward_ios, size: 14, color: primaryBlue),
+          ],
+        ),
       ),
     );
   }
@@ -140,22 +198,39 @@ class _PerfilPasajeroState extends State<PerfilPasajero> {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
-        onPressed: () {},
+        // 🔥 Aquí conectamos la función y la ruta
+        onPressed: () async {
+          // 1. Borramos el token del celular
+          await AuthService.logout();
+
+          // 2. Redirigimos y destruimos el historial de navegación
+          if (context.mounted) {
+            Navigator.pushNamedAndRemoveUntil(
+              context,
+              '/bienvenido', // Tu ruta de destino
+              (route) => false, // Esto elimina todas las pantallas anteriores
+            );
+          }
+        },
         style: ElevatedButton.styleFrom(
           backgroundColor: statusRed,
           padding: const EdgeInsets.symmetric(vertical: 15),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
+          ),
           elevation: 0,
         ),
-        child: Text('Cerrar sesión', style: mExtrabold(color: Colors.white, size: 16, context: context)),
+        child: Text(
+          'Cerrar sesión',
+          style: mExtrabold(color: Colors.white, size: 16, context: context),
+        ),
       ),
     );
   }
 
- 
   Widget _buildCustomBottomNav(BuildContext context) {
     return Container(
-      height: sp(85, context), 
+      height: sp(85, context),
       padding: EdgeInsets.symmetric(horizontal: sp(10, context)),
       decoration: const BoxDecoration(
         color: navBarBg,
@@ -178,11 +253,11 @@ class _PerfilPasajeroState extends State<PerfilPasajero> {
     return GestureDetector(
       onTap: () {
         setState(() => _selectedIndex = index);
-        if(index == 0) Navigator.pop(context);
+        if (index == 0) Navigator.pop(context);
       },
       child: Container(
         width: sp(45, context),
-        height: sp(45, context), 
+        height: sp(45, context),
         decoration: BoxDecoration(
           color: active ? primaryBlue : Colors.white,
           shape: BoxShape.circle,
@@ -195,9 +270,9 @@ class _PerfilPasajeroState extends State<PerfilPasajero> {
           ],
         ),
         child: Icon(
-          icon, 
-          color: active ? Colors.white : primaryBlue, 
-          size: sp(26, context) 
+          icon,
+          color: active ? Colors.white : primaryBlue,
+          size: sp(26, context),
         ),
       ),
     );

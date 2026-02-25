@@ -701,7 +701,7 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero>
             '/principal_pasajero',
             '/agendar_viaje',
             '/historial_viajes_pasajero',
-            '/mi_perfil_pasajero',
+            '/perfil_pasajero',
           ][index],
         );
       },

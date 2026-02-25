@@ -1,7 +1,12 @@
 import 'dart:io';
+import 'dart:typed_data';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
+import '../services/auth/validacion_service.dart';
+import 'package:provider/provider.dart';
+import '../providers/user_provider.dart';
 
 class CompletarPerfilPasajero extends StatefulWidget {
   const CompletarPerfilPasajero({super.key});
@@ -17,30 +22,35 @@ class _CompletarPerfilPasajeroState extends State<CompletarPerfilPasajero>
   static const Color lightBlueBg = Color(0xFFB3D4FF);
   static const Color accentBlue = Color(0xFF64A1F4);
   static const Color statusRed = Color(0xFFEF5350);
+  static const Color statusGreen = Color(0xFF4CAF50);
 
   final Set<String> _selectedNeeds = {};
   int _selectedIndex = 3;
   bool _isListening = false;
 
   late AnimationController _pulseController;
-  File? _ineAnverso;
-  File? _ineReverso;
+  Uint8List? _ineAnversoBytes;
+  Uint8List? _ineReversoBytes;
   final ImagePicker _picker = ImagePicker();
+
+  bool _isSavingIne = false;
 
   @override
   void initState() {
     super.initState();
-    _pulseController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 600),
-      lowerBound: 1.0,
-      upperBound: 1.15,
-    )..addStatusListener((status) {
-        if (status == AnimationStatus.completed)
-          _pulseController.reverse();
-        else if (status == AnimationStatus.dismissed && _isListening)
-          _pulseController.forward();
-      });
+    _pulseController =
+        AnimationController(
+          vsync: this,
+          duration: const Duration(milliseconds: 600),
+          lowerBound: 1.0,
+          upperBound: 1.15,
+        )..addStatusListener((status) {
+          if (status == AnimationStatus.completed) {
+            _pulseController.reverse();
+          } else if (status == AnimationStatus.dismissed && _isListening) {
+            _pulseController.forward();
+          }
+        });
   }
 
   @override
@@ -61,29 +71,83 @@ class _CompletarPerfilPasajeroState extends State<CompletarPerfilPasajero>
     });
   }
 
+  Future<void> _guardarINE() async {
+    if (_ineAnversoBytes == null || _ineReversoBytes == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Por favor selecciona ambas fotos de la INE'),
+          backgroundColor: statusRed,
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isSavingIne = true);
+
+    try {
+      // 🔥 Ya tenemos los bytes, solo codificamos a Base64 directo
+      final base64Anverso = base64Encode(_ineAnversoBytes!);
+      final base64Reverso = base64Encode(_ineReversoBytes!);
+
+      final exito = await ValidacionService.enviarValidacionINE(
+        ineFrenteBase64: base64Anverso,
+        ineReversoBase64: base64Reverso,
+      );
+
+      if (exito && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Documentos enviados a revisión correctamente'),
+            backgroundColor: statusGreen,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString()), backgroundColor: statusRed),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSavingIne = false);
+      }
+    }
+  }
+
   double sp(double size, BuildContext context) {
     double sw = MediaQuery.of(context).size.width;
     double res = sw * (size / 375);
     return (size <= 20 && res > 20) ? 20 : res;
   }
 
-  TextStyle mBold(BuildContext context,
-          {Color color = Colors.black, double size = 11}) =>
-      GoogleFonts.montserrat(
-          color: color,
-          fontSize: sp(size, context),
-          fontWeight: FontWeight.bold);
+  TextStyle mBold(
+    BuildContext context, {
+    Color color = Colors.black,
+    double size = 11,
+  }) => GoogleFonts.montserrat(
+    color: color,
+    fontSize: sp(size, context),
+    fontWeight: FontWeight.bold,
+  );
 
-  TextStyle mExtrabold(BuildContext context,
-          {Color color = Colors.black, double size = 14}) =>
-      GoogleFonts.montserrat(
-          color: color,
-          fontSize: sp(size, context),
-          fontWeight: FontWeight.w700);
+  TextStyle mExtrabold(
+    BuildContext context, {
+    Color color = Colors.black,
+    double size = 14,
+  }) => GoogleFonts.montserrat(
+    color: color,
+    fontSize: sp(size, context),
+    fontWeight: FontWeight.w700,
+  );
 
   @override
   Widget build(BuildContext context) {
     final sw = MediaQuery.of(context).size.width;
+    final user = context.watch<UserProvider>().user;
+    final String nombreUsuario = user?.nombre ?? "Usuario";
+
+    final bool isActivo = user?.activo ?? false;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -94,59 +158,110 @@ class _CompletarPerfilPasajeroState extends State<CompletarPerfilPasajero>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildHeader(context),
+                _buildHeader(context, nombreUsuario, isActivo),
                 const SizedBox(height: 110),
                 Padding(
                   padding: EdgeInsets.symmetric(horizontal: sw * 0.06),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildStatusButton(context),
+                      _buildStatusButton(context, isActivo),
                       const SizedBox(height: 25),
-                      Text('Foto de INE', style: mExtrabold(context, size: 18)),
-                      const SizedBox(height: 15),
-                      Row(
-                        children: [
-                          Expanded(
+
+                      if (!isActivo) ...[
+                        Text(
+                          'Foto de INE',
+                          style: mExtrabold(context, size: 18),
+                        ),
+                        const SizedBox(height: 15),
+                        Row(
+                          children: [
+                            // En tu método build(), busca estas dos líneas y cámbiales la variable:
+                            Expanded(
                               child: _buildDocCard(
-                                  context,
-                                  'Anverso',
-                                  _ineAnverso,
-                                  'assets/ine_anverso.png',
-                                  'anverso')),
-                          const SizedBox(width: 15),
-                          Expanded(
+                                context,
+                                'Anverso',
+                                _ineAnversoBytes,
+                                'assets/ine_anverso.png',
+                                'anverso',
+                              ),
+                            ),
+                            const SizedBox(width: 15),
+                            Expanded(
                               child: _buildDocCard(
-                                  context,
-                                  'Reverso',
-                                  _ineReverso,
-                                  'assets/ine_reverso.png',
-                                  'reverso')),
-                        ],
-                      ),
-                      const SizedBox(height: 35),
-                      Text('¿Presenta alguna necesidad especial?',
-                          style: mExtrabold(context, size: 17)),
+                                context,
+                                'Reverso',
+                                _ineReversoBytes,
+                                'assets/ine_reverso.png',
+                                'reverso',
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 25),
+                        Center(
+                          child: _isSavingIne
+                              ? const CircularProgressIndicator(
+                                  color: primaryBlue,
+                                )
+                              : ElevatedButton(
+                                  onPressed: _guardarINE,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: primaryBlue,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 35,
+                                      vertical: 15,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(30),
+                                    ),
+                                  ),
+                                  child: Text(
+                                    'Enviar INE a revisión',
+                                    style: mBold(
+                                      context,
+                                      color: Colors.white,
+                                      size: 12,
+                                    ),
+                                  ),
+                                ),
+                        ),
+                        const SizedBox(height: 35),
+                      ],
+
                       Text(
-                          'Seleccione las casillas que se ajusten a su necesidad',
-                          style: mBold(context, color: Colors.red, size: 10)),
+                        '¿Presenta alguna necesidad especial?',
+                        style: mExtrabold(context, size: 17),
+                      ),
+                      Text(
+                        'Seleccione las casillas que se ajusten a su necesidad',
+                        style: mBold(context, color: Colors.red, size: 10),
+                      ),
                       const SizedBox(height: 25),
                       _buildNeedsGrid(context),
-                      const SizedBox(height: 40),
-                      Align(
-                        alignment: Alignment.centerRight,
+                      const SizedBox(height: 35),
+
+                      Center(
                         child: ElevatedButton(
                           onPressed: () {},
                           style: ElevatedButton.styleFrom(
                             backgroundColor: primaryBlue,
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 25, vertical: 15),
+                              horizontal: 35,
+                              vertical: 15,
+                            ),
                             shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(30)),
+                              borderRadius: BorderRadius.circular(30),
+                            ),
                           ),
-                          child: Text('Registrar un acompañante',
-                              style:
-                                  mBold(context, color: Colors.white, size: 12)),
+                          child: Text(
+                            'Registrar un acompañante',
+                            style: mBold(
+                              context,
+                              color: Colors.white,
+                              size: 12,
+                            ),
+                          ),
                         ),
                       ),
                       const SizedBox(height: 40),
@@ -175,11 +290,15 @@ class _CompletarPerfilPasajeroState extends State<CompletarPerfilPasajero>
           ),
         ],
       ),
-      bottomNavigationBar: _buildCustomBottomNav(context),
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
+  // 🔥 Le pasamos nombre e isActivo como parámetros
+  Widget _buildHeader(
+    BuildContext context,
+    String nombreUsuario,
+    bool isActivo,
+  ) {
     return Stack(
       clipBehavior: Clip.none,
       children: [
@@ -192,8 +311,11 @@ class _CompletarPerfilPasajeroState extends State<CompletarPerfilPasajero>
             child: Padding(
               padding: const EdgeInsets.only(top: 35),
               child: IconButton(
-                icon: const Icon(Icons.arrow_back_ios_new,
-                    color: primaryBlue, size: 20),
+                icon: const Icon(
+                  Icons.arrow_back_ios_new,
+                  color: primaryBlue,
+                  size: 20,
+                ),
                 onPressed: () => Navigator.pop(context),
               ),
             ),
@@ -223,9 +345,13 @@ class _CompletarPerfilPasajeroState extends State<CompletarPerfilPasajero>
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('Username',
-                  style: GoogleFonts.montserrat(
-                      fontSize: 22, fontWeight: FontWeight.w900)),
+              Text(
+                nombreUsuario,
+                style: GoogleFonts.montserrat(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
               Row(
                 children: [
                   const Icon(Icons.star, color: Colors.amber, size: 18),
@@ -234,14 +360,25 @@ class _CompletarPerfilPasajeroState extends State<CompletarPerfilPasajero>
                   const Icon(Icons.star, color: Colors.amber, size: 18),
                   const Icon(Icons.star, color: Colors.amber, size: 18),
                   const SizedBox(width: 5),
-                  Text('5.00',
-                      style: mBold(context, color: primaryBlue, size: 12)),
+                  Text(
+                    '5.00',
+                    style: mBold(context, color: primaryBlue, size: 12),
+                  ),
                 ],
               ),
               const SizedBox(height: 4),
-              _buildBadge("Verificado", Icons.check_circle_outline),
-              const SizedBox(height: 4),
-              _buildBadge("Pendiente de verificación", Icons.error_outline),
+              if (isActivo)
+                _buildBadge(
+                  "Verificado",
+                  Icons.check_circle_outline,
+                  statusGreen,
+                )
+              else
+                _buildBadge(
+                  "Pendiente de verificación",
+                  Icons.error_outline,
+                  statusRed,
+                ),
             ],
           ),
         ),
@@ -249,11 +386,11 @@ class _CompletarPerfilPasajeroState extends State<CompletarPerfilPasajero>
     );
   }
 
-  Widget _buildBadge(String text, IconData icon) {
+  Widget _buildBadge(String text, IconData icon, Color bgColor) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: primaryBlue,
+        color: bgColor,
         borderRadius: BorderRadius.circular(15),
       ),
       child: Row(
@@ -267,25 +404,39 @@ class _CompletarPerfilPasajeroState extends State<CompletarPerfilPasajero>
     );
   }
 
-  Widget _buildStatusButton(BuildContext context) {
+  // 🔥 Le pasamos isActivo como parámetro
+  Widget _buildStatusButton(BuildContext context, bool isActivo) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-          color: statusRed, borderRadius: BorderRadius.circular(20)),
+        color: isActivo ? statusGreen : statusRed,
+        borderRadius: BorderRadius.circular(20),
+      ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.error_outline, color: Colors.white, size: 20),
+          Icon(
+            isActivo ? Icons.check_circle : Icons.error_outline,
+            color: Colors.white,
+            size: 20,
+          ),
           const SizedBox(width: 8),
-          Text('Completar perfil',
-              style: mBold(context, color: Colors.white, size: 14)),
+          Text(
+            isActivo ? 'Perfil completo' : 'Completar perfil',
+            style: mBold(context, color: Colors.white, size: 14),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildDocCard(BuildContext context, String label, File? file,
-      String placeholder, String type) {
+  Widget _buildDocCard(
+    BuildContext context,
+    String label,
+    Uint8List? imageBytes, // 🔥 Cambiado aquí
+    String placeholder,
+    String type,
+  ) {
     return Column(
       children: [
         GestureDetector(
@@ -297,12 +448,15 @@ class _CompletarPerfilPasajeroState extends State<CompletarPerfilPasajero>
               color: Colors.white,
               borderRadius: BorderRadius.circular(18),
               border: Border.all(
-                  color: accentBlue.withOpacity(0.5), width: 1.5),
+                color: accentBlue.withOpacity(0.5),
+                width: 1.5,
+              ),
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(16),
-              child: file != null
-                  ? Image.file(file, fit: BoxFit.cover)
+              // 🔥 Usamos Image.memory en lugar de Image.file
+              child: imageBytes != null
+                  ? Image.memory(imageBytes, fit: BoxFit.cover)
                   : Image.asset(placeholder, fit: BoxFit.contain),
             ),
           ),
@@ -322,12 +476,12 @@ class _CompletarPerfilPasajeroState extends State<CompletarPerfilPasajero>
       {'label': 'Discapacidad\nvisual', 'icon': 'assets/visual.png'},
     ];
 
-    return Center( 
+    return Center(
       child: Wrap(
-        alignment: WrapAlignment.center, 
+        alignment: WrapAlignment.center,
         runAlignment: WrapAlignment.center,
-        spacing: 15,    
-        runSpacing: 20, 
+        spacing: 15,
+        runSpacing: 20,
         children: needs
             .map((n) => _buildNeedItem(context, n['label']!, n['icon']!))
             .toList(),
@@ -338,9 +492,11 @@ class _CompletarPerfilPasajeroState extends State<CompletarPerfilPasajero>
   Widget _buildNeedItem(BuildContext context, String label, String iconPath) {
     bool isSelected = _selectedNeeds.contains(label);
     return GestureDetector(
-      onTap: () => setState(() => isSelected
-          ? _selectedNeeds.remove(label)
-          : _selectedNeeds.add(label)),
+      onTap: () => setState(
+        () => isSelected
+            ? _selectedNeeds.remove(label)
+            : _selectedNeeds.add(label),
+      ),
       child: SizedBox(
         width: 100,
         child: Column(
@@ -352,8 +508,9 @@ class _CompletarPerfilPasajeroState extends State<CompletarPerfilPasajero>
               decoration: BoxDecoration(
                 color: Colors.white,
                 border: Border.all(
-                    color: isSelected ? primaryBlue : accentBlue,
-                    width: isSelected ? 3 : 1.5),
+                  color: isSelected ? primaryBlue : accentBlue,
+                  width: isSelected ? 3 : 1.5,
+                ),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Image.asset(iconPath, fit: BoxFit.contain),
@@ -363,7 +520,9 @@ class _CompletarPerfilPasajeroState extends State<CompletarPerfilPasajero>
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
               decoration: BoxDecoration(
-                  color: accentBlue, borderRadius: BorderRadius.circular(10)),
+                color: accentBlue,
+                borderRadius: BorderRadius.circular(10),
+              ),
               child: Text(
                 label,
                 textAlign: TextAlign.center,
@@ -379,61 +538,15 @@ class _CompletarPerfilPasajeroState extends State<CompletarPerfilPasajero>
   Future<void> _pickImage(String type) async {
     final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
     if (image != null) {
+      // Leemos los bytes directo de la memoria (funciona en Web y Móvil)
+      final bytes = await image.readAsBytes();
       setState(() {
-        if (type == 'anverso')
-          _ineAnverso = File(image.path);
-        else
-          _ineReverso = File(image.path);
+        if (type == 'anverso') {
+          _ineAnversoBytes = bytes;
+        } else {
+          _ineReversoBytes = bytes;
+        }
       });
     }
-  }
-
-  // --- SECCIÓN CORREGIDA ---
-
-  Widget _buildCustomBottomNav(BuildContext context) {
-    return Container(
-      height: 80,
-      decoration: const BoxDecoration(color: Color(0xFFD6E8FF)),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          _navIcon(0, Icons.home_rounded, '/principal_pasajero'),
-          _navIcon(1, Icons.location_on_rounded, '/agendar_viaje'),
-          _navIcon(2, Icons.history_rounded, '/historial_viajes_pasajero'),
-          _navIcon(3, Icons.person_rounded, '/mi_perfil_pasajero'),
-        ],
-      ),
-    );
-  }
-
-  Widget _navIcon(int index, IconData icon, String routeName) {
-    bool active = _selectedIndex == index;
-    return GestureDetector(
-      onTap: () {
-        if (_selectedIndex != index) {
-          Navigator.pushReplacementNamed(context, routeName);
-        }
-      },
-      child: Container(
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          color: active ? primaryBlue : Colors.white,
-          shape: BoxShape.circle,
-          boxShadow: [
-            if (!active)
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 4,
-                offset: const Offset(0, 2),
-              )
-          ],
-        ),
-        child: Icon(
-          icon,
-          color: active ? Colors.white : primaryBlue,
-          size: 30,
-        ),
-      ),
-    );
   }
 }

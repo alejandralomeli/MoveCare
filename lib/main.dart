@@ -27,6 +27,7 @@ import 'screens/registro_acompanante.dart';
 import 'screens/historial_viajes_pasajero.dart';
 import 'screens/viaje_confirmado.dart';
 import 'screens/estimacion_costo.dart';
+import 'screens/metodos_pago_vista.dart';
 
 // Screens Conductor
 import 'screens/registro_conductor.dart';
@@ -77,33 +78,32 @@ class MyApp extends StatelessWidget {
 
       routes: {
         // Rutas de Autenticación y Sistema
-        '/bienvenido': (context) => const Bienvenido(),
-        '/iniciar_sesion': (context) => const IniciarSesion(), 
+        '/bienvenido': (context) => const Bienvenido(), //Listo
+        '/iniciar_sesion': (context) => const IniciarSesion(), //Listo
         '/olvide_contrasena': (context) => const OlvideContrasena(), //PENDIENTE
         '/nueva_contrasena': (context) => const NuevaContrasena(),//PENDIENTE
-        '/confirmar-correo': (context) => const ConfirmarCorreoScreen(), 
-        '/menu_vistas': (context) => const MenuVistas(),
-        '/registro': (context) => const Registro(),
+        '/confirmar-correo': (context) => const ConfirmarCorreoScreen(), //Listo
+        '/menu_vistas': (context) => const MenuVistas(), //Listo
+        '/registro': (context) => const Registro(), //Listo
 
         // Módulo Pasajero
-        '/registro_pasajero': (context) => const RegistroPasajero(),
-        '/principal_pasajero': (context) => const PrincipalPasajero(), //EL BOTON DE VOZ SE MUEVE POR TODA LA PANTALLA AL BAJAR
-        '/completar_perfil_pasajero': (context) => const CompletarPerfilPasajero(),
-        '/perfil_pasajero': (context) => const PerfilPasajero(),
-        '/mi_perfil_pasajero': (context) => const MiPerfilPasajero(),
-        '/agendar_viaje': (context) => const AgendarViaje(), 
-        '/agendar_varios_destinos': (context) => const AgendarVariosDestinos(),
+        '/registro_pasajero': (context) => const RegistroPasajero(), //Listo
+        '/principal_pasajero': (context) => const PrincipalPasajero(), //Listo //EL BOTON DE VOZ SE MUEVE POR TODA LA PANTALLA AL BAJAR
+        '/completar_perfil_pasajero': (context) => const CompletarPerfilPasajero(), //Listo //EL BOTON DE VOZ SE MUEVE POR TODA LA PANTALLA AL BAJAR
+        '/perfil_pasajero': (context) => const PerfilPasajero(), //Listo
+        '/agendar_viaje': (context) => const AgendarViaje(), //Listo
+        '/agendar_varios_destinos': (context) => const AgendarVariosDestinos(), //Listo
         '/pago_tarjeta': (context) => const PagoTarjetaScreen(), //ESTO AL FINAL
-        '/registro_tarjeta': (context) => const RegistroTarjetaScreen(),
-        '/registro_acompanante': (context) => const RegistrarAcompanante(),
-        '/historial_viajes_pasajero': (context) => const HistorialViajesPasajero(),
+        '/registro_tarjeta': (context) => const RegistroTarjetaScreen(), //Listo
+        '/registro_acompanante': (context) => const RegistrarAcompanante(), //Listo
+        '/historial_viajes_pasajero': (context) => const HistorialViajesPasajero(), //Listo
         '/viaje_confirmado': (context) => const ViajeConfirmado(), //ESTO AL FINAL
         '/estimacion_costo': (context) => const EstimacionViaje(), //PENDIENTE A LA IA
+        '/metodos_pago_lista': (context) => MetodosPagoVista(), //Listo
 
         // Módulo Conductor
-        //LO VOY A REPROGRAMAR PARA UNA SEMANA MÁS
-        '/registro_conductor': (context) => const RegistroConductor(),
-        '/continue_driver_register_screen': (context) => const ContinuarRegistroConductor(),
+        '/registro_conductor': (context) => const RegistroConductor(), //Listo
+        '/continue_driver_register_screen': (context) => const ContinuarRegistroConductor(), //Listo
         '/principal_conductor': (context) => const PrincipalConductor(),
         '/mi_perfil_conductor': (context) => const MiPerfilConductor(),
         '/viaje_actual': (context) => const ViajeActualMapa(),

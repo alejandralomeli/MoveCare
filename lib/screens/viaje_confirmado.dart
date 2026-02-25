@@ -265,7 +265,7 @@ Widget _buildCustomBottomNav() {
           _navIcon(0, Icons.home, '/principal_pasajero'),
           _navIcon(1, Icons.location_on, '/agendar_viaje'),
           _navIcon(2, Icons.history, '/historial_viajes_pasajero'),
-          _navIcon(3, Icons.person, '/mi_perfil_pasajero'),
+          _navIcon(3, Icons.person, '/perfil_pasajero'),
         ],
       ),
     );

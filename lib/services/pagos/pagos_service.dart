@@ -47,4 +47,19 @@ class PagosService {
     
     throw Exception("Error al obtener tarjetas");
   }
+
+/// Desactivar (eliminar lógicamente) una tarjeta
+  static Future<bool> desactivarTarjeta(String idMetodo) async {
+    // Usamos el método delete de tu HttpClient
+    final response = await HttpClient.delete("/pagos/tarjetas/$idMetodo");
+
+    if (response.statusCode == 200) {
+      return true;
+    }
+    
+    if (response.statusCode == 401) throw Exception('TOKEN_INVALIDO');
+    
+    final bodyResponse = jsonDecode(response.body);
+    throw Exception(bodyResponse["detail"] ?? "Error al desactivar tarjeta");
+  }
 }

@@ -104,6 +104,7 @@ class AuthService {
     return token != null && token.isNotEmpty;
   }
 
+  // ================= LOGOUT =================
   static Future<void> logout() async {
     await SecureStorage.deleteAll();
   }
