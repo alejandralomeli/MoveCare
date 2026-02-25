@@ -289,7 +289,7 @@ class _EstimacionViajeState extends State<EstimacionViaje>
           _navIcon(0, Icons.home, '/principal_pasajero', sw),
           _navIcon(1, Icons.location_on, '/agendar_viaje', sw),
           _navIcon(2, Icons.history, '/historial_viajes_pasajero', sw),
-          _navIcon(3, Icons.person, '/mi_perfil_pasajero', sw),
+          _navIcon(3, Icons.person, '/perfil_pasajero', sw),
         ],
       ),
     );

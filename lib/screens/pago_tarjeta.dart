@@ -259,7 +259,7 @@ class _PagoTarjetaScreenState extends State<PagoTarjetaScreen> {
           _navIcon(0, Icons.home, sw, '/principal_pasajero'),
           _navIcon(1, Icons.location_on, sw, '/agendar_viaje'),
           _navIcon(2, Icons.history, sw, '/historial_viajes_pasajero'),
-          _navIcon(3, Icons.person, sw, '/mi_perfil_pasajero'),
+          _navIcon(3, Icons.person, sw, '/perfil_pasajero'),
         ],
       ),
     );
