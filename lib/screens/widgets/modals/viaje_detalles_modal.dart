@@ -3,8 +3,13 @@ import 'package:google_fonts/google_fonts.dart';
 
 class ViajeDetallesModal extends StatelessWidget {
   final Map<String, dynamic> viaje;
+  final bool esConductor; // 🔥 Agregamos el rol
 
-  const ViajeDetallesModal({super.key, required this.viaje});
+  const ViajeDetallesModal({
+    super.key, 
+    required this.viaje,
+    this.esConductor = false, // 🔥 Por defecto es falso (lo abre el pasajero)
+  });
 
   // Reutilizamos los colores de tu app
   static const Color primaryBlue = Color(0xFF1559B2);
@@ -33,6 +38,19 @@ class ViajeDetallesModal extends StatelessWidget {
     DateTime fecha = DateTime.parse(viaje['fecha_hora_inicio']);
     String fechaStr = "${fecha.day}/${fecha.month}/${fecha.year} a las ${fecha.hour}:${fecha.minute.toString().padLeft(2, '0')}";
 
+    // 🔥 LÓGICA DINÁMICA DE TEXTOS E ÍCONOS DEPENDIENDO DEL ROL
+    final tituloPersona = esConductor ? "Pasajero" : "Conductor";
+    final nombrePersona = esConductor 
+        ? (viaje['nombre_pasajero'] ?? 'Buscando pasajero...') 
+        : (viaje['nombre_conductor'] ?? 'Buscando conductor...');
+    final iconoPersona = esConductor ? Icons.person : Icons.person_pin;
+
+    final tituloExtra = esConductor ? "Necesidades Especiales" : "Vehículo";
+    final contenidoExtra = esConductor 
+        ? (viaje['necesidad_especial'] ?? 'Ninguna especificada') 
+        : "${viaje['vehiculo_marca'] ?? ''} ${viaje['vehiculo_modelo'] ?? ''} - ${viaje['vehiculo_color'] ?? ''}\nPlacas: ${viaje['vehiculo_placas'] ?? ''}";
+    final iconoExtra = esConductor ? Icons.accessible : Icons.directions_car;
+
     return Container(
       padding: const EdgeInsets.all(25),
       decoration: const BoxDecoration(
@@ -60,18 +78,19 @@ class ViajeDetallesModal extends StatelessWidget {
             Text("Detalles de tu viaje", style: mExtrabold(size: 22, color: darkBlue)),
             const SizedBox(height: 25),
 
-            // Sección: Conductor y Vehículo
+            // Sección Dinámica: Conductor o Pasajero
             _buildSection(
-              icon: Icons.person_pin,
-              title: "Conductor",
-              content: viaje['nombre_conductor'] ?? 'Buscando conductor...',
+              icon: iconoPersona,
+              title: tituloPersona,
+              content: nombrePersona,
             ),
             const Divider(height: 30, color: lightBlueBg, thickness: 2),
 
+            // Sección Dinámica: Vehículo o Discapacidades
             _buildSection(
-              icon: Icons.directions_car,
-              title: "Vehículo",
-              content: "${viaje['vehiculo_marca']} ${viaje['vehiculo_modelo']} - ${viaje['vehiculo_color']}\nPlacas: ${viaje['vehiculo_placas']}",
+              icon: iconoExtra,
+              title: tituloExtra,
+              content: contenidoExtra,
             ),
             const Divider(height: 30, color: lightBlueBg, thickness: 2),
 
@@ -104,7 +123,7 @@ class ViajeDetallesModal extends StatelessWidget {
                   child: _buildSection(
                     icon: Icons.info_outline,
                     title: "Estado",
-                    content: viaje['estado'],
+                    content: viaje['estado'] ?? 'Desconocido',
                   ),
                 ),
               ],

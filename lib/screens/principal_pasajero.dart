@@ -1,7 +1,8 @@
+import 'dart:convert'; // 🔥 NUEVO: Necesario para decodificar la foto en Base64
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import 'package:latlong2/latlong.dart'; // 🔥 NUEVO: Necesario para las coordenadas
+import 'package:latlong2/latlong.dart';
 
 import 'widgets/map_widget.dart';
 import 'widgets/route_map_widget.dart';
@@ -38,7 +39,7 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero>
   Map<String, dynamic>? _viajeProximo;
   List<dynamic> _historialViajes = [];
 
-  // 🔥 NUEVO: Variables para almacenar la ruta del viaje próximo
+  // Variables para almacenar la ruta del viaje próximo
   LatLng? _startCoord;
   LatLng? _endCoord;
   List<LatLng> _routePoints = [];
@@ -87,28 +88,23 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero>
         final fechaViaje = DateTime.parse(_viajeProximo!['fecha_hora_inicio']);
         _buildCalendarDates(fechaViaje);
 
-        // 🔥 NUEVO: Lógica para extraer la ruta guardada en el backend
+        // Lógica para extraer la ruta guardada en el backend
         if (_viajeProximo!['ruta'] != null) {
           try {
             List<dynamic> rutaJson = _viajeProximo!['ruta'];
             _routePoints = rutaJson.map((punto) {
-              // Asumiendo que guardaste la ruta como un JSON array de mapas: [{'lat': 20.6, 'lng': -103.3}, ...]
-              // o array de arrays [[20.6, -103.3], ...]
               if (punto is Map) {
                 return LatLng(
-                  (punto['lat'] ?? punto[1]) *
-                      1.0, // Ajusta según tus llaves del JSON
+                  (punto['lat'] ?? punto[1]) * 1.0,
                   (punto['lng'] ?? punto['lon'] ?? punto[0]) * 1.0,
                 );
               } else if (punto is List) {
-                // Si OSRM lo guardó como [lon, lat], cámbialo a LatLng(punto[1], punto[0])
                 return LatLng(punto[0] * 1.0, punto[1] * 1.0);
               }
               return const LatLng(0, 0);
             }).toList();
 
             if (_routePoints.isNotEmpty) {
-              // Tomamos el primer y último punto de la ruta para dibujar los pines
               _startCoord = _routePoints.first;
               _endCoord = _routePoints.last;
             }
@@ -145,8 +141,7 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero>
           ),
           actions: [
             TextButton(
-              onPressed: () =>
-                  Navigator.of(ctx).pop(), // Cierra el modal sin hacer nada
+              onPressed: () => Navigator.of(ctx).pop(),
               child: Text("Volver", style: mExtrabold(color: Colors.grey)),
             ),
             ElevatedButton(
@@ -157,8 +152,8 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero>
                 ),
               ),
               onPressed: () {
-                Navigator.of(ctx).pop(); // Cerramos el modal
-                _procesarCancelacion(idViaje); // Ejecutamos la cancelación
+                Navigator.of(ctx).pop();
+                _procesarCancelacion(idViaje);
               },
               child: Text(
                 "Sí, cancelar",
@@ -172,13 +167,11 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero>
   }
 
   Future<void> _procesarCancelacion(String idViaje) async {
-    // Ponemos la pantalla en modo carga para que el usuario no toque nada más
     setState(() => _loadingHome = true);
 
     try {
       await ViajeService.cancelarViaje(idViaje);
 
-      // Mostrar mensaje de éxito
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -243,7 +236,23 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero>
       );
     }
 
+    // 🔥 1. LEEMOS AL USUARIO DEL PROVIDER
     final user = context.watch<UserProvider>().user;
+
+    // 🔥 2. PREPARAMOS LA FOTO DE PERFIL DECODIFICADA
+    ImageProvider imagenPerfil = const AssetImage('assets/pasajero.png'); 
+    
+    if (user != null && user.fotoPerfil.isNotEmpty) {
+      try {
+        String base64String = user.fotoPerfil;
+        if (base64String.contains(',')) {
+          base64String = base64String.split(',').last;
+        }
+        imagenPerfil = MemoryImage(base64Decode(base64String));
+      } catch (e) {
+        debugPrint("Error decodificando foto de perfil: $e");
+      }
+    }
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -254,15 +263,14 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildHeader(user?.nombre ?? 'Usuario'),
+                // 🔥 3. MANDAMOS LA IMAGEN Y EL NOMBRE AL HEADER
+                _buildHeader(user?.nombre ?? 'Usuario', imagenPerfil),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const SizedBox(height: 60),
-
-                      // 🔥 NUEVO: Cambia el título dependiendo de si hay viaje o no
                       Text(
                         _viajeProximo != null
                             ? 'Ruta de tu próximo viaje'
@@ -270,9 +278,7 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero>
                         style: mExtrabold(size: 18),
                       ),
                       const SizedBox(height: 10),
-
                       _buildMapSection(),
-
                       const SizedBox(height: 25),
                       Text('Próximo viaje', style: mExtrabold(size: 18)),
                       const SizedBox(height: 10),
@@ -306,7 +312,8 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero>
 
   // --- WIDGETS COMPONENTES ---
 
-  Widget _buildHeader(String name) {
+  // 🔥 4. ACEPTAMOS LA IMAGEN COMO PARÁMETRO EN EL HEADER
+  Widget _buildHeader(String name, ImageProvider imagenPerfil) {
     return Stack(
       clipBehavior: Clip.none,
       children: [
@@ -319,7 +326,7 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero>
             backgroundColor: Colors.white,
             child: CircleAvatar(
               radius: 46,
-              backgroundImage: AssetImage('assets/pasajero.png'),
+              backgroundImage: imagenPerfil, // 🔥 USAMOS LA IMAGEN AQUÍ
             ),
           ),
         ),
@@ -362,7 +369,6 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero>
     );
   }
 
-  // 🔥 NUEVO: Aquí ocurre la magia para elegir qué mapa pintar
   Widget _buildMapSection() {
     return Container(
       height: 150,
@@ -371,14 +377,12 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero>
       child: ClipRRect(
         borderRadius: BorderRadius.circular(20),
         child: (_viajeProximo != null && _routePoints.isNotEmpty)
-            // Si hay viaje y tenemos los puntos de la ruta, dibujamos la ruta
             ? RouteMapWidget(
                 startCoord: _startCoord,
                 endCoord: _endCoord,
                 routePoints: _routePoints,
                 isLoading: false,
               )
-            // Si no, dibujamos el mapa de ubicación actual normal
             : const MapWidget(),
       ),
     );
@@ -444,19 +448,17 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero>
                 onPressed: () {
                   showModalBottomSheet(
                     context: context,
-                    isScrollControlled:
-                        true, 
-                    backgroundColor: Colors
-                        .transparent,
+                    isScrollControlled: true,
+                    backgroundColor: Colors.transparent,
                     builder: (context) =>
-                        ViajeDetallesModal(viaje: _viajeProximo!),
+                        ViajeDetallesModal(viaje: _viajeProximo!, esConductor: false),
                   );
                 },
               ),
               const SizedBox(width: 10),
               _actionBtn(
                 'Cancelar',
-                color: statusRed, // Lo pintamos rojo para indicar peligro
+                color: statusRed,
                 onPressed: () {
                   _mostrarDialogoCancelacion(
                     _viajeProximo!['id_viaje'].toString(),
@@ -582,7 +584,7 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero>
       onPressed: () => _mostrarPanelAgendar(context),
       style: ElevatedButton.styleFrom(
         backgroundColor: buttonLightBlue,
-        shape: StadiumBorder(),
+        shape: const StadiumBorder(),
       ),
       child: Text('Agendar viaje', style: mExtrabold(color: Colors.black)),
     );

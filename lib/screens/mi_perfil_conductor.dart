@@ -1,48 +1,43 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import '../services/auth/auth_service.dart';
+import '../providers/user_provider.dart';
+import 'widgets/modals/terminos_modal.dart';
 
 class MiPerfilConductor extends StatefulWidget {
   const MiPerfilConductor({super.key});
 
   @override
-  State<MiPerfilConductor> createState() => MiPerfilConductorState();
+  State<MiPerfilConductor> createState() => _MiPerfilConductorState();
 }
 
-class MiPerfilConductorState extends State<MiPerfilConductor> with TickerProviderStateMixin {
+class _MiPerfilConductorState extends State<MiPerfilConductor> {
+  // Paleta de colores consistente
   static const Color primaryBlue = Color(0xFF1559B2);
   static const Color lightBlueBg = Color(0xFFB3D4FF);
-  static const Color dividerColor = Color(0xFFD6E8FF);
+  static const Color navBarBg = Color(0xFFD6E8FF);
+  static const Color statusRed = Color(0xFFEF5350);
+  static const Color statusGreen = Color(0xFF4CAF50);
 
   int _selectedIndex = 3;
-  bool _isListening = false;
 
-  late AnimationController _pulseController;
-  late Animation<double> _pulseAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-    _pulseController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 800),
-    );
-    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.2).animate(
-      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
-    );
+  // Función de escalado
+  double sp(double size, BuildContext context) {
+    double sw = MediaQuery.of(context).size.width;
+    double res = sw * (size / 375);
+    return (size <= 20 && res > 20) ? 20 : res;
   }
 
-  @override
-  void dispose() {
-    _pulseController.dispose();
-    super.dispose();
-  }
-
-  double sp(double size, double sw) => sw * (size / 375);
-
-  TextStyle mBold({Color color = Colors.black, double size = 14, required double sw}) {
+  TextStyle mExtrabold({
+    Color color = Colors.black,
+    double size = 14,
+    required BuildContext context,
+  }) {
     return GoogleFonts.montserrat(
       color: color,
-      fontSize: sp(size, sw),
+      fontSize: sp(size, context),
       fontWeight: FontWeight.bold,
     );
   }
@@ -50,218 +45,273 @@ class MiPerfilConductorState extends State<MiPerfilConductor> with TickerProvide
   @override
   Widget build(BuildContext context) {
     final sw = MediaQuery.of(context).size.width;
+    
+    // 1. Obtención de datos del Provider
+    final user = context.watch<UserProvider>().user;
+    final String nombreUsuario = user?.nombre ?? "Conductor.";
+    final bool isActivo = user?.activo ?? false;
+
+    // 2. Manejo de imagen de perfil
+    ImageProvider imagenPerfil = const AssetImage('assets/conductor.png');
+    if (user != null && user.fotoPerfil.isNotEmpty) {
+      try {
+        String base64String = user.fotoPerfil;
+        if (base64String.contains(',')) {
+          base64String = base64String.split(',').last;
+        }
+        imagenPerfil = MemoryImage(base64Decode(base64String));
+      } catch (e) {
+        debugPrint("Error decodificando foto de conductor: $e");
+      }
+    }
 
     return Scaffold(
-      body: Stack(
+      backgroundColor: Colors.white,
+      body: Column(
         children: [
-          // Fondo
-          Positioned.fill(
-            child: Image.asset(
-              'assets/ruta.png',
-              fit: BoxFit.cover,
-            ),
-          ),
-          Positioned.fill(
-            child: Container(color: Colors.white.withOpacity(0.1)),
-          ),
-
-          SafeArea(
-            child: Column(
-              children: [
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: sp(15, sw), vertical: sp(15, sw)),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          Expanded(
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              child: Column(
+                children: [
+                  // --- HEADER CON BANNER Y AVATAR ---
+                  Stack(
+                    clipBehavior: Clip.none,
                     children: [
-                      IconButton(
-                        icon: Icon(Icons.arrow_back_ios_new, color: primaryBlue, size: 20),
-                        onPressed: () => Navigator.pop(context),
-                      ),
-                      GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            _isListening = !_isListening;
-                            if (_isListening) {
-                              _pulseController.repeat(reverse: true);
-                            } else {
-                              _pulseController.stop();
-                              _pulseController.reset();
-                            }
-                          });
-                        },
-                        child: ScaleTransition(
-                          scale: _pulseAnimation,
-                          child: AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 300),
-                            child: Image.asset(
-                              _isListening ? 'assets/escuchando.png' : 'assets/controlvoz.png',
-                              key: ValueKey<bool>(_isListening),
-                              width: sp(60, sw),
-                              height: sp(60, sw),
-                              errorBuilder: (c, e, s) => CircleAvatar(
-                                backgroundColor: _isListening ? Colors.red : primaryBlue,
-                                radius: sp(30, sw),
-                                child: Icon(_isListening ? Icons.graphic_eq : Icons.mic, color: Colors.white),
-                              ),
+                      Container(
+                        height: 120,
+                        width: double.infinity,
+                        color: lightBlueBg,
+                        child: SafeArea(
+                          child: Align(
+                            alignment: Alignment.topLeft,
+                            child: IconButton(
+                              icon: const Icon(Icons.arrow_back_ios_new, color: primaryBlue, size: 20),
+                              onPressed: () => Navigator.pop(context),
                             ),
                           ),
                         ),
                       ),
-                    ],
-                  ),
-                ),
-
-                _buildProfileHeader(sw),
-
-                SizedBox(height: sp(30, sw)),
-
-                Expanded(
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: sp(25, sw)),
-                    child: Container(
-                      width: double.infinity,
-                      margin: EdgeInsets.only(bottom: sp(20, sw)),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(25),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
-                            blurRadius: 10,
-                            offset: const Offset(0, 5),
-                          )
-                        ],
+                      Positioned(
+                        bottom: -50,
+                        left: 20,
+                        child: Container(
+                          width: 100,
+                          height: 100,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.white,
+                            border: Border.all(color: Colors.white, width: 2),
+                            image: DecorationImage(
+                              image: imagenPerfil,
+                              fit: BoxFit.cover,
+                            ),
+                            boxShadow: [
+                              BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10)
+                            ],
+                          ),
+                        ),
                       ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(25),
-                        child: ListView(
-                          padding: EdgeInsets.zero,
-                          physics: const BouncingScrollPhysics(),
+                      Positioned(
+                        bottom: -45,
+                        left: 130,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _buildMenuOption('Mi Historial', () => print("Historial"), sw),
-                            _buildDivider(),
-                            _buildMenuOption('Notificaciones', () => print("Notificaciones"), sw),
-                            _buildDivider(),
-                            _buildMenuOption('Configuración de Perfil', () => print("Configuración"), sw),
-                            _buildDivider(),
-                            _buildMenuOption('Mis Métricas', () => print("Métricas"), sw),
-                            _buildDivider(),
-                            _buildMenuOption('Privacidad', () => print("Privacidad"), sw),
+                            Text(
+                              nombreUsuario,
+                              style: GoogleFonts.montserrat(
+                                fontSize: sp(20, context),
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            // Badge de Estado
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: isActivo ? statusGreen : statusRed,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    isActivo ? Icons.check_circle : Icons.error_outline,
+                                    color: Colors.white,
+                                    size: 12,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    isActivo ? "Verificado" : "Pendiente",
+                                    style: mExtrabold(color: Colors.white, size: 10, context: context),
+                                  ),
+                                ],
+                              ),
+                            ),
                           ],
                         ),
                       ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 70),
+
+                  // --- LISTA DE OPCIONES ---
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: sw * 0.06),
+                    child: Column(
+                      children: [
+                        _profileItem(
+                          Icons.person,
+                          "Información de Conductor",
+                          context,
+                          onTap: () => Navigator.pushNamed(context, '/completar_perfil_conductor'),
+                        ),
+                        _profileItem(
+                          Icons.bar_chart,
+                          "Mis Métricas y Ganancias",
+                          context,
+                          onTap: () => print("Navegar a Métricas"),
+                        ),
+                        _profileItem(
+                          Icons.history,
+                          "Historial de Viajes",
+                          context,
+                          onTap: () => Navigator.pushNamed(context, '/historial_viajes_conductor'),
+                        ),
+                        _profileItem(
+                          Icons.notifications,
+                          "Notificaciones",
+                          context,
+                        ),
+                        _profileItem(
+                          Icons.policy,
+                          "Términos y Privacidad",
+                          context,
+                          onTap: () {
+                            showModalBottomSheet(
+                              context: context,
+                              backgroundColor: Colors.transparent,
+                              isScrollControlled: true,
+                              builder: (context) => const TerminosModal(),
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 30),
+                        _buildLogoutButton(context),
+                        const SizedBox(height: 20),
+                      ],
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ],
       ),
-      bottomNavigationBar: _buildCustomBottomNav(sw),
+      bottomNavigationBar: _buildCustomBottomNav(context),
     );
   }
 
-  Widget _buildProfileHeader(double sw) {
-    return Column(
-      children: [
-        Container(
-          decoration: const BoxDecoration(
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(color: Colors.black26, blurRadius: 8, offset: Offset(0, 4))
-            ],
-          ),
-          child: CircleAvatar(
-            radius: sp(65, sw),
-            backgroundColor: const Color(0xFF81D4FA),
-            backgroundImage: const AssetImage('assets/conductor.png'),
-          ),
+  Widget _profileItem(
+    IconData icon,
+    String title,
+    BuildContext context, {
+    VoidCallback? onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 15),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF0F7FF),
+          borderRadius: BorderRadius.circular(15),
         ),
-        SizedBox(height: sp(12, sw)),
-        Text('Username', style: mBold(size: 24, sw: sw)),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+        child: Row(
           children: [
-            ...List.generate(5, (index) => Icon(Icons.star, color: Colors.orange, size: sp(20, sw))),
-            Text(' 5.00', style: mBold(color: primaryBlue, size: 14, sw: sw)),
+            Icon(icon, color: primaryBlue),
+            const SizedBox(width: 15),
+            Text(title, style: mExtrabold(size: 14, context: context)),
+            const Spacer(),
+            const Icon(Icons.arrow_forward_ios, size: 14, color: primaryBlue),
           ],
         ),
-        SizedBox(height: sp(8, sw)),
-        Container(
-          padding: EdgeInsets.symmetric(horizontal: sp(12, sw), vertical: sp(4, sw)),
-          decoration: BoxDecoration(
-            color: primaryBlue,
-            borderRadius: BorderRadius.circular(15),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.check_circle, color: Colors.white, size: sp(16, sw)),
-              SizedBox(width: sp(6, sw)),
-              Text('Verificado', style: mBold(color: Colors.white, size: 12, sw: sw)),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildMenuOption(String title, VoidCallback onTap, double sw) {
-    return ListTile(
-      onTap: onTap,
-      splashColor: primaryBlue.withOpacity(0.2),
-      contentPadding: EdgeInsets.symmetric(horizontal: sp(30, sw), vertical: sp(5, sw)),
-      title: Text(
-        title,
-        style: mBold(size: 17, sw: sw),
       ),
-      trailing: Icon(Icons.chevron_right, color: Colors.grey.withOpacity(0.3), size: sp(20, sw)),
     );
   }
 
-  Widget _buildDivider() {
-    return const Divider(
-      height: 1,
-      thickness: 1.5,
-      indent: 20,
-      endIndent: 20,
-      color: dividerColor,
+  Widget _buildLogoutButton(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton(
+        onPressed: () async {
+          await AuthService.logout();
+          if (context.mounted) {
+            Navigator.pushNamedAndRemoveUntil(context, '/bienvenido', (route) => false);
+          }
+        },
+        style: ElevatedButton.styleFrom(
+          backgroundColor: statusRed,
+          padding: const EdgeInsets.symmetric(vertical: 15),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+          elevation: 0,
+        ),
+        child: Text(
+          'Cerrar sesión',
+          style: mExtrabold(color: Colors.white, size: 16, context: context),
+        ),
+      ),
     );
   }
 
-  Widget _buildCustomBottomNav(double sw) {
+  Widget _buildCustomBottomNav(BuildContext context) {
     return Container(
-      height: sp(75, sw),
+      height: sp(85, context),
+      padding: EdgeInsets.symmetric(horizontal: sp(10, context)),
       decoration: const BoxDecoration(
-        color: Color(0xFFD6E8FF),
+        color: navBarBg,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          _navIcon(0, Icons.home, sw),
-          _navIcon(1, Icons.location_on, sw),
-          _navIcon(2, Icons.bar_chart, sw),
-          _navIcon(3, Icons.person, sw),
+          _navIcon(0, Icons.home, context),
+          _navIcon(1, Icons.location_on, context),
+          _navIcon(2, Icons.list_alt, context), // Cambiado a icono de lista para conductor
+          _navIcon(3, Icons.person, context),
         ],
       ),
     );
   }
 
-  Widget _navIcon(int index, IconData icon, double sw) {
+  Widget _navIcon(int index, IconData icon, BuildContext context) {
     bool active = _selectedIndex == index;
     return GestureDetector(
-      onTap: () => setState(() => _selectedIndex = index),
+      onTap: () {
+        if (active) return;
+        setState(() => _selectedIndex = index);
+        if (index == 0) Navigator.pushReplacementNamed(context, '/principal_conductor');
+      },
       child: Container(
-        padding: EdgeInsets.all(sp(10, sw)),
+        width: sp(45, context),
+        height: sp(45, context),
         decoration: BoxDecoration(
           color: active ? primaryBlue : Colors.white,
           shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         child: Icon(
           icon,
           color: active ? Colors.white : primaryBlue,
-          size: sp(28, sw),
+          size: sp(26, context),
         ),
       ),
     );

@@ -94,6 +94,37 @@ class AuthService {
     }
   }
 
+  // ================= ACTUALIZAR PERFIL =================
+  static Future<Map<String, dynamic>> updateProfile({
+    String? nombreCompleto,
+    String? telefono,
+    String? direccion,
+    String? fechaNacimiento,
+    String? fotoPerfil,
+    String? discapacidad,
+  }) async {
+    // 1. Armamos el body solo con los campos que no sean nulos
+    final Map<String, dynamic> body = {};
+    if (nombreCompleto != null) body["nombre_completo"] = nombreCompleto;
+    if (telefono != null) body["telefono"] = telefono;
+    if (direccion != null) body["direccion"] = direccion;
+    if (fechaNacimiento != null) body["fecha_nacimiento"] = fechaNacimiento;
+    if (fotoPerfil != null) body["foto_perfil"] = fotoPerfil;
+    if (discapacidad != null) body["discapacidad"] = discapacidad;
+
+    // 2. Usamos el método PUT (Asegúrate de que tu clase HttpClient tenga soporte para .put)
+    // Nota: Mantuve el prefijo "/auth/auth" para seguir el estándar de tus otras rutas
+    final response = await HttpClient.put("/auth/auth/actualizar-perfil", body);
+
+    final data = jsonDecode(response.body);
+
+    if (response.statusCode == 200) {
+      return {"ok": true, "mensaje": data["mensaje"] ?? "Perfil actualizado"};
+    } else {
+      return {"ok": false, "error": data["detail"] ?? "Error al actualizar"};
+    }
+  }
+
   // ================= TOKEN =================
   static Future<String?> getToken() async {
     return await SecureStorage.getToken();

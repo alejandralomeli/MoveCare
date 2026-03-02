@@ -1,7 +1,11 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart'; // 🔥 IMPORTANTE AGREGAR EL PROVIDER
 import '../services/auth/auth_service.dart';
 import 'widgets/modals/terminos_modal.dart';
+// 🔥 ASEGÚRATE DE QUE LA RUTA A TU USER PROVIDER SEA CORRECTA
+import '../providers/user_provider.dart'; 
 
 class PerfilPasajero extends StatefulWidget {
   const PerfilPasajero({super.key});
@@ -16,6 +20,7 @@ class _PerfilPasajeroState extends State<PerfilPasajero> {
   static const Color navBarBg = Color(0xFFD6E8FF);
   static const Color buttonLightBlue = Color(0xFF64A1F4);
   static const Color statusRed = Color(0xFFEF5350);
+  static const Color statusGreen = Color(0xFF4CAF50); // 🔥 Agregado para el badge verde
 
   int _selectedIndex = 3;
   double sp(double size, BuildContext context) {
@@ -39,6 +44,26 @@ class _PerfilPasajeroState extends State<PerfilPasajero> {
   @override
   Widget build(BuildContext context) {
     final sw = MediaQuery.of(context).size.width;
+
+    // 🔥 1. LEEMOS AL USUARIO DESDE EL PROVIDER
+    final user = context.watch<UserProvider>().user;
+    final String nombreUsuario = user?.nombre ?? "Mi Perfil";
+    final bool isActivo = user?.activo ?? false;
+
+    // 🔥 2. PREPARAMOS LA FOTO DE PERFIL (Manejo de Base64)
+    ImageProvider imagenPerfil = const AssetImage('assets/pasajero.png'); 
+    
+    if (user != null && user.fotoPerfil.isNotEmpty) {
+      try {
+        String base64String = user.fotoPerfil;
+        if (base64String.contains(',')) {
+          base64String = base64String.split(',').last;
+        }
+        imagenPerfil = MemoryImage(base64Decode(base64String));
+      } catch (e) {
+        debugPrint("Error decodificando foto de perfil: $e");
+      }
+    }
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -83,22 +108,57 @@ class _PerfilPasajeroState extends State<PerfilPasajero> {
                             shape: BoxShape.circle,
                             color: Colors.white,
                             border: Border.all(color: Colors.white, width: 2),
-                            image: const DecorationImage(
-                              image: AssetImage('assets/pasajero.png'),
+                            // 🔥 3. USAMOS LA IMAGEN DECODIFICADA AQUÍ
+                            image: DecorationImage(
+                              image: imagenPerfil,
                               fit: BoxFit.cover,
                             ),
                           ),
                         ),
                       ),
+                      // 🔥 4. REEMPLAZAMOS EL TEXTO FIJO POR NOMBRE Y ESTADO DINÁMICO
                       Positioned(
-                        bottom: -35,
+                        bottom: -45, // Ajustado ligeramente hacia arriba para acomodar el badge
                         left: 130,
-                        child: Text(
-                          'Mi Perfil',
-                          style: GoogleFonts.montserrat(
-                            fontSize: 24,
-                            fontWeight: FontWeight.w900,
-                          ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              nombreUsuario,
+                              style: GoogleFonts.montserrat(
+                                fontSize: 24,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            // Badge de Verificado / Pendiente
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: isActivo ? statusGreen : statusRed,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    isActivo ? Icons.check_circle : Icons.error_outline, 
+                                    color: Colors.white, 
+                                    size: 12
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    isActivo ? "Verificado" : "Pendiente", 
+                                    style: GoogleFonts.montserrat(
+                                      color: Colors.white, 
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                    )
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
@@ -134,17 +194,14 @@ class _PerfilPasajeroState extends State<PerfilPasajero> {
                             Navigator.pushNamed(context, '/metodos_pago_lista');
                           },
                         ),
-                        // _profileItem(Icons.security, "Seguridad", context),
                         _profileItem(
-                          Icons
-                              .policy, // Cambiamos el icono para que haga sentido
+                          Icons.policy, 
                           "Términos y Privacidad",
                           context,
                           onTap: () {
                             showModalBottomSheet(
                               context: context,
-                              backgroundColor: Colors
-                                  .transparent, // Transparente para que se vean las esquinas redondeadas
+                              backgroundColor: Colors.transparent, 
                               isScrollControlled: true,
                               builder: (context) => const TerminosModal(),
                             );
@@ -171,7 +228,6 @@ class _PerfilPasajeroState extends State<PerfilPasajero> {
     BuildContext context, {
     VoidCallback? onTap,
   }) {
-    // 🔥 Envolvemos todo en un GestureDetector para que sea clickeable
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -198,17 +254,14 @@ class _PerfilPasajeroState extends State<PerfilPasajero> {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
-        // 🔥 Aquí conectamos la función y la ruta
         onPressed: () async {
-          // 1. Borramos el token del celular
           await AuthService.logout();
 
-          // 2. Redirigimos y destruimos el historial de navegación
           if (context.mounted) {
             Navigator.pushNamedAndRemoveUntil(
               context,
-              '/bienvenido', // Tu ruta de destino
-              (route) => false, // Esto elimina todas las pantallas anteriores
+              '/bienvenido', 
+              (route) => false, 
             );
           }
         },

@@ -1,4 +1,5 @@
 // screens/splash_screen.dart
+import 'dart:convert'; // Necesario para base64Url y jsonDecode
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../core/storage/secure_storage.dart'; 
@@ -18,20 +19,45 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> _verificarSesion() async {
-    // 1. Simular carga
+    // 1. Simular tiempo de carga para que se vea la animación
     await Future.delayed(const Duration(seconds: 2));
 
-    // 2. Verificar token
+    // 2. Obtener el token guardado
     final token = await SecureStorage.getToken();
 
     if (!mounted) return;
 
     if (token != null && token.isNotEmpty) {
-      // ✅ HAY SESIÓN: Vamos al Home del Pasajero
+      try {
+        // 3. Decodificar el JWT (header.payload.signature)
+        final parts = token.split('.');
+        if (parts.length == 3) {
+          final payloadBase64 = parts[1];
+          
+          // Normalizamos el base64 por si faltan caracteres de padding (=)
+          final normalized = base64Url.normalize(payloadBase64);
+          final payloadString = utf8.decode(base64Url.decode(normalized));
+          final payloadMap = jsonDecode(payloadString);
+
+          // 4. Extraer el rol (coincide con tu payload de FastAPI)
+          final rol = payloadMap['rol']; 
+
+          // 5. Redirigir según el rol
+          if (rol == 'conductor') {
+            Navigator.of(context).pushReplacementNamed('/principal_conductor');
+            return; // Salimos de la función para no ejecutar el código de abajo
+          }
+        }
+      } catch (e) {
+        debugPrint("Error decodificando token en Splash: $e");
+        // Si el token está mal formado por alguna razón, no rompemos la app,
+        // simplemente caerá al default de pasajero.
+      }
+
+      // Por defecto o si el rol es 'pasajero'
       Navigator.of(context).pushReplacementNamed('/principal_pasajero');
     } else {
-      // ❌ NO HAY SESIÓN: Vamos a Bienvenido
-      // CORRECCIÓN: Apuntamos a '/bienvenido' en lugar de '/'
+      // ❌ NO HAY SESIÓN o TOKEN VACÍO: Vamos a Bienvenido
       Navigator.of(context).pushReplacementNamed('/bienvenido'); 
     }
   }

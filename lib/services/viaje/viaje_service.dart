@@ -77,6 +77,21 @@ class ViajeService {
     throw Exception("Error al obtener historial");
   }
 
+  static Future<List<dynamic>> obtenerHistorialConductor() async {
+    // Apuntamos al nuevo endpoint del back
+    final response = await HttpClient.get("/viajes/historial-conductor");
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+
+    if (response.statusCode == 401) {
+      throw Exception('TOKEN_INVALIDO');
+    }
+
+    throw Exception("Error al obtener historial del conductor");
+  }
+
   static Future<void> cancelarViaje(String idViaje) async {
     // Llamamos al endpoint que acabamos de crear en el backend
     final response = await HttpClient.put("/viajes/$idViaje/cancelar", {});

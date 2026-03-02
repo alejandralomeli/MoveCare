@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import '../services/auth/validacion_service.dart';
+import '../services/auth/auth_service.dart'; // 🔥 IMPORTAMOS EL AUTH SERVICE
 import 'package:provider/provider.dart';
 import '../providers/user_provider.dart';
 
@@ -27,13 +28,22 @@ class _CompletarPerfilPasajeroState extends State<CompletarPerfilPasajero>
   final Set<String> _selectedNeeds = {};
   int _selectedIndex = 3;
   bool _isListening = false;
+  bool _isInit = false;
 
   late AnimationController _pulseController;
+  
   Uint8List? _ineAnversoBytes;
   Uint8List? _ineReversoBytes;
+  Uint8List? _fotoPerfilBytes; 
   final ImagePicker _picker = ImagePicker();
 
   bool _isSavingIne = false;
+  bool _isSavingProfile = false; // 🔥 NUEVO: Estado para el guardado de perfil
+
+  final TextEditingController _nombreController = TextEditingController();
+  final TextEditingController _telefonoController = TextEditingController();
+  final TextEditingController _direccionController = TextEditingController();
+  DateTime? _fechaNacimiento;
 
   @override
   void initState() {
@@ -54,8 +64,51 @@ class _CompletarPerfilPasajeroState extends State<CompletarPerfilPasajero>
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_isInit) {
+      final user = context.read<UserProvider>().user;
+      if (user != null) {
+        // 1. Asignamos los textos directos
+        _nombreController.text = user.nombre;
+        _telefonoController.text = user.telefono; 
+        _direccionController.text = user.direccion;
+
+        // 2. Fecha de Nacimiento
+        if (user.fechaNacimiento.isNotEmpty) {
+          _fechaNacimiento = DateTime.tryParse(user.fechaNacimiento);
+        }
+
+        // 3. Foto de Perfil
+        if (user.fotoPerfil.isNotEmpty) {
+          try {
+            String base64String = user.fotoPerfil;
+            if (base64String.contains(',')) {
+              base64String = base64String.split(',').last;
+            }
+            _fotoPerfilBytes = base64Decode(base64String);
+          } catch (e) {
+            debugPrint("Error decodificando foto de perfil: $e");
+          }
+        }
+
+        // 4. Discapacidad (El backend envía: "Tercera Edad, Movilidad reducida")
+        if (user.discapacidad.isNotEmpty) {
+          final listaDiscapacidades = user.discapacidad.split(',').map((e) => e.trim());
+          // 🔥 Esto asegura que los botones se pinten seleccionados al entrar
+          _selectedNeeds.addAll(listaDiscapacidades);
+        }
+      }
+      _isInit = true;
+    }
+  }
+
+  @override
   void dispose() {
     _pulseController.dispose();
+    _nombreController.dispose();
+    _telefonoController.dispose();
+    _direccionController.dispose();
     super.dispose();
   }
 
@@ -69,6 +122,97 @@ class _CompletarPerfilPasajeroState extends State<CompletarPerfilPasajero>
         _pulseController.value = 1.0;
       }
     });
+  }
+
+  Future<void> _seleccionarFecha(BuildContext context) async {
+    final DateTime? seleccion = await showDatePicker(
+      context: context,
+      initialDate: _fechaNacimiento ?? DateTime(2000),
+      firstDate: DateTime(1930),
+      lastDate: DateTime.now(),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: primaryBlue,
+              onPrimary: Colors.white,
+              onSurface: Colors.black,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (seleccion != null && seleccion != _fechaNacimiento) {
+      setState(() {
+        _fechaNacimiento = seleccion;
+      });
+    }
+  }
+
+  // 🔥 NUEVA FUNCIÓN: Guardar datos personales, foto y discapacidades
+  Future<void> _guardarPerfil() async {
+    setState(() => _isSavingProfile = true);
+
+    try {
+      // 1. Formatear la foto a base64
+      String? base64Foto;
+      if (_fotoPerfilBytes != null) {
+        base64Foto = base64Encode(_fotoPerfilBytes!);
+      }
+
+      // 2. Formatear la fecha (YYYY-MM-DD)
+      String? fechaNacStr;
+      if (_fechaNacimiento != null) {
+        fechaNacStr = "${_fechaNacimiento!.year}-${_fechaNacimiento!.month.toString().padLeft(2, '0')}-${_fechaNacimiento!.day.toString().padLeft(2, '0')}";
+      }
+
+      // 3. Unir las discapacidades separadas por comas
+      String? discapacidadesStr;
+      if (_selectedNeeds.isNotEmpty) {
+        discapacidadesStr = _selectedNeeds.join(", ");
+      } else {
+        discapacidadesStr = ""; // Opcional: enviar vacío si las desmarcó todas
+      }
+
+      // 4. Enviar al backend
+      final res = await AuthService.updateProfile(
+        nombreCompleto: _nombreController.text.isNotEmpty ? _nombreController.text : null,
+        telefono: _telefonoController.text.isNotEmpty ? _telefonoController.text : null,
+        direccion: _direccionController.text.isNotEmpty ? _direccionController.text : null,
+        fechaNacimiento: fechaNacStr,
+        fotoPerfil: base64Foto,
+        discapacidad: discapacidadesStr,
+      );
+
+      if (res['ok'] && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(res['mensaje'] ?? 'Perfil guardado con éxito'),
+            backgroundColor: statusGreen,
+          ),
+        );
+        // Opcional: Aquí podrías volver a llamar a la función que descarga 
+        // los datos del usuario para actualizar el Provider en tiempo real.
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(res['error'] ?? 'Error al guardar el perfil'),
+            backgroundColor: statusRed,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: statusRed),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSavingProfile = false);
+      }
+    }
   }
 
   Future<void> _guardarINE() async {
@@ -85,7 +229,6 @@ class _CompletarPerfilPasajeroState extends State<CompletarPerfilPasajero>
     setState(() => _isSavingIne = true);
 
     try {
-      // 🔥 Ya tenemos los bytes, solo codificamos a Base64 directo
       final base64Anverso = base64Encode(_ineAnversoBytes!);
       final base64Reverso = base64Encode(_ineReversoBytes!);
 
@@ -146,7 +289,6 @@ class _CompletarPerfilPasajeroState extends State<CompletarPerfilPasajero>
     final sw = MediaQuery.of(context).size.width;
     final user = context.watch<UserProvider>().user;
     final String nombreUsuario = user?.nombre ?? "Usuario";
-
     final bool isActivo = user?.activo ?? false;
 
     return Scaffold(
@@ -168,7 +310,52 @@ class _CompletarPerfilPasajeroState extends State<CompletarPerfilPasajero>
                       _buildStatusButton(context, isActivo),
                       const SizedBox(height: 25),
 
+                      _buildDatosPersonalesSection(context),
+                      const SizedBox(height: 25),
+
+                      Text(
+                        '¿Presenta alguna necesidad especial?',
+                        style: mExtrabold(context, size: 17),
+                      ),
+                      Text(
+                        'Seleccione las casillas que se ajusten a su necesidad',
+                        style: mBold(context, color: Colors.red, size: 10),
+                      ),
+                      const SizedBox(height: 25),
+                      _buildNeedsGrid(context),
+                      const SizedBox(height: 35),
+
+                      // 🔥 BOTÓN GUARDAR PERFIL
+                      Center(
+                        child: _isSavingProfile
+                            ? const CircularProgressIndicator(color: primaryBlue)
+                            : ElevatedButton(
+                                onPressed: _guardarPerfil,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: primaryBlue,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 35,
+                                    vertical: 15,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(30),
+                                  ),
+                                ),
+                                child: Text(
+                                  'Guardar Cambios de Perfil',
+                                  style: mBold(
+                                    context,
+                                    color: Colors.white,
+                                    size: 14, // Lo hice un poco más grande
+                                  ),
+                                ),
+                              ),
+                      ),
+                      const SizedBox(height: 35),
+
                       if (!isActivo) ...[
+                        const Divider(thickness: 1, color: Color(0xFFE0E0E0)),
+                        const SizedBox(height: 25),
                         Text(
                           'Foto de INE',
                           style: mExtrabold(context, size: 18),
@@ -176,7 +363,6 @@ class _CompletarPerfilPasajeroState extends State<CompletarPerfilPasajero>
                         const SizedBox(height: 15),
                         Row(
                           children: [
-                            // En tu método build(), busca estas dos líneas y cámbiales la variable:
                             Expanded(
                               child: _buildDocCard(
                                 context,
@@ -229,23 +415,12 @@ class _CompletarPerfilPasajeroState extends State<CompletarPerfilPasajero>
                         const SizedBox(height: 35),
                       ],
 
-                      Text(
-                        '¿Presenta alguna necesidad especial?',
-                        style: mExtrabold(context, size: 17),
-                      ),
-                      Text(
-                        'Seleccione las casillas que se ajusten a su necesidad',
-                        style: mBold(context, color: Colors.red, size: 10),
-                      ),
-                      const SizedBox(height: 25),
-                      _buildNeedsGrid(context),
-                      const SizedBox(height: 35),
-
                       Center(
                         child: ElevatedButton(
                           onPressed: () {},
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: primaryBlue,
+                            backgroundColor: Colors.white, // Cambié a blanco para que no compita visualmente con Guardar
+                            side: const BorderSide(color: primaryBlue),
                             padding: const EdgeInsets.symmetric(
                               horizontal: 35,
                               vertical: 15,
@@ -258,7 +433,7 @@ class _CompletarPerfilPasajeroState extends State<CompletarPerfilPasajero>
                             'Registrar un acompañante',
                             style: mBold(
                               context,
-                              color: Colors.white,
+                              color: primaryBlue, // Texto azul
                               size: 12,
                             ),
                           ),
@@ -293,7 +468,100 @@ class _CompletarPerfilPasajeroState extends State<CompletarPerfilPasajero>
     );
   }
 
-  // 🔥 Le pasamos nombre e isActivo como parámetros
+  Widget _buildDatosPersonalesSection(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Datos personales', style: mExtrabold(context, size: 18)),
+        const SizedBox(height: 15),
+        _buildTextField(
+          context: context,
+          label: 'Nombre completo',
+          controller: _nombreController,
+          icon: Icons.person_outline,
+        ),
+        const SizedBox(height: 15),
+        _buildTextField(
+          context: context,
+          label: 'Teléfono',
+          controller: _telefonoController,
+          icon: Icons.phone_android_outlined,
+          keyboardType: TextInputType.phone,
+        ),
+        const SizedBox(height: 15),
+        _buildTextField(
+          context: context,
+          label: 'Dirección',
+          controller: _direccionController,
+          icon: Icons.location_on_outlined,
+          maxLines: 2,
+        ),
+        const SizedBox(height: 15),
+        
+        GestureDetector(
+          onTap: () => _seleccionarFecha(context),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 15),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(15),
+              border: Border.all(color: accentBlue.withOpacity(0.5)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.calendar_today_outlined, color: primaryBlue, size: 20),
+                const SizedBox(width: 10),
+                Text(
+                  _fechaNacimiento == null
+                      ? 'Fecha de nacimiento'
+                      : '${_fechaNacimiento!.day.toString().padLeft(2, '0')}/${_fechaNacimiento!.month.toString().padLeft(2, '0')}/${_fechaNacimiento!.year}',
+                  style: GoogleFonts.montserrat(
+                    color: _fechaNacimiento == null ? Colors.grey : Colors.black,
+                    fontSize: 14,
+                    fontWeight: _fechaNacimiento == null ? FontWeight.w500 : FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTextField({
+    required BuildContext context,
+    required String label,
+    required TextEditingController controller,
+    required IconData icon,
+    TextInputType keyboardType = TextInputType.text,
+    int maxLines = 1,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: accentBlue.withOpacity(0.5)),
+      ),
+      child: TextField(
+        controller: controller,
+        keyboardType: keyboardType,
+        maxLines: maxLines,
+        style: GoogleFonts.montserrat(
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+        ),
+        decoration: InputDecoration(
+          hintText: label,
+          hintStyle: GoogleFonts.montserrat(color: Colors.grey, fontWeight: FontWeight.w500),
+          prefixIcon: Icon(icon, color: primaryBlue, size: 20),
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 15, vertical: 15),
+        ),
+      ),
+    );
+  }
+
   Widget _buildHeader(
     BuildContext context,
     String nombreUsuario,
@@ -324,16 +592,32 @@ class _CompletarPerfilPasajeroState extends State<CompletarPerfilPasajero>
         Positioned(
           bottom: -50,
           left: 20,
-          child: Container(
-            width: 100,
-            height: 100,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: Colors.white,
-              border: Border.all(color: Colors.white, width: 2),
-              image: const DecorationImage(
-                image: AssetImage('assets/pasajero.png'),
-                fit: BoxFit.cover,
+          child: GestureDetector(
+            onTap: () => _pickImage('perfil'),
+            child: Container(
+              width: 100,
+              height: 100,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white,
+                border: Border.all(color: Colors.white, width: 2),
+                image: DecorationImage(
+                  image: _fotoPerfilBytes != null
+                      ? MemoryImage(_fotoPerfilBytes!) as ImageProvider
+                      : const AssetImage('assets/pasajero.png'),
+                  fit: BoxFit.cover,
+                ),
+              ),
+              child: Align(
+                alignment: Alignment.bottomRight,
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: const BoxDecoration(
+                    color: primaryBlue,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.camera_alt, color: Colors.white, size: 16),
+                ),
               ),
             ),
           ),
@@ -346,7 +630,7 @@ class _CompletarPerfilPasajeroState extends State<CompletarPerfilPasajero>
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                nombreUsuario,
+                _nombreController.text.isNotEmpty ? _nombreController.text : nombreUsuario,
                 style: GoogleFonts.montserrat(
                   fontSize: 22,
                   fontWeight: FontWeight.w900,
@@ -404,7 +688,6 @@ class _CompletarPerfilPasajeroState extends State<CompletarPerfilPasajero>
     );
   }
 
-  // 🔥 Le pasamos isActivo como parámetro
   Widget _buildStatusButton(BuildContext context, bool isActivo) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -433,7 +716,7 @@ class _CompletarPerfilPasajeroState extends State<CompletarPerfilPasajero>
   Widget _buildDocCard(
     BuildContext context,
     String label,
-    Uint8List? imageBytes, // 🔥 Cambiado aquí
+    Uint8List? imageBytes,
     String placeholder,
     String type,
   ) {
@@ -454,7 +737,6 @@ class _CompletarPerfilPasajeroState extends State<CompletarPerfilPasajero>
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(16),
-              // 🔥 Usamos Image.memory en lugar de Image.file
               child: imageBytes != null
                   ? Image.memory(imageBytes, fit: BoxFit.cover)
                   : Image.asset(placeholder, fit: BoxFit.contain),
@@ -469,11 +751,11 @@ class _CompletarPerfilPasajeroState extends State<CompletarPerfilPasajero>
 
   Widget _buildNeedsGrid(BuildContext context) {
     final needs = [
-      {'label': 'Tercera\nEdad', 'icon': 'assets/tercera_edad.png'},
-      {'label': 'Movilidad\nreducida', 'icon': 'assets/silla_ruedas.png'},
-      {'label': 'Discapacidad\nauditiva', 'icon': 'assets/auditiva.png'},
+      {'label': 'Tercera Edad', 'icon': 'assets/tercera_edad.png'},
+      {'label': 'Movilidad reducida', 'icon': 'assets/silla_ruedas.png'},
+      {'label': 'Discapacidad auditiva', 'icon': 'assets/auditiva.png'},
       {'label': 'Obesidad', 'icon': 'assets/obesidad.png'},
-      {'label': 'Discapacidad\nvisual', 'icon': 'assets/visual.png'},
+      {'label': 'Discapacidad visual', 'icon': 'assets/visual.png'},
     ];
 
     return Center(
@@ -490,7 +772,9 @@ class _CompletarPerfilPasajeroState extends State<CompletarPerfilPasajero>
   }
 
   Widget _buildNeedItem(BuildContext context, String label, String iconPath) {
+    // 🔥 Aquí funciona la magia: al cargar desde provider, verifica si el label existe en el Set.
     bool isSelected = _selectedNeeds.contains(label);
+    
     return GestureDetector(
       onTap: () => setState(
         () => isSelected
@@ -524,7 +808,7 @@ class _CompletarPerfilPasajeroState extends State<CompletarPerfilPasajero>
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Text(
-                label,
+                label.replaceAll(' ', '\n'), 
                 textAlign: TextAlign.center,
                 style: mBold(context, color: Colors.white, size: 9),
               ),
@@ -538,13 +822,14 @@ class _CompletarPerfilPasajeroState extends State<CompletarPerfilPasajero>
   Future<void> _pickImage(String type) async {
     final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
     if (image != null) {
-      // Leemos los bytes directo de la memoria (funciona en Web y Móvil)
       final bytes = await image.readAsBytes();
       setState(() {
         if (type == 'anverso') {
           _ineAnversoBytes = bytes;
-        } else {
+        } else if (type == 'reverso') {
           _ineReversoBytes = bytes;
+        } else if (type == 'perfil') {
+          _fotoPerfilBytes = bytes;
         }
       });
     }

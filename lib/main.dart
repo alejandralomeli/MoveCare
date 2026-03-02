@@ -104,11 +104,12 @@ class MyApp extends StatelessWidget {
         // Módulo Conductor
         '/registro_conductor': (context) => const RegistroConductor(), //Listo
         '/continue_driver_register_screen': (context) => const ContinuarRegistroConductor(), //Listo
-        '/principal_conductor': (context) => const PrincipalConductor(),
-        '/mi_perfil_conductor': (context) => const MiPerfilConductor(),
-        '/viaje_actual': (context) => const ViajeActualMapa(),
+        '/principal_conductor': (context) => const PrincipalConductor() ,//Listo
+        '/mi_perfil_conductor': (context) => const MiPerfilConductor(), //Listo
+        '/historial_viajes_conductor': (context) => const HistorialViajesConductor(), //Listo
+        
         '/solicitud_viaje': (context) => const SolicitudViaje(),
-        '/historial_viajes_conductor': (context) => const HistorialViajesConductor(),
+        '/viaje_actual': (context) => const ViajeActualMapa(), 
         '/completar_perfil_conductor': (context) => const CompletarPerfilConductor(),
         '/agregar_ine': (context) => const AgregarIne(),  
         '/agregar_licencia': (context) => const AgregarLicencia(),
