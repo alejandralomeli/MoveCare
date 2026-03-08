@@ -383,7 +383,7 @@ class _PrincipalConductorState extends State<PrincipalConductor> with TickerProv
         String route = '';
         switch (index) {
           case 0: route = '/principal_conductor'; break;
-          //case 1: route = '/viaje_actual'; break;
+          case 2: route = '/viajes_conductor'; break;
           case 3: route = '/mi_perfil_conductor'; break;
         }
         if (route.isNotEmpty) Navigator.pushReplacementNamed(context, route);

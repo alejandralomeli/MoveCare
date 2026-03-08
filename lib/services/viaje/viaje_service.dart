@@ -1,5 +1,6 @@
 import 'dart:convert';
 import '../http_client.dart';
+import 'package:latlong2/latlong.dart';
 
 class ViajeService {
   static Future<String> crearViaje({
@@ -106,5 +107,99 @@ class ViajeService {
 
     final bodyResponse = jsonDecode(response.body);
     throw Exception(bodyResponse["detail"] ?? "Error al cancelar viaje");
+  }
+
+  static Future<List<dynamic>> obtenerViajesPorEstadoConductor(
+    String idUsuario,
+    String estado,
+  ) async {
+    // AHORA APUNTA A LA NUEVA RUTA QUE ESPERA EL id_usuario
+    final response = await HttpClient.get(
+      "/viajes/conductor/usuario/$idUsuario/viajes/$estado",
+    );
+
+    if (response.statusCode == 200) {
+      final bodyResponse = jsonDecode(response.body);
+      if (bodyResponse is Map && bodyResponse.containsKey('data')) {
+        return bodyResponse['data'];
+      }
+      return bodyResponse;
+    }
+
+    if (response.statusCode == 404) {
+      throw Exception('No eres un conductor registrado.');
+    }
+
+    if (response.statusCode == 401) {
+      throw Exception('TOKEN_INVALIDO');
+    }
+
+    throw Exception("Error al obtener viajes con estado $estado");
+  }
+
+  static Future<bool> aceptarViaje(String idViaje) async {
+    final response = await HttpClient.put("/viajes/$idViaje/aceptar", {});
+    if (response.statusCode == 200) return true;
+    throw Exception("Error al aceptar el viaje");
+  }
+
+  static Future<bool> rechazarViaje(String idViaje) async {
+    final response = await HttpClient.put("/viajes/$idViaje/rechazar", {});
+    if (response.statusCode == 200) return true;
+    throw Exception("Error al rechazar el viaje");
+  }
+
+  static Future<bool> cancelarViajeChofer(String idViaje) async {
+    final response = await HttpClient.put("/viajes/$idViaje/cancelar", {});
+    if (response.statusCode == 200) return true;
+    throw Exception("Error al cancelar el viaje");
+  }
+
+  static Future<Map<String, dynamic>> obtenerViajeActual(String idViaje) async {
+    final response = await HttpClient.get("/viajes/viaje_actual/$idViaje");
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    }
+
+    throw Exception("Error al obtener los detalles del viaje actual");
+  }
+
+  static List<LatLng> decodificarPolyline(String encoded) {
+    List<LatLng> points = [];
+    int index = 0, len = encoded.length;
+    int lat = 0, lng = 0;
+
+    try {
+      while (index < len) {
+        int b, shift = 0, result = 0;
+        do {
+          b = encoded.codeUnitAt(index++) - 63;
+          result |= (b & 0x1f) << shift;
+          shift += 5;
+        } while (b >= 0x20);
+        int dlat = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
+        lat += dlat;
+
+        shift = 0;
+        result = 0;
+        do {
+          b = encoded.codeUnitAt(index++) - 63;
+          result |= (b & 0x1f) << shift;
+          shift += 5;
+        } while (b >= 0x20);
+        int dlng = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
+        lng += dlng;
+
+        // OSRM usa precisión de 5 decimales (1E5)
+        points.add(LatLng(lat / 1E5, lng / 1E5));
+      }
+    } catch (e) {
+      print(
+        "⚠️ Error decodificando polyline: $e. Se dibujará hasta donde se pudo.",
+      );
+    }
+
+    return points;
   }
 }

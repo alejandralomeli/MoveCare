@@ -38,6 +38,7 @@ import 'screens/viaje_actual.dart';
 import 'screens/solicitud_viaje.dart';
 import 'screens/historial_viajes_conductor.dart';  
 import 'screens/completar_perfil_conductor.dart';
+import 'screens/solicitudes_viaje_conductor.dart';
 import 'screens/agregar_ine.dart';
 import 'screens/agregar_licencia.dart';
 
@@ -78,47 +79,45 @@ class MyApp extends StatelessWidget {
 
       routes: {
         // Rutas de Autenticación y Sistema
-        '/bienvenido': (context) => const Bienvenido(), //Listo
-        '/iniciar_sesion': (context) => const IniciarSesion(), //Listo
+        '/bienvenido': (context) => const Bienvenido(),
+        '/iniciar_sesion': (context) => const IniciarSesion(),
         '/olvide_contrasena': (context) => const OlvideContrasena(), //PENDIENTE
         '/nueva_contrasena': (context) => const NuevaContrasena(),//PENDIENTE
-        '/confirmar-correo': (context) => const ConfirmarCorreoScreen(), //Listo
-        '/menu_vistas': (context) => const MenuVistas(), //Listo
-        '/registro': (context) => const Registro(), //Listo
+        '/confirmar-correo': (context) => const ConfirmarCorreoScreen(),
+        '/menu_vistas': (context) => const MenuVistas(),
+        '/registro': (context) => const Registro(),
 
         // Módulo Pasajero
-        '/registro_pasajero': (context) => const RegistroPasajero(), //Listo
-        '/principal_pasajero': (context) => const PrincipalPasajero(), //Listo //EL BOTON DE VOZ SE MUEVE POR TODA LA PANTALLA AL BAJAR
-        '/completar_perfil_pasajero': (context) => const CompletarPerfilPasajero(), //Listo //EL BOTON DE VOZ SE MUEVE POR TODA LA PANTALLA AL BAJAR
-        '/perfil_pasajero': (context) => const PerfilPasajero(), //Listo
-        '/agendar_viaje': (context) => const AgendarViaje(), //Listo
-        '/agendar_varios_destinos': (context) => const AgendarVariosDestinos(), //Listo
+        '/registro_pasajero': (context) => const RegistroPasajero(), 
+        '/principal_pasajero': (context) => const PrincipalPasajero(), 
+        '/completar_perfil_pasajero': (context) => const CompletarPerfilPasajero(), 
+        '/perfil_pasajero': (context) => const PerfilPasajero(), 
+        '/agendar_viaje': (context) => const AgendarViaje(), 
+        '/agendar_varios_destinos': (context) => const AgendarVariosDestinos(), 
         '/pago_tarjeta': (context) => const PagoTarjetaScreen(), //ESTO AL FINAL
-        '/registro_tarjeta': (context) => const RegistroTarjetaScreen(), //Listo
-        '/registro_acompanante': (context) => const RegistrarAcompanante(), //Listo
-        '/historial_viajes_pasajero': (context) => const HistorialViajesPasajero(), //Listo
+        '/registro_tarjeta': (context) => const RegistroTarjetaScreen(), 
+        '/registro_acompanante': (context) => const RegistrarAcompanante(), 
+        '/historial_viajes_pasajero': (context) => const HistorialViajesPasajero(), 
         '/viaje_confirmado': (context) => const ViajeConfirmado(), //ESTO AL FINAL
         '/estimacion_costo': (context) => const EstimacionViaje(), //PENDIENTE A LA IA
-        '/metodos_pago_lista': (context) => MetodosPagoVista(), //Listo
+        '/metodos_pago_lista': (context) => MetodosPagoVista(), 
 
         // Módulo Conductor
-        '/registro_conductor': (context) => const RegistroConductor(), //Listo
-        '/continue_driver_register_screen': (context) => const ContinuarRegistroConductor(), //Listo
-        '/principal_conductor': (context) => const PrincipalConductor() ,//Listo
-        '/mi_perfil_conductor': (context) => const MiPerfilConductor(), //Listo
-        '/historial_viajes_conductor': (context) => const HistorialViajesConductor(), //Listo
-        
-        '/solicitud_viaje': (context) => const SolicitudViaje(),
-        '/viaje_actual': (context) => const ViajeActualMapa(), 
-        '/completar_perfil_conductor': (context) => const CompletarPerfilConductor(),
-        '/agregar_ine': (context) => const AgregarIne(),  
-        '/agregar_licencia': (context) => const AgregarLicencia(),
+        '/registro_conductor': (context) => const RegistroConductor(), 
+        '/continue_driver_register_screen': (context) => const ContinuarRegistroConductor(), 
+        '/principal_conductor': (context) => const PrincipalConductor() ,
+        '/mi_perfil_conductor': (context) => const MiPerfilConductor(), 
+        '/historial_viajes_conductor': (context) => const HistorialViajesConductor(), 
+        '/viajes_conductor': (context) => const SolicitudesViajesConductor(),
+        //'/solicitud_viaje': (context) => const SolicitudViaje(), Listo, pero la ruta ya no es necesaria
+
+        '/viaje_actual': (context) => const ViajeActualMapa(), //Pendiente
+        '/completar_perfil_conductor': (context) => const CompletarPerfilConductor(), //Pendiente
 
         // Módulo Administrativo
-        //ALE FALTA EL PRINCIPAL DE PASAJERO
-        '/reporte_incidencia': (context) => const ReporteIncidencia(),
-        '/gestion_usuarios': (context) => const GestionUsuarios(),
-        '/historial_auditorias': (context) => const HistorialAuditoria(),
+        '/reporte_incidencia': (context) => const ReporteIncidencia(), //Pendiente
+        '/gestion_usuarios': (context) => const GestionUsuarios(), //Pendiente
+        '/historial_auditorias': (context) => const HistorialAuditoria(), //Pendiente
       },
     );
   }
