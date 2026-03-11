@@ -195,7 +195,6 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
               ],
             ),
           ),
-          _buildVoiceButton(),
         ],
       ),
       bottomNavigationBar: const PassengerBottomNav(selectedIndex: 0),
@@ -239,19 +238,16 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
             ],
           ),
         ),
+        Positioned(
+          top: 60,
+          right: 20,
+          child: MicButton(
+            isActive: _isListening,
+            onTap: _toggleListening,
+            size: 42,
+          ),
+        ),
       ],
-    );
-  }
-
-  Widget _buildVoiceButton() {
-    return Positioned(
-      top: 60,
-      right: 20,
-      child: MicButton(
-        isActive: _isListening,
-        onTap: _toggleListening,
-        size: 42,
-      ),
     );
   }
 
