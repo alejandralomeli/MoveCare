@@ -13,7 +13,7 @@ class PrincipalConductor extends StatefulWidget {
 class _PrincipalConductorState extends State<PrincipalConductor> {
   String _selectedDate = '';
   bool _isVoiceActive = false;
-  List<DateTime> _calendarDates = [];
+  DateTime _weekStart = DateTime.now().subtract(Duration(days: DateTime.now().weekday - 1));
 
   @override
   void initState() {
@@ -23,10 +23,13 @@ class _PrincipalConductorState extends State<PrincipalConductor> {
 
   void _buildCalendarDates(DateTime baseDate) {
     final monday = baseDate.subtract(Duration(days: baseDate.weekday - 1));
-    setState(() {
-      _calendarDates = List.generate(5, (i) => monday.add(Duration(days: i)));
-      _selectedDate = baseDate.day.toString();
-    });
+    _weekStart = monday;
+    _selectedDate = baseDate.day.toString();
+  }
+
+  String _dayLetter(DateTime d) {
+    const days = ['L', 'M', 'Mi', 'J', 'V', 'S', 'D'];
+    return days[d.weekday - 1];
   }
 
   TextStyle mBold({Color color = AppColors.textPrimary, double size = 14}) {
@@ -61,7 +64,36 @@ class _PrincipalConductorState extends State<PrincipalConductor> {
                       const SizedBox(height: 20),
                       _buildRouteSection(),
                       const SizedBox(height: 25),
-                      Text('Próximos viajes', style: mBold(size: 18)),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('Próximos viajes', style: mBold(size: 18)),
+                          Row(
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.chevron_left, color: AppColors.primary),
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(),
+                                onPressed: () {
+                                  final now = DateTime.now();
+                                  final currentWeekStart = now.subtract(Duration(days: now.weekday - 1));
+                                  final prev = _weekStart.subtract(const Duration(days: 7));
+                                  if (!prev.isBefore(currentWeekStart)) {
+                                    setState(() => _weekStart = prev);
+                                  }
+                                },
+                              ),
+                              const SizedBox(width: 10),
+                              IconButton(
+                                icon: const Icon(Icons.chevron_right, color: AppColors.primary),
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(),
+                                onPressed: () => setState(() => _weekStart = _weekStart.add(const Duration(days: 7))),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                       const SizedBox(height: 10),
                       _buildCalendarRow(),
                       Align(
@@ -75,7 +107,7 @@ class _PrincipalConductorState extends State<PrincipalConductor> {
                               lastDate: DateTime.now().add(const Duration(days: 365)),
                             );
                             if (picked != null) {
-                              _buildCalendarDates(picked);
+                              setState(() => _buildCalendarDates(picked));
                             }
                           },
                           icon: const Icon(Icons.calendar_month_outlined, size: 16),
@@ -94,7 +126,6 @@ class _PrincipalConductorState extends State<PrincipalConductor> {
               ],
             ),
           ),
-          _buildVoiceButton(),
         ],
       ),
       bottomNavigationBar: const DriverBottomNav(selectedIndex: 0),
@@ -139,18 +170,6 @@ class _PrincipalConductorState extends State<PrincipalConductor> {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildVoiceButton() {
-    return Positioned(
-      top: 14,
-      right: 20,
-      child: MicButton(
-        isActive: _isVoiceActive,
-        onTap: () => setState(() => _isVoiceActive = !_isVoiceActive),
-        size: 52,
-      ),
     );
   }
 
@@ -304,58 +323,64 @@ class _PrincipalConductorState extends State<PrincipalConductor> {
 
   Widget _buildCalendarRow() {
     return Row(
-      children: _calendarDates.map((date) => Expanded(child: _calendarDay(date))).toList(),
+      children: List.generate(7, (i) => _weekStart.add(Duration(days: i)))
+          .map((date) => Expanded(child: _calendarDay(date)))
+          .toList(),
     );
   }
 
   Widget _calendarDay(DateTime date) {
-    bool isSelected = _selectedDate == date.day.toString();
-    String dayLetter = ['D', 'L', 'M', 'M', 'J', 'V', 'S'][date.weekday % 7];
-    return GestureDetector(
-      onTap: () => setState(() => _selectedDate = date.day.toString()),
-      child: Container(
-        height: 65,
-        margin: const EdgeInsets.symmetric(horizontal: 3),
-        decoration: BoxDecoration(
-          color: AppColors.primaryLight,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isSelected ? AppColors.primary : Colors.transparent,
-            width: 2,
-          ),
-        ),
-        child: Column(
-          children: [
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 2),
-              decoration: const BoxDecoration(
-                color: AppColors.primary,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(10)),
-              ),
-              child: Text(
-                dayLetter,
-                textAlign: TextAlign.center,
-                style: GoogleFonts.montserrat(
-                  color: AppColors.white,
-                  fontSize: 10,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
+    final today = DateTime.now();
+    final isPast = date.isBefore(DateTime(today.year, today.month, today.day));
+    final isSelected = _selectedDate == date.day.toString();
+    return Opacity(
+      opacity: isPast ? 0.4 : 1.0,
+      child: GestureDetector(
+        onTap: isPast ? null : () => setState(() => _selectedDate = date.day.toString()),
+        child: Container(
+          height: 65,
+          margin: const EdgeInsets.symmetric(horizontal: 3),
+          decoration: BoxDecoration(
+            color: AppColors.primaryLight,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isSelected ? AppColors.primary : Colors.transparent,
+              width: 2,
             ),
-            Expanded(
-              child: Center(
+          ),
+          child: Column(
+            children: [
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 2),
+                decoration: const BoxDecoration(
+                  color: AppColors.primary,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(10)),
+                ),
                 child: Text(
-                  date.day.toString(),
+                  _dayLetter(date),
+                  textAlign: TextAlign.center,
                   style: GoogleFonts.montserrat(
-                    color: AppColors.primary,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
+                    color: AppColors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
-            ),
-          ],
+              Expanded(
+                child: Center(
+                  child: Text(
+                    date.day.toString(),
+                    style: GoogleFonts.montserrat(
+                      color: AppColors.primary,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

@@ -15,18 +15,6 @@ class _EstimacionViajeState extends State<EstimacionViaje> {
 
   double sp(double size, double sw) => sw * (size / 375);
 
-  TextStyle mBold({
-    Color color = AppColors.primary,
-    double size = 14,
-    required double sw,
-  }) {
-    return GoogleFonts.montserrat(
-      color: color,
-      fontSize: sp(size, sw),
-      fontWeight: FontWeight.w700,
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
@@ -128,32 +116,29 @@ class _EstimacionViajeState extends State<EstimacionViaje> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Center(
-            child: Text('Detalles del viaje', style: mBold(size: 18, sw: sw)),
+            child: Text(
+              'Detalles del viaje',
+              style: GoogleFonts.montserrat(
+                fontSize: sp(16, sw),
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
+              ),
+            ),
           ),
           SizedBox(height: sp(20, sw)),
-          _buildLocationRow(Icons.location_on, 'Desde', 'Punto de partida', sw),
+          _buildLocationRow(Icons.location_on_outlined, 'Desde', 'Punto de partida', sw),
           SizedBox(height: sp(15, sw)),
-          _buildLocationRow(
-            Icons.location_on,
-            'Destino',
-            'Punto de llegada',
-            sw,
-          ),
+          _buildLocationRow(Icons.flag_outlined, 'Destino', 'Punto de llegada', sw),
           Divider(height: sp(35, sw), color: AppColors.border, thickness: 1),
-          _buildDetailRow(Icons.access_time_filled, '10 : 30 am', sw),
-          _buildDetailRow(Icons.monetization_on, 'Costo Estimado', sw),
-          _buildDetailRow(Icons.payment, 'Método de pago', sw),
+          _buildDetailRow(Icons.access_time_outlined, '10 : 30 am', sw),
+          _buildDetailRow(Icons.attach_money_outlined, 'Costo Estimado', sw),
+          _buildDetailRow(Icons.payment_outlined, 'Método de pago', sw),
         ],
       ),
     );
   }
 
-  Widget _buildLocationRow(
-    IconData icon,
-    String title,
-    String subtitle,
-    double sw,
-  ) {
+  Widget _buildLocationRow(IconData icon, String title, String subtitle, double sw) {
     return Row(
       children: [
         Icon(icon, color: AppColors.primary, size: sp(24, sw)),
@@ -164,7 +149,11 @@ class _EstimacionViajeState extends State<EstimacionViaje> {
             children: [
               Text(
                 title,
-                style: mBold(size: 10, color: AppColors.primary, sw: sw),
+                style: GoogleFonts.montserrat(
+                  fontSize: sp(10, sw),
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.primary,
+                ),
               ),
               Text(
                 subtitle,
@@ -172,7 +161,8 @@ class _EstimacionViajeState extends State<EstimacionViaje> {
                 overflow: TextOverflow.ellipsis,
                 style: GoogleFonts.montserrat(
                   fontSize: sp(13, sw),
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.textPrimary,
                 ),
               ),
             ],
@@ -191,7 +181,11 @@ class _EstimacionViajeState extends State<EstimacionViaje> {
           SizedBox(width: sp(12, sw)),
           Text(
             text,
-            style: GoogleFonts.montserrat(fontSize: sp(13, sw), fontWeight: FontWeight.w500, color: AppColors.textPrimary),
+            style: GoogleFonts.montserrat(
+              fontSize: sp(13, sw),
+              fontWeight: FontWeight.w500,
+              color: AppColors.textPrimary,
+            ),
           ),
         ],
       ),
@@ -200,22 +194,25 @@ class _EstimacionViajeState extends State<EstimacionViaje> {
 
   Widget _buildConfirmButton(double sw) {
     return SizedBox(
-      height: sp(55, sw),
+      height: sp(48, sw),
       child: ElevatedButton(
         onPressed: () {},
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.primary,
+          elevation: 0,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(12),
           ),
-          elevation: 4,
         ),
         child: Text(
           'Confirmar',
-          style: mBold(color: AppColors.white, size: 17, sw: sw),
+          style: GoogleFonts.montserrat(
+            fontSize: sp(14, sw),
+            fontWeight: FontWeight.w600,
+            color: AppColors.white,
+          ),
         ),
       ),
     );
   }
-
 }

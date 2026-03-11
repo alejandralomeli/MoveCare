@@ -11,34 +11,12 @@ class CompletarPerfilConductor extends StatefulWidget {
 }
 
 class _CompletarPerfilConductorState extends State<CompletarPerfilConductor> {
-  bool _isVoiceActive = false;
+  bool _isListening = false;
 
-  void _toggleVoice() {
-    setState(() => _isVoiceActive = !_isVoiceActive);
-  }
-
-  double sp(double size, double sw) => sw * (size / 375);
-
-  TextStyle mBold(double sw, {Color color = Colors.black, double size = 14}) {
-    return GoogleFonts.montserrat(
-      color: color,
-      fontSize: sp(size, sw),
-      fontWeight: FontWeight.w600,
-    );
-  }
-
-  TextStyle mRegular(double sw, {Color color = AppColors.textSecondary, double size = 13}) {
-    return GoogleFonts.montserrat(
-      color: color,
-      fontSize: sp(size, sw),
-      fontWeight: FontWeight.w500,
-    );
-  }
+  void _toggleListening() => setState(() => _isListening = !_isListening);
 
   @override
   Widget build(BuildContext context) {
-    final double sw = MediaQuery.of(context).size.width;
-
     return Scaffold(
       backgroundColor: AppColors.white,
       body: CustomScrollView(
@@ -46,79 +24,227 @@ class _CompletarPerfilConductorState extends State<CompletarPerfilConductor> {
         slivers: [
           SliverPersistentHeader(
             pinned: true,
-            delegate: _ConductorHeaderDelegate(
-              maxHeight: 80,
-              minHeight: 80,
-              isVoiceActive: _isVoiceActive,
-              onVoiceTap: _toggleVoice,
-              sw: sw,
-              mBold: mBold,
+            delegate: _HeaderDelegate(
+              isVoiceActive: _isListening,
+              onVoiceTap: _toggleListening,
             ),
           ),
-
           SliverToBoxAdapter(
             child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: sp(25, sw)),
+              padding: const EdgeInsets.symmetric(horizontal: 22),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  SizedBox(height: sp(80, sw)),
+                  const SizedBox(height: 35),
 
-                  _buildCompleteProfileBanner(sw),
-
-                  SizedBox(height: sp(25, sw)),
-
-                  Text('Foto de INE', style: mBold(sw, size: 14)),
-                  SizedBox(height: sp(10, sw)),
-                  Row(
-                    children: [
-                      Expanded(child: _buildDocumentCard(sw, 'Anverso', 'Agregar_Ine', 'ine_anverso.png')),
-                      SizedBox(width: sp(15, sw)),
-                      Expanded(child: _buildDocumentCard(sw, 'Reverso', 'Agregar_Ine', 'ine_reverso.png')),
-                    ],
-                  ),
-
-                  SizedBox(height: sp(25, sw)),
-
-                  Text('Foto de Licencia de Conducir', style: mBold(sw, size: 14)),
-                  SizedBox(height: sp(10, sw)),
-                  Row(
-                    children: [
-                      Expanded(child: _buildDocumentCard(sw, 'Anverso', 'Agregar_Licencia', 'ine_anverso.png')),
-                      SizedBox(width: sp(15, sw)),
-                      Expanded(child: _buildDocumentCard(sw, 'Reverso', 'Agregar_Licencia', 'ine_reverso.png')),
-                    ],
-                  ),
-
-                  SizedBox(height: sp(25, sw)),
-
-                  Text('Póliza de Seguro', style: mBold(sw, size: 14)),
-                  SizedBox(height: sp(10, sw)),
-
-                  GestureDetector(
-                    onTap: () => Navigator.pushNamed(context, 'Agregar_Poliza'),
-                    child: Container(
-                      padding: EdgeInsets.symmetric(horizontal: sp(20, sw), vertical: sp(8, sw)),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: AppColors.primary, width: 2),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Text('PDF', style: mBold(sw, color: AppColors.primary, size: 14)),
+                  // Badge de estado
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: AppColors.error,
+                      borderRadius: BorderRadius.circular(25),
                     ),
-                  ),
-
-                  SizedBox(height: sp(40, sw)),
-
-                  Center(
-                    child: Column(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        _buildActionButton(sw, 'Datos de mi Vehículo', 'Datos_Vehiculo'),
-                        SizedBox(height: sp(15, sw)),
-                        _buildActionButton(sw, 'Mi Historial', 'Historial_Viajes_Conductor'),
+                        const Icon(Icons.error_outline, color: AppColors.white, size: 17),
+                        const SizedBox(width: 7),
+                        Text('Completar perfil',
+                            style: GoogleFonts.montserrat(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.white,
+                            )),
                       ],
                     ),
                   ),
-                  SizedBox(height: sp(50, sw)),
+
+                  const SizedBox(height: 28),
+
+                  // Sección INE
+                  Row(
+                    children: [
+                      Text('Foto de ',
+                          style: GoogleFonts.montserrat(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textPrimary,
+                          )),
+                      Text('INE',
+                          style: GoogleFonts.montserrat(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.primary,
+                          )),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text('Sube una foto clara del anverso y reverso',
+                      style: GoogleFonts.montserrat(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.textSecondary,
+                      )),
+                  const SizedBox(height: 14),
+                  Row(
+                    children: [
+                      Expanded(child: _buildDocCard('Anverso', 'assets/ine_anverso.png', 'Agregar_Ine')),
+                      const SizedBox(width: 15),
+                      Expanded(child: _buildDocCard('Reverso', 'assets/ine_reverso.png', 'Agregar_Ine')),
+                    ],
+                  ),
+
+                  const SizedBox(height: 28),
+                  const Divider(color: AppColors.border, height: 1),
+                  const SizedBox(height: 24),
+
+                  // Sección Licencia
+                  Row(
+                    children: [
+                      Text('Licencia de ',
+                          style: GoogleFonts.montserrat(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textPrimary,
+                          )),
+                      Text('Conducir',
+                          style: GoogleFonts.montserrat(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.primary,
+                          )),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text('Sube una foto clara del anverso y reverso',
+                      style: GoogleFonts.montserrat(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.textSecondary,
+                      )),
+                  const SizedBox(height: 14),
+                  Row(
+                    children: [
+                      Expanded(child: _buildDocCard('Anverso', 'assets/ine_anverso.png', 'Agregar_Licencia')),
+                      const SizedBox(width: 15),
+                      Expanded(child: _buildDocCard('Reverso', 'assets/ine_reverso.png', 'Agregar_Licencia')),
+                    ],
+                  ),
+
+                  const SizedBox(height: 28),
+                  const Divider(color: AppColors.border, height: 1),
+                  const SizedBox(height: 24),
+
+                  // Sección Póliza
+                  Row(
+                    children: [
+                      Text('Póliza de ',
+                          style: GoogleFonts.montserrat(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textPrimary,
+                          )),
+                      Text('Seguro',
+                          style: GoogleFonts.montserrat(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.primary,
+                          )),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text('Adjunta el PDF de tu póliza vigente',
+                      style: GoogleFonts.montserrat(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.textSecondary,
+                      )),
+                  const SizedBox(height: 14),
+                  GestureDetector(
+                    onTap: () => Navigator.pushNamed(context, 'Agregar_Poliza'),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                      decoration: BoxDecoration(
+                        color: AppColors.white,
+                        border: Border.all(color: AppColors.primary, width: 1.5),
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.04),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.picture_as_pdf_outlined,
+                              color: AppColors.primary, size: 22),
+                          const SizedBox(width: 10),
+                          Text('Adjuntar PDF',
+                              style: GoogleFonts.montserrat(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.primary,
+                              )),
+                          const Spacer(),
+                          const Icon(Icons.chevron_right,
+                              color: AppColors.textSecondary, size: 20),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 36),
+
+                  // Botón datos del vehículo
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () => Navigator.pushNamed(context, 'Datos_Vehiculo'),
+                      icon: const Icon(Icons.directions_car_outlined, size: 18),
+                      label: Text(
+                        'Datos de mi Vehículo',
+                        style: GoogleFonts.montserrat(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.primary,
+                        side: const BorderSide(color: AppColors.primary),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 14),
+
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.pushNamed(context, 'Historial_Viajes_Conductor'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: Text(
+                        'Guardar',
+                        style: GoogleFonts.montserrat(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 30),
                 ],
               ),
             ),
@@ -129,83 +255,58 @@ class _CompletarPerfilConductorState extends State<CompletarPerfilConductor> {
     );
   }
 
-  Widget _buildDocumentCard(double sw, String label, String route, String assetName) {
+  Widget _buildDocCard(String label, String placeholder, String route) {
     return GestureDetector(
       onTap: () => Navigator.pushNamed(context, route),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            height: sp(105, sw),
+            height: 110,
             width: double.infinity,
             decoration: BoxDecoration(
               color: AppColors.white,
-              borderRadius: BorderRadius.circular(18),
+              borderRadius: BorderRadius.circular(16),
               border: Border.all(color: AppColors.border),
-              boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, 4))],
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.05),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(18),
+              borderRadius: BorderRadius.circular(16),
               child: Padding(
                 padding: const EdgeInsets.all(8),
-                child: Image.asset('assets/$assetName', fit: BoxFit.contain, errorBuilder: (c,e,s) => const Icon(Icons.image)),
+                child: Image.asset(placeholder,
+                    fit: BoxFit.contain,
+                    errorBuilder: (c, e, s) => const Icon(
+                        Icons.add_a_photo_outlined,
+                        size: 32,
+                        color: AppColors.primary)),
               ),
             ),
           ),
-          const SizedBox(height: 8),
-          Text(label, style: mBold(sw, color: AppColors.primary, size: 12)),
+          const SizedBox(height: 7),
+          Text(label,
+              style: GoogleFonts.montserrat(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppColors.primary,
+              )),
         ],
       ),
     );
   }
-
-  Widget _buildActionButton(double sw, String label, String route) {
-    return SizedBox(
-      width: sp(280, sw),
-      height: sp(50, sw),
-      child: ElevatedButton(
-        onPressed: () => Navigator.pushNamed(context, route),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primary,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-        child: Text(label, style: mBold(sw, color: AppColors.white, size: 14)),
-      ),
-    );
-  }
-
-  Widget _buildCompleteProfileBanner(double sw) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
-      decoration: BoxDecoration(color: AppColors.error, borderRadius: BorderRadius.circular(20)),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.error_outline, color: Colors.white, size: 20),
-          const SizedBox(width: 10),
-          Text('Completar perfil', style: mBold(sw, color: AppColors.white, size: 12)),
-        ],
-      ),
-    );
-  }
-
 }
 
-class _ConductorHeaderDelegate extends SliverPersistentHeaderDelegate {
-  final double maxHeight;
-  final double minHeight;
+class _HeaderDelegate extends SliverPersistentHeaderDelegate {
   final bool isVoiceActive;
   final VoidCallback onVoiceTap;
-  final double sw;
-  final TextStyle Function(double, {Color color, double size}) mBold;
 
-  _ConductorHeaderDelegate({
-    required this.maxHeight,
-    required this.minHeight,
-    required this.isVoiceActive,
-    required this.onVoiceTap,
-    required this.sw,
-    required this.mBold,
-  });
+  _HeaderDelegate({required this.isVoiceActive, required this.onVoiceTap});
 
   @override
   Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
@@ -213,30 +314,37 @@ class _ConductorHeaderDelegate extends SliverPersistentHeaderDelegate {
       clipBehavior: Clip.none,
       children: [
         Container(
-          height: maxHeight,
+          height: maxExtent,
           width: double.infinity,
           decoration: const BoxDecoration(color: AppColors.primaryLight),
-        ),
-
-        Positioned(
-          left: 10,
-          bottom: 10,
-          child: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.primary, size: 20),
-            onPressed: () => Navigator.of(context).pop(),
+          child: Center(
+            child: Text(
+              'Completar Perfil',
+              style: GoogleFonts.montserrat(
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textPrimary,
+              ),
+            ),
           ),
         ),
-
         Positioned(
-          right: sw * (25 / 375),
-          bottom: -26,
-          child: MicButton(isActive: isVoiceActive, onTap: onVoiceTap, size: 52),
+          left: 10,
+          bottom: 20,
+          child: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new,
+                color: AppColors.primary, size: 20),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
         ),
       ],
     );
   }
 
-  @override double get maxExtent => maxHeight;
-  @override double get minExtent => minHeight;
-  @override bool shouldRebuild(covariant _ConductorHeaderDelegate oldDelegate) => true;
+  @override
+  double get maxExtent => 80;
+  @override
+  double get minExtent => 80;
+  @override
+  bool shouldRebuild(covariant _HeaderDelegate oldDelegate) => true;
 }

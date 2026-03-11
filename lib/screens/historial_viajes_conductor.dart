@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../app_theme.dart';
-import 'widgets/mic_button.dart';
-
 class HistorialViajesConductor extends StatefulWidget {
   const HistorialViajesConductor({super.key});
 
@@ -13,7 +11,6 @@ class HistorialViajesConductor extends StatefulWidget {
 
 class _HistorialViajesConductorState extends State<HistorialViajesConductor> {
   String _filterSelected = 'Todos';
-  bool _isVoiceActive = false;
 
   final List<String> filters = [
     'Todos',
@@ -38,57 +35,53 @@ class _HistorialViajesConductorState extends State<HistorialViajesConductor> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.white,
-      appBar: AppHeader(
-        title: 'Historial de Viajes',
-        trailing: Padding(
-          padding: const EdgeInsets.only(right: 8),
-          child: MicButton(
-            isActive: _isVoiceActive,
-            onTap: () => setState(() => _isVoiceActive = !_isVoiceActive),
-            size: 42,
+      body: CustomScrollView(
+        physics: const BouncingScrollPhysics(),
+        slivers: [
+          SliverPersistentHeader(
+            pinned: true,
+            delegate: _HeaderDelegate(),
           ),
-        ),
-      ),
-      body: Column(
-        children: [
-          const SizedBox(height: 8),
-          _buildFilterMenu(),
-          Expanded(
-            child: ListView(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              physics: const BouncingScrollPhysics(),
-              children: [
-                _buildTripCard(
-                  'En Curso',
-                  AppColors.primary,
-                  'Origen ejemplo',
-                  'Destino ejemplo',
-                  'Nov 27, 2025',
-                  'Pasajero Uno',
-                  'auditiva.png',
+          SliverToBoxAdapter(child: _buildFilterMenu()),
+          SliverList(
+            delegate: SliverChildListDelegate([
+              const SizedBox(height: 10),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Column(
+                  children: [
+                    _buildTripCard(
+                      'En Curso',
+                      AppColors.primary,
+                      'Origen ejemplo',
+                      'Destino ejemplo',
+                      'Nov 27, 2025',
+                      'Pasajero Uno',
+                      'auditiva.png',
+                    ),
+                    _buildTripCard(
+                      'Aceptado',
+                      const Color(0xFF16A34A),
+                      'Hospital General',
+                      'Col. Las Flores',
+                      'Nov 20, 2025',
+                      'Pasajero Dos',
+                      'silla_ruedas.png',
+                    ),
+                    _buildTripCard(
+                      'Rechazado',
+                      AppColors.error,
+                      'Centro Médico',
+                      'Av. Insurgentes 420',
+                      'Nov 15, 2025',
+                      'Pasajero Tres',
+                      'tercera_edad.png',
+                    ),
+                    const SizedBox(height: 20),
+                  ],
                 ),
-                _buildTripCard(
-                  'Aceptado',
-                  const Color(0xFF16A34A),
-                  'Hospital General',
-                  'Col. Las Flores',
-                  'Nov 20, 2025',
-                  'Pasajero Dos',
-                  'silla_ruedas.png',
-                ),
-                _buildTripCard(
-                  'Rechazado',
-                  AppColors.error,
-                  'Centro Médico',
-                  'Av. Insurgentes 420',
-                  'Nov 15, 2025',
-                  'Pasajero Tres',
-                  'tercera_edad.png',
-                ),
-                const SizedBox(height: 20),
-              ],
-            ),
+              ),
+            ]),
           ),
         ],
       ),
@@ -300,4 +293,44 @@ class _HistorialViajesConductorState extends State<HistorialViajesConductor> {
       ),
     );
   }
+}
+
+class _HeaderDelegate extends SliverPersistentHeaderDelegate {
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return Stack(
+      children: [
+        Container(
+          height: maxExtent,
+          width: double.infinity,
+          decoration: const BoxDecoration(color: AppColors.primaryLight),
+          child: Center(
+            child: Text(
+              'Historial de Viajes',
+              style: GoogleFonts.montserrat(
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textPrimary,
+              ),
+            ),
+          ),
+        ),
+        Positioned(
+          left: 10,
+          bottom: 20,
+          child: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.primary, size: 20),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+        ),
+      ],
+    );
+  }
+
+  @override
+  double get maxExtent => 80;
+  @override
+  double get minExtent => 80;
+  @override
+  bool shouldRebuild(covariant _HeaderDelegate oldDelegate) => false;
 }

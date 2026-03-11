@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../app_theme.dart';
+import 'widgets/mic_button.dart';
 
 class ReporteIncidencia extends StatefulWidget {
   const ReporteIncidencia({super.key});
@@ -10,7 +11,8 @@ class ReporteIncidencia extends StatefulWidget {
 }
 
 class _ReporteIncidenciaState extends State<ReporteIncidencia> {
-  // Función de escalado idéntica a tus otras vistas
+  bool _isListening = false;
+
   double sp(double size, BuildContext context) {
     double sw = MediaQuery.of(context).size.width;
     double res = sw * (size / 375);
@@ -31,44 +33,17 @@ class _ReporteIncidenciaState extends State<ReporteIncidencia> {
 
     return Scaffold(
       backgroundColor: AppColors.white,
-      body: Column(
-        children: [
-
-          Container(
-            height: 80,
-            width: double.infinity,
-            color: AppColors.primaryLight,
-            child: Stack(
-              children: [
-
-                Positioned(
-                  top: 35,
-                  left: 10,
-                  child: IconButton(
-                    icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.primary, size: 20),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                ),
-
-                Align(
-                  alignment: Alignment.bottomCenter,
-                  child: Padding(
-                    padding: const EdgeInsets.only(bottom: 30),
-                    child: Text(
-                      'Bandeja de Reportes',
-                      style: GoogleFonts.montserrat(
-                        fontSize: sp(20, context),
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+      body: CustomScrollView(
+        physics: const BouncingScrollPhysics(),
+        slivers: [
+          SliverPersistentHeader(
+            pinned: true,
+            delegate: _HeaderDelegate(
+              isVoiceActive: _isListening,
+              onVoiceTap: () => setState(() => _isListening = !_isListening),
             ),
           ),
-          // --- CUERPO ---
-          Expanded(
+          SliverFillRemaining(
             child: ListView.builder(
               padding: EdgeInsets.symmetric(horizontal: sw * 0.06, vertical: 20),
               physics: const BouncingScrollPhysics(),
@@ -162,4 +137,50 @@ class _ReporteIncidenciaState extends State<ReporteIncidencia> {
       ),
     );
   }
+}
+
+class _HeaderDelegate extends SliverPersistentHeaderDelegate {
+  final bool isVoiceActive;
+  final VoidCallback onVoiceTap;
+
+  _HeaderDelegate({required this.isVoiceActive, required this.onVoiceTap});
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Container(
+          height: maxExtent,
+          width: double.infinity,
+          decoration: const BoxDecoration(color: AppColors.primaryLight),
+          child: Center(
+            child: Text(
+              'Bandeja de Reportes',
+              style: GoogleFonts.montserrat(
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textPrimary,
+              ),
+            ),
+          ),
+        ),
+        Positioned(
+          left: 10,
+          bottom: 20,
+          child: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.primary, size: 20),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+        ),
+      ],
+    );
+  }
+
+  @override
+  double get maxExtent => 80;
+  @override
+  double get minExtent => 80;
+  @override
+  bool shouldRebuild(covariant _HeaderDelegate oldDelegate) => true;
 }

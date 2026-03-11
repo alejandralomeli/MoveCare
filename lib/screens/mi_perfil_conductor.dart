@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../app_theme.dart';
+import '../core/utils/auth_helper.dart';
 import 'widgets/mic_button.dart';
 
 class MiPerfilConductor extends StatefulWidget {
@@ -13,98 +14,188 @@ class MiPerfilConductor extends StatefulWidget {
 class MiPerfilConductorState extends State<MiPerfilConductor> {
   bool _isListening = false;
 
-  double sp(double size, double sw) => sw * (size / 375);
-
-  TextStyle mBold({Color color = Colors.black, double size = 14, required double sw}) {
-    return GoogleFonts.montserrat(
-      color: color,
-      fontSize: sp(size, sw),
-      fontWeight: FontWeight.bold,
-    );
-  }
+  void _toggleListening() => setState(() => _isListening = !_isListening);
 
   @override
   Widget build(BuildContext context) {
-    final sw = MediaQuery.of(context).size.width;
-
     return Scaffold(
-      body: Stack(
-        children: [
-          // Fondo
-          Positioned.fill(
-            child: Image.asset(
-              'assets/ruta.png',
-              fit: BoxFit.cover,
+      backgroundColor: AppColors.white,
+      body: CustomScrollView(
+        physics: const BouncingScrollPhysics(),
+        slivers: [
+          SliverPersistentHeader(
+            pinned: true,
+            delegate: _HeaderDelegate(
+              isVoiceActive: _isListening,
+              onVoiceTap: _toggleListening,
             ),
           ),
-          Positioned.fill(
-            child: Container(color: AppColors.white.withValues(alpha: 0.1)),
-          ),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 22),
+              child: Column(
+                children: [
+                  const SizedBox(height: 40),
 
-          SafeArea(
-            child: Column(
-              children: [
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: sp(15, sw), vertical: sp(15, sw)),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  // Avatar
+                  Stack(
                     children: [
-                      IconButton(
-                        icon: Icon(Icons.arrow_back_ios_new, color: AppColors.primary, size: 20),
-                        onPressed: () => Navigator.pop(context),
+                      CircleAvatar(
+                        radius: 52,
+                        backgroundColor: AppColors.primaryLight,
+                        backgroundImage: const AssetImage('assets/conductor.png'),
                       ),
-                      MicButton(
-                        isActive: _isListening,
-                        onTap: () => setState(() => _isListening = !_isListening),
-                        size: 52,
+                      Positioned(
+                        bottom: 2,
+                        right: 2,
+                        child: Container(
+                          padding: const EdgeInsets.all(5),
+                          decoration: const BoxDecoration(
+                            color: AppColors.primary,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.edit, color: AppColors.white, size: 14),
+                        ),
                       ),
                     ],
                   ),
-                ),
 
-                _buildProfileHeader(sw),
+                  const SizedBox(height: 14),
 
-                SizedBox(height: sp(30, sw)),
+                  // Nombre
+                  Text(
+                    'Username',
+                    style: GoogleFonts.montserrat(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
 
-                Expanded(
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: sp(25, sw)),
-                    child: Container(
-                      width: double.infinity,
-                      margin: EdgeInsets.only(bottom: sp(20, sw)),
-                      decoration: BoxDecoration(
-                        color: AppColors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.07),
-                            blurRadius: 8,
-                            offset: const Offset(0, 3),
-                          )
-                        ],
+                  const SizedBox(height: 6),
+
+                  // Estrellas + rating
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      ...List.generate(5, (i) => const Icon(Icons.star, color: Colors.orange, size: 16)),
+                      const SizedBox(width: 5),
+                      Text(
+                        '5.00',
+                        style: GoogleFonts.montserrat(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.primary,
+                        ),
                       ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(16),
-                        child: ListView(
-                          padding: EdgeInsets.zero,
-                          physics: const BouncingScrollPhysics(),
-                          children: [
-                            _buildMenuOption('Mi Historial', () => print("Historial"), sw),
-                            _buildDivider(),
-                            _buildMenuOption('Notificaciones', () => print("Notificaciones"), sw),
-                            _buildDivider(),
-                            _buildMenuOption('Configuración de Perfil', () => print("Configuración"), sw),
-                            _buildDivider(),
-                            _buildMenuOption('Mis Métricas', () => print("Métricas"), sw),
-                            _buildDivider(),
-                            _buildMenuOption('Privacidad', () => print("Privacidad"), sw),
-                          ],
+                    ],
+                  ),
+
+                  const SizedBox(height: 10),
+
+                  // Badge verificado
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.check_circle, color: AppColors.white, size: 14),
+                        const SizedBox(width: 5),
+                        Text(
+                          'Verificado',
+                          style: GoogleFonts.montserrat(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 28),
+
+                  // Menú de opciones
+                  Container(
+                    decoration: BoxDecoration(
+                      color: AppColors.white,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: AppColors.border),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.05),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      children: [
+                        _buildMenuItem(
+                          icon: Icons.history,
+                          label: 'Mi Historial',
+                          onTap: () => Navigator.pushNamed(context, 'Historial_Viajes_Conductor'),
+                        ),
+                        _buildDivider(),
+                        _buildMenuItem(
+                          icon: Icons.notifications_outlined,
+                          label: 'Notificaciones',
+                          onTap: () {},
+                        ),
+                        _buildDivider(),
+                        _buildMenuItem(
+                          icon: Icons.person_outline,
+                          label: 'Configuración de Perfil',
+                          onTap: () {},
+                        ),
+                        _buildDivider(),
+                        _buildMenuItem(
+                          icon: Icons.bar_chart_outlined,
+                          label: 'Mis Métricas',
+                          onTap: () {},
+                        ),
+                        _buildDivider(),
+                        _buildMenuItem(
+                          icon: Icons.lock_outline,
+                          label: 'Privacidad',
+                          onTap: () {},
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 14),
+
+                  // Cerrar sesión
+                  Container(
+                    decoration: BoxDecoration(
+                      color: AppColors.white,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: AppColors.error.withValues(alpha: 0.4)),
+                    ),
+                    child: ListTile(
+                      onTap: () => AuthHelper.expulsarUsuario(context),
+                      splashColor: AppColors.error.withValues(alpha: 0.08),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      leading: const Icon(Icons.logout, color: AppColors.error, size: 20),
+                      title: Text(
+                        'Cerrar sesión',
+                        style: GoogleFonts.montserrat(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.error,
                         ),
                       ),
                     ),
                   ),
-                ),
-              ],
+
+                  const SizedBox(height: 28),
+                ],
+              ),
             ),
           ),
         ],
@@ -113,81 +204,71 @@ class MiPerfilConductorState extends State<MiPerfilConductor> {
     );
   }
 
-  Widget _buildProfileHeader(double sw) {
-    return Column(
+  Widget _buildMenuItem({required IconData icon, required String label, required VoidCallback onTap}) {
+    return ListTile(
+      onTap: onTap,
+      splashColor: AppColors.primary.withValues(alpha: 0.08),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 2),
+      leading: Icon(icon, color: AppColors.primary, size: 20),
+      title: Text(
+        label,
+        style: GoogleFonts.montserrat(
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+          color: AppColors.textPrimary,
+        ),
+      ),
+      trailing: const Icon(Icons.chevron_right, color: AppColors.textSecondary, size: 20),
+    );
+  }
+
+  Widget _buildDivider() {
+    return const Divider(height: 1, thickness: 1, indent: 20, endIndent: 20, color: AppColors.border);
+  }
+}
+
+class _HeaderDelegate extends SliverPersistentHeaderDelegate {
+  final bool isVoiceActive;
+  final VoidCallback onVoiceTap;
+
+  _HeaderDelegate({required this.isVoiceActive, required this.onVoiceTap});
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return Stack(
+      clipBehavior: Clip.none,
       children: [
         Container(
-          decoration: const BoxDecoration(
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(color: Colors.black26, blurRadius: 8, offset: Offset(0, 4))
-            ],
-          ),
-          child: Stack(
-            children: [
-              CircleAvatar(
-                radius: sp(65, sw),
-                backgroundColor: AppColors.primaryLight,
-                backgroundImage: const AssetImage('assets/conductor.png'),
+          height: maxExtent,
+          width: double.infinity,
+          decoration: const BoxDecoration(color: AppColors.primaryLight),
+          child: Center(
+            child: Text(
+              'Mi Perfil',
+              style: GoogleFonts.montserrat(
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textPrimary,
               ),
-              Positioned(
-                bottom: 0, right: 0,
-                child: Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: const BoxDecoration(color: AppColors.primary, shape: BoxShape.circle),
-                  child: const Icon(Icons.edit, color: AppColors.white, size: 16),
-                ),
-              ),
-            ],
+            ),
           ),
         ),
-        SizedBox(height: sp(12, sw)),
-        Text('Username', style: GoogleFonts.montserrat(fontSize: sp(22, sw), fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            ...List.generate(5, (index) => Icon(Icons.star, color: Colors.orange, size: sp(20, sw))),
-            Text(' 5.00', style: mBold(color: AppColors.primary, size: 14, sw: sw)),
-          ],
-        ),
-        SizedBox(height: sp(8, sw)),
-        Container(
-          padding: EdgeInsets.symmetric(horizontal: sp(12, sw), vertical: sp(4, sw)),
-          decoration: BoxDecoration(
-            color: AppColors.primary,
-            borderRadius: BorderRadius.circular(15),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.check_circle, color: AppColors.white, size: sp(16, sw)),
-              SizedBox(width: sp(6, sw)),
-              Text('Verificado', style: mBold(color: AppColors.white, size: 12, sw: sw)),
-            ],
+        Positioned(
+          left: 10,
+          bottom: 20,
+          child: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.primary, size: 20),
+            onPressed: () => Navigator.of(context).pop(),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildMenuOption(String title, VoidCallback onTap, double sw) {
-    return ListTile(
-      onTap: onTap,
-      splashColor: AppColors.primary.withValues(alpha: 0.2),
-      contentPadding: EdgeInsets.symmetric(horizontal: sp(30, sw), vertical: sp(5, sw)),
-      title: Text(title, style: GoogleFonts.montserrat(fontSize: sp(15, sw), fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
-      trailing: Icon(Icons.chevron_right, color: AppColors.textSecondary, size: sp(20, sw)),
-    );
-  }
-
-  Widget _buildDivider() {
-    return const Divider(
-      height: 1,
-      thickness: 1.5,
-      indent: 20,
-      endIndent: 20,
-      color: AppColors.border,
-    );
-  }
-
+  @override
+  double get maxExtent => 80;
+  @override
+  double get minExtent => 80;
+  @override
+  bool shouldRebuild(covariant _HeaderDelegate oldDelegate) => true;
 }
