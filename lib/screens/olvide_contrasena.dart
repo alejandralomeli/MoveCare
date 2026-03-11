@@ -1,127 +1,151 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../app_theme.dart';
 
 class OlvideContrasena extends StatelessWidget {
   const OlvideContrasena({super.key});
 
-  static const Color primaryBlue = Color(0xFF1559B2);
-  static const Color fieldBlue = Color(0xFFD6E8FF);
   double sp(double size, double sw) => sw * (size / 375);
 
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
-    final sw = size.width;
-    final sh = size.height;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.white,
+      resizeToAvoidBottomInset: true,
       body: Stack(
         children: [
+          // Top image
           Positioned(
             top: 0,
             left: 0,
             right: 0,
-            height: sh * 0.45,
-            child: Image.asset(
-              'assets/ruta.png',
-              fit: BoxFit.cover,
+            height: size.height * 0.36,
+            child: Stack(
+              children: [
+                Image.asset(
+                  'assets/ruta.png',
+                  width: double.infinity,
+                  height: double.infinity,
+                  fit: BoxFit.cover,
+                  errorBuilder: (c, e, s) =>
+                      Container(color: AppColors.primaryLight),
+                ),
+                Container(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [Color(0x40000000), Color(0x00000000)],
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
 
+          // Back button
           Positioned(
-            top: 45,
-            left: 10,
+            top: MediaQuery.of(context).padding.top + 4,
+            left: 4,
             child: IconButton(
-              icon: Icon(
-                Icons.arrow_back_ios_new,
-                color: primaryBlue,
-                size: 20, 
-              ),
+              icon: const Icon(Icons.arrow_back_ios_new,
+                  color: AppColors.white, size: 20),
               onPressed: () => Navigator.pop(context),
             ),
           ),
 
+          // White bottom panel
           Align(
             alignment: Alignment.bottomCenter,
             child: Container(
-              height: sh * 0.65,
+              height: size.height * 0.72,
               width: double.infinity,
               decoration: const BoxDecoration(
-                color: Colors.white,
+                color: AppColors.white,
                 borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(50),
-                  topRight: Radius.circular(50),
+                  topLeft: Radius.circular(28),
+                  topRight: Radius.circular(28),
                 ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black12,
-                    blurRadius: 20,
-                    offset: Offset(0, -5),
-                  )
-                ],
               ),
               child: SingleChildScrollView(
                 physics: const BouncingScrollPhysics(),
-                padding: EdgeInsets.symmetric(horizontal: sw * 0.09),
+                padding: const EdgeInsets.symmetric(horizontal: 28),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-      
-                    _buildLogo(sh),
-
-                    SizedBox(height: sh * 0.03),
+                    SizedBox(height: size.height * 0.032),
+                    _buildLogo(size),
+                    SizedBox(height: size.height * 0.025),
 
                     Text(
                       '¿Olvidaste tu contraseña?',
                       textAlign: TextAlign.center,
                       style: GoogleFonts.montserrat(
-                        color: primaryBlue,
-                        fontWeight: FontWeight.bold,
-                        fontSize: sp(22, sw),
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
                       ),
                     ),
-
-                    SizedBox(height: sh * 0.02),
-
+                    const SizedBox(height: 6),
                     Text(
-                      'Por favor ingrese su correo electrónico para recibir un código de confirmación',
+                      'Ingresa tu correo para recibir\nun código de recuperación',
                       textAlign: TextAlign.center,
                       style: GoogleFonts.montserrat(
-                        color: Colors.black87,
-                        fontSize: sp(14, sw),
-                        fontWeight: FontWeight.w500,
+                        fontSize: 13,
+                        color: AppColors.textSecondary,
                       ),
                     ),
 
-                    SizedBox(height: sh * 0.04),
+                    SizedBox(height: size.height * 0.035),
 
-                    _buildEmailField(sw),
+                    // Email field
+                    TextField(
+                      keyboardType: TextInputType.emailAddress,
+                      style: GoogleFonts.montserrat(
+                          fontSize: 14, color: AppColors.textPrimary),
+                      decoration: const InputDecoration(
+                        hintText: 'Correo electrónico',
+                        prefixIcon: Icon(Icons.mail_outline_rounded),
+                      ),
+                    ),
 
-                    SizedBox(height: sh * 0.05),
+                    SizedBox(height: size.height * 0.03),
+
                     SizedBox(
-                      width: sw * 0.75,
-                      height: sp(55, sw),
+                      width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: () {
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: primaryBlue,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(30),
-                          ),
-                          elevation: 0,
-                        ),
-                        child: Text(
-                          'Confirma tu correo',
+                        onPressed: () {},
+                        child: const Text('Enviar código'),
+                      ),
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    GestureDetector(
+                      onTap: () => Navigator.pop(context),
+                      child: RichText(
+                        text: TextSpan(
                           style: GoogleFonts.montserrat(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: sp(16, sw),
+                            color: AppColors.textSecondary,
+                            fontSize: 13,
                           ),
+                          children: [
+                            const TextSpan(text: '¿Recuerdas tu contraseña? '),
+                            TextSpan(
+                              text: 'Inicia sesión',
+                              style: GoogleFonts.montserrat(
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
-                    const SizedBox(height: 30),
+
+                    const SizedBox(height: 28),
                   ],
                 ),
               ),
@@ -132,57 +156,28 @@ class OlvideContrasena extends StatelessWidget {
     );
   }
 
-  Widget _buildLogo(double sh) {
-    double logoSize = sh * 0.13;
-    if (logoSize > 110) logoSize = 110;
-
-    return Center(
-      child: Container(
-        width: logoSize,
-        height: logoSize,
-        decoration: const BoxDecoration(
-          color: Color(0xFFE8F1FF),
-          shape: BoxShape.circle,
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(15),
-          child: Image.asset('assets/movecare.png'),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildEmailField(double sw) {
+  Widget _buildLogo(Size size) {
+    final logoSize = size.height * 0.11;
     return Container(
+      width: logoSize,
+      height: logoSize,
       decoration: BoxDecoration(
-        color: fieldBlue,
+        color: AppColors.primaryLight,
         borderRadius: BorderRadius.circular(20),
       ),
-      child: TextField(
-        keyboardType: TextInputType.emailAddress,
-        style: GoogleFonts.montserrat(
-          color: primaryBlue,
-          fontWeight: FontWeight.w600,
-          fontSize: sp(15, sw),
-        ),
-        decoration: InputDecoration(
-          hintText: 'Correo',
-          hintStyle: GoogleFonts.montserrat(
-            color: primaryBlue.withOpacity(0.7),
-            fontSize: sp(15, sw),
-            fontWeight: FontWeight.w600,
-          ),
-          prefixIcon: UnconstrainedBox(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 15),
-              child: CircleAvatar(
-                radius: sp(12, sw),
-                backgroundColor: primaryBlue,
-              ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Image.asset(
+            'assets/movecare.png',
+            fit: BoxFit.contain,
+            errorBuilder: (c, e, s) => Icon(
+              Icons.local_hospital_rounded,
+              size: logoSize * 0.5,
+              color: AppColors.primary,
             ),
           ),
-          border: InputBorder.none,
-          contentPadding: EdgeInsets.symmetric(vertical: sp(18, sw)),
         ),
       ),
     );

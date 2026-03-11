@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../app_theme.dart';
 
 class ReporteIncidencia extends StatefulWidget {
   const ReporteIncidencia({super.key});
@@ -9,12 +10,6 @@ class ReporteIncidencia extends StatefulWidget {
 }
 
 class _ReporteIncidenciaState extends State<ReporteIncidencia> {
-  static const Color primaryBlue = Color(0xFF1559B2);
-  static const Color lightBlueBg = Color(0xFFB3D4FF);
-  static const Color cardBlue = Color(0xFFD6E8FF);
-  static const Color statusRed = Color(0xFFEF5350);
-  static const Color buttonLightBlue = Color(0xFF64A1F4);
-
   // Función de escalado idéntica a tus otras vistas
   double sp(double size, BuildContext context) {
     double sw = MediaQuery.of(context).size.width;
@@ -35,26 +30,26 @@ class _ReporteIncidenciaState extends State<ReporteIncidencia> {
     final sw = MediaQuery.of(context).size.width;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.white,
       body: Column(
         children: [
 
           Container(
-            height: 110,
+            height: 80,
             width: double.infinity,
-            color: lightBlueBg,
-            child: Stack( 
+            color: AppColors.primaryLight,
+            child: Stack(
               children: [
-               
+
                 Positioned(
                   top: 35,
                   left: 10,
                   child: IconButton(
-                    icon: const Icon(Icons.arrow_back_ios_new, color: primaryBlue, size: 20),
+                    icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.primary, size: 20),
                     onPressed: () => Navigator.pop(context),
                   ),
                 ),
-               
+
                 Align(
                   alignment: Alignment.bottomCenter,
                   child: Padding(
@@ -63,8 +58,8 @@ class _ReporteIncidenciaState extends State<ReporteIncidencia> {
                       'Bandeja de Reportes',
                       style: GoogleFonts.montserrat(
                         fontSize: sp(20, context),
-                        fontWeight: FontWeight.w900,
-                        color: const Color.fromARGB(255, 0, 0, 0),
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
                       ),
                     ),
                   ),
@@ -91,9 +86,9 @@ class _ReporteIncidenciaState extends State<ReporteIncidencia> {
       margin: const EdgeInsets.only(bottom: 20),
       padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
-        color: cardBlue,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: primaryBlue.withOpacity(0.3), width: 1),
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border, width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -105,12 +100,12 @@ class _ReporteIncidenciaState extends State<ReporteIncidencia> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: statusRed,
+                  color: AppColors.error,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
                   'URGENTE',
-                  style: mExtrabold(color: Colors.white, size: 10, context: context),
+                  style: mExtrabold(color: AppColors.white, size: 10, context: context),
                 ),
               )
             ],
@@ -120,13 +115,13 @@ class _ReporteIncidenciaState extends State<ReporteIncidencia> {
             'Fecha: 24 Octubre 2025',
             style: GoogleFonts.montserrat(fontSize: sp(12, context), fontWeight: FontWeight.w600),
           ),
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 10),
-            child: Divider(color: primaryBlue, thickness: 0.5),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            child: Divider(color: AppColors.border, thickness: 1),
           ),
           Text(
             'Descripción:',
-            style: mExtrabold(size: 13, context: context, color: primaryBlue),
+            style: mExtrabold(size: 13, context: context, color: AppColors.primary),
           ),
           const SizedBox(height: 5),
           Text(
@@ -136,9 +131,9 @@ class _ReporteIncidenciaState extends State<ReporteIncidencia> {
           const SizedBox(height: 15),
           Row(
             children: [
-              _actionBtn('Descartar', Colors.white, Colors.black54, context),
+              _actionBtn('Descartar', AppColors.white, AppColors.textSecondary, context),
               const SizedBox(width: 10),
-              _actionBtn('Bloquear', statusRed, Colors.white, context),
+              _actionBtn('Bloquear', AppColors.error, AppColors.white, context),
             ],
           )
         ],
@@ -155,7 +150,7 @@ class _ReporteIncidenciaState extends State<ReporteIncidencia> {
           foregroundColor: textColor,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(10),
-            side: bgColor == Colors.white ? const BorderSide(color: Colors.black26) : BorderSide.none,
+            side: bgColor == AppColors.white ? const BorderSide(color: AppColors.border) : BorderSide.none,
           ),
           elevation: 0,
           padding: const EdgeInsets.symmetric(vertical: 10),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../app_theme.dart';
 
 class MenuVistas extends StatelessWidget {
   const MenuVistas({super.key});
@@ -43,11 +44,11 @@ class MenuVistas extends StatelessWidget {
 
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F9FF),
+      backgroundColor: AppColors.surface,
       appBar: AppBar(
-        title: Text('MoveCare - Índice', 
+        title: Text('MoveCare - Índice',
           style: GoogleFonts.montserrat(fontWeight: FontWeight.bold, color: Colors.white)),
-        backgroundColor: const Color(0xFF1559B2),
+        backgroundColor: AppColors.primary,
         centerTitle: true,
         elevation: 0,
       ),
@@ -63,10 +64,10 @@ class MenuVistas extends StatelessWidget {
               leading: Container(
                 padding: const EdgeInsets.all(8),
                 decoration: const BoxDecoration(
-                  color: Color(0xFFB3D4FF),
+                  color: AppColors.primaryLight,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.ads_click, color: Color(0xFF1559B2)),
+                child: const Icon(Icons.ads_click, color: AppColors.primary),
               ),
               title: Text(
                 misRutas[index]['nombre']!,

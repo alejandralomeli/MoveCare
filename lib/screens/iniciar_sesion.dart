@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../services/auth/auth_service.dart';
 import '../core/storage/secure_storage.dart';
+import '../app_theme.dart';
+import '../core/utils/ui_helpers.dart';
 
 class IniciarSesion extends StatefulWidget {
   const IniciarSesion({super.key});
@@ -11,20 +13,16 @@ class IniciarSesion extends StatefulWidget {
 }
 
 class _IniciarSesionState extends State<IniciarSesion> {
-  static const Color primaryBlue = Color(0xFF1559B2);
-  static const Color lightInputBlue = Color(0xFFB3D4FF);
-  static const Color googleBtnBlue = Color(0xFFE1EBFD);
-  static const Color forgotPasswordRed = Color(0xFFE57373);
-
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-
   bool _loading = false;
+  bool _obscurePassword = true;
 
-  // Función de escalado responsive
-  double sp(double size, BuildContext context) {
-    double sw = MediaQuery.of(context).size.width;
-    return sw * (size / 375);
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
   }
 
   @override
@@ -32,93 +30,226 @@ class _IniciarSesionState extends State<IniciarSesion> {
     final size = MediaQuery.of(context).size;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.white,
       resizeToAvoidBottomInset: true,
       body: Stack(
         children: [
-          // Fondo superior
+          // Top image
           Positioned(
             top: 0,
             left: 0,
             right: 0,
-            height: size.height * 0.40,
-            child: Image.asset(
-              'assets/ruta.png',
-              fit: BoxFit.cover,
-              errorBuilder: (c, e, s) => Container(color: lightInputBlue),
+            height: size.height * 0.36,
+            child: Stack(
+              children: [
+                Image.asset(
+                  'assets/ruta.png',
+                  width: double.infinity,
+                  height: double.infinity,
+                  fit: BoxFit.cover,
+                  errorBuilder: (c, e, s) =>
+                      Container(color: AppColors.primaryLight),
+                ),
+                Container(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [Color(0x40000000), Color(0x00000000)],
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
 
-          // Botón de regreso (UI de main)
+          // Back button
           Positioned(
-            top: MediaQuery.of(context).padding.top + sp(10, context),
-            left: sp(10, context),
+            top: MediaQuery.of(context).padding.top + 4,
+            left: 4,
             child: IconButton(
-              icon: Icon(
-                Icons.arrow_back_ios_new,
-                color: primaryBlue,
-                size: sp(20, context),
-              ),
+              icon: const Icon(Icons.arrow_back_ios_new,
+                  color: AppColors.white, size: 20),
               onPressed: () => Navigator.pop(context),
             ),
           ),
 
-          // Contenedor blanco principal
+          // White bottom panel
           Align(
             alignment: Alignment.bottomCenter,
             child: Container(
               height: size.height * 0.72,
               width: double.infinity,
-              decoration: BoxDecoration(
-                color: Colors.white,
+              decoration: const BoxDecoration(
+                color: AppColors.white,
                 borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(sp(50, context)),
-                  topRight: Radius.circular(sp(50, context)),
+                  topLeft: Radius.circular(28),
+                  topRight: Radius.circular(28),
                 ),
-                boxShadow: const [
-                  BoxShadow(color: Colors.black12, blurRadius: 10, spreadRadius: 5)
-                ],
               ),
               child: SingleChildScrollView(
                 physics: const BouncingScrollPhysics(),
-                padding: EdgeInsets.symmetric(horizontal: sp(35, context)),
+                padding: EdgeInsets.symmetric(horizontal: sp(28, context)),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    SizedBox(height: size.height * 0.04),
-                    _buildLogo(size, context),
-                    SizedBox(height: size.height * 0.04),
-                    
-                    _buildTextField(
-                      context: context,
-                      hint: 'Correo',
-                      iconColor: primaryBlue,
-                      controller: _emailController,
-                      isPassword: false,
+                    SizedBox(height: size.height * 0.032),
+                    _buildLogo(size),
+                    SizedBox(height: size.height * 0.025),
+
+                    Text(
+                      'Bienvenido de vuelta',
+                      style: GoogleFonts.montserrat(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
+                      ),
                     ),
-                    
-                    SizedBox(height: sp(15, context)),
-                    
-                    _buildTextField(
-                      context: context,
-                      hint: 'Contraseña',
-                      iconColor: const Color(0xFF64A1F4),
-                      controller: _passwordController,
-                      isPassword: true,
+                    const SizedBox(height: 4),
+                    Text(
+                      'Inicia sesión para continuar',
+                      style: GoogleFonts.montserrat(
+                        fontSize: 13,
+                        color: AppColors.textSecondary,
+                      ),
                     ),
-                    
+
                     SizedBox(height: size.height * 0.03),
-                    
-                    _buildIngresarBtn(context),
-                    
-                    SizedBox(height: sp(20, context)),
-                    
-                    _buildGoogleBtn(size, context),
-                    
-                    SizedBox(height: sp(30, context)),
-                    
-                    _buildFooter(context),
-                    
-                    SizedBox(height: sp(30, context)),
+
+                    // Email field
+                    TextField(
+                      controller: _emailController,
+                      keyboardType: TextInputType.emailAddress,
+                      style: GoogleFonts.montserrat(
+                          fontSize: 14, color: AppColors.textPrimary),
+                      decoration: const InputDecoration(
+                        hintText: 'Correo electrónico',
+                        prefixIcon: Icon(Icons.mail_outline_rounded),
+                      ),
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    // Password field
+                    TextField(
+                      controller: _passwordController,
+                      obscureText: _obscurePassword,
+                      style: GoogleFonts.montserrat(
+                          fontSize: 14, color: AppColors.textPrimary),
+                      decoration: InputDecoration(
+                        hintText: 'Contraseña',
+                        prefixIcon:
+                            const Icon(Icons.lock_outline_rounded),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _obscurePassword
+                                ? Icons.visibility_off_outlined
+                                : Icons.visibility_outlined,
+                            color: AppColors.textSecondary,
+                            size: 20,
+                          ),
+                          onPressed: () => setState(
+                              () => _obscurePassword = !_obscurePassword),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 10),
+
+                    // Forgot password
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: GestureDetector(
+                        onTap: () => Navigator.pushNamed(
+                            context, '/olvide_contrasena'),
+                        child: Text(
+                          '¿Olvidé mi contraseña?',
+                          style: GoogleFonts.montserrat(
+                            color: AppColors.primary,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    SizedBox(height: size.height * 0.028),
+
+                    // Login button
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: _loading ? null : _login,
+                        child: _loading
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                    color: Colors.white, strokeWidth: 2),
+                              )
+                            : const Text('Ingresar'),
+                      ),
+                    ),
+
+                    const SizedBox(height: 14),
+
+                    // Google button
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: () {},
+                        icon: Image.asset(
+                          'assets/icono_google.png',
+                          height: 20,
+                          errorBuilder: (c, e, s) =>
+                              const Icon(Icons.g_mobiledata, size: 22),
+                        ),
+                        label: Text(
+                          'Continuar con Google',
+                          style: GoogleFonts.montserrat(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                          ),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.textPrimary,
+                          side: const BorderSide(color: AppColors.border),
+                          padding:
+                              const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    SizedBox(height: size.height * 0.035),
+
+                    // Footer
+                    GestureDetector(
+                      onTap: () =>
+                          Navigator.pushNamed(context, '/registro'),
+                      child: RichText(
+                        text: TextSpan(
+                          style: GoogleFonts.montserrat(
+                            color: AppColors.textSecondary,
+                            fontSize: 13,
+                          ),
+                          children: [
+                            const TextSpan(text: '¿No tienes cuenta? '),
+                            TextSpan(
+                              text: 'Regístrate',
+                              style: GoogleFonts.montserrat(
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 28),
                   ],
                 ),
               ),
@@ -129,182 +260,31 @@ class _IniciarSesionState extends State<IniciarSesion> {
     );
   }
 
-  Widget _buildLogo(Size size, BuildContext context) {
-    double logoSize = size.height * 0.15;
+  Widget _buildLogo(Size size) {
+    final logoSize = size.height * 0.11;
     return Container(
       width: logoSize,
       height: logoSize,
-      decoration: const BoxDecoration(shape: BoxShape.circle),
-      child: ClipOval(
-        child: Image.asset(
-          'assets/movecare.png',
-          fit: BoxFit.cover,
-          errorBuilder: (c, e, s) => CircleAvatar(
-            backgroundColor: lightInputBlue,
-            child: Icon(Icons.person, size: logoSize * 0.5, color: primaryBlue),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTextField({
-    required BuildContext context,
-    required String hint,
-    required Color iconColor,
-    required TextEditingController controller, // Restaurado de HEAD
-    bool isPassword = false,
-  }) {
-    return Container(
       decoration: BoxDecoration(
-        color: lightInputBlue,
-        borderRadius: BorderRadius.circular(sp(20, context)),
+        color: AppColors.primaryLight,
+        borderRadius: BorderRadius.circular(20),
       ),
-      child: TextField(
-        controller: controller, // Restaurado conexión
-        obscureText: isPassword,
-        style: GoogleFonts.montserrat(
-          fontWeight: FontWeight.w500,
-          fontSize: sp(14, context),
-        ),
-        decoration: InputDecoration(
-          hintText: hint,
-          hintStyle: GoogleFonts.montserrat(
-            color: primaryBlue,
-            fontWeight: FontWeight.w600,
-            fontSize: sp(14, context),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Image.asset(
+            'assets/movecare.png',
+            fit: BoxFit.contain,
+            errorBuilder: (c, e, s) => Icon(Icons.local_hospital_rounded,
+                size: logoSize * 0.5, color: AppColors.primary),
           ),
-          prefixIcon: Padding(
-            padding: EdgeInsets.all(sp(8, context)),
-            child: CircleAvatar(
-              radius: sp(15, context),
-              backgroundColor: iconColor,
-            ),
-          ),
-          border: InputBorder.none,
-          contentPadding: EdgeInsets.symmetric(vertical: sp(18, context)),
         ),
       ),
     );
   }
 
-  Widget _buildIngresarBtn(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      height: sp(55, context),
-      child: ElevatedButton(
-        onPressed: _loading ? null : _login,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: primaryBlue,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(sp(25, context)),
-          ),
-          elevation: 4,
-        ),
-        // Combinación: Estilo de main, Lógica de HEAD
-        child: _loading
-            ? SizedBox(
-                height: sp(24, context),
-                width: sp(24, context),
-                child: const CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-              )
-            : Text(
-                'Ingresar',
-                style: GoogleFonts.montserrat(
-                  fontSize: sp(18, context),
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-      ),
-    );
-  }
-
-  Widget _buildGoogleBtn(Size size, BuildContext context) {
-    return Container(
-      width: double.infinity,
-      height: sp(55, context),
-      decoration: BoxDecoration(
-        color: googleBtnBlue,
-        borderRadius: BorderRadius.circular(sp(25, context)),
-        boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 2, offset: Offset(0, 2))],
-      ),
-      child: InkWell(
-        onTap: () {
-          // Implementar login con Google
-        },
-        borderRadius: BorderRadius.circular(sp(25, context)),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Image.asset(
-              'assets/icono_google.png',
-              height: sp(24, context),
-              errorBuilder: (c, e, s) => Icon(Icons.g_mobiledata, size: sp(30, context)),
-            ),
-            SizedBox(width: sp(12, context)),
-            Text(
-              'Iniciar Sesión con Google',
-              style: GoogleFonts.montserrat(
-                color: primaryBlue,
-                fontWeight: FontWeight.bold,
-                fontSize: sp(14, context),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFooter(BuildContext context) {
-    return Column(
-      children: [
-        GestureDetector(
-          onTap: () {
-            // Usando rutas en español consistentes con HEAD
-            Navigator.pushNamed(context, '/registro'); 
-          },
-          child: RichText(
-            textAlign: TextAlign.center,
-            text: TextSpan(
-              style: GoogleFonts.montserrat(
-                color: Colors.black87,
-                fontSize: sp(14, context),
-              ),
-              children: [
-                const TextSpan(text: '¿No tienes cuenta? '),
-                TextSpan(
-                  text: 'Regístrate',
-                  style: GoogleFonts.montserrat(
-                    color: primaryBlue,
-                    fontWeight: FontWeight.bold,
-                    decoration: TextDecoration.underline,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        SizedBox(height: sp(15, context)),
-        GestureDetector(
-          onTap: () {
-             Navigator.pushNamed(context, '/olvide_contrasena');
-          },
-          child: Text(
-            'Olvidé mi contraseña',
-            style: GoogleFonts.montserrat(
-              color: forgotPasswordRed,
-              fontSize: sp(13, context),
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  // ================== LOGIN LOGIC ==================
+  // =================== LOGIC ===================
 
   Future<void> _login() async {
     final email = _emailController.text.trim();
@@ -316,9 +296,7 @@ class _IniciarSesionState extends State<IniciarSesion> {
     }
 
     setState(() => _loading = true);
-
     final result = await AuthService.login(email: email, password: password);
-
     setState(() => _loading = false);
 
     if (result['ok']) {
@@ -332,7 +310,7 @@ class _IniciarSesionState extends State<IniciarSesion> {
       } else if (rol == 'conductor') {
         Navigator.pushReplacementNamed(context, '/principal_conductor');
       } else if (rol == 'administrador') {
-        Navigator.pushReplacementNamed(context, '/gestion_usuarios');//TEMPORAL
+        Navigator.pushReplacementNamed(context, '/gestion_usuarios');
       } else {
         _showAlert('Error', 'Rol no reconocido');
       }
@@ -342,11 +320,14 @@ class _IniciarSesionState extends State<IniciarSesion> {
           ? error['detail'].toString()
           : error.toString();
 
-      if (errorMsg.contains('Debes verificar tu correo antes de iniciar sesión.')) {
+      if (errorMsg.contains(
+          'Debes verificar tu correo antes de iniciar sesión.')) {
+        if (!mounted) return;
         Navigator.pushReplacementNamed(context, '/confirmar-correo');
         return;
       }
 
+      if (!mounted) return;
       _showAlert('Error de inicio de sesión', errorMsg);
     }
   }
@@ -355,8 +336,10 @@ class _IniciarSesionState extends State<IniciarSesion> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: Text(title),
-        content: Text(message),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(title,
+            style: GoogleFonts.montserrat(fontWeight: FontWeight.w700)),
+        content: Text(message, style: GoogleFonts.montserrat(fontSize: 14)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),

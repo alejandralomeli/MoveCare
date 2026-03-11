@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../app_theme.dart';
+import 'widgets/mic_button.dart';
 
 class ViajeActualMapa extends StatefulWidget {
   const ViajeActualMapa({super.key});
@@ -8,32 +10,8 @@ class ViajeActualMapa extends StatefulWidget {
   State<ViajeActualMapa> createState() => _ViajeActualMapaState();
 }
 
-class _ViajeActualMapaState extends State<ViajeActualMapa> with TickerProviderStateMixin {
-  static const Color primaryBlue = Color(0xFF1559B2);
-  static const Color lightBlueBg = Color(0xFFB3D4FF);
-  static const Color cardBlue = Color(0xFFD6E8FF);
-  int _selectedIndex = 1;
+class _ViajeActualMapaState extends State<ViajeActualMapa> {
   bool _isVoiceActive = false;
-  late AnimationController _pulseController;
-  late Animation<double> _pulseAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-    _pulseController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1000),
-    );
-    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.15).animate(
-      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
-    );
-  }
-
-  @override
-  void dispose() {
-    _pulseController.dispose();
-    super.dispose();
-  }
 
   double sp(double size, double sw) => sw * (size / 375);
 
@@ -50,7 +28,7 @@ class _ViajeActualMapaState extends State<ViajeActualMapa> with TickerProviderSt
     final sw = MediaQuery.of(context).size.width;
 
     return Scaffold(
-      backgroundColor: lightBlueBg,
+      backgroundColor: AppColors.primaryLight,
       body: SafeArea(
         child: Column(
           children: [
@@ -60,7 +38,7 @@ class _ViajeActualMapaState extends State<ViajeActualMapa> with TickerProviderSt
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.arrow_back_ios_new, color: primaryBlue, size: 20),
+                    icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.primary, size: 20),
                     onPressed: () => Navigator.pop(context),
                   ),
                   Text('Viaje Actual', style: mBold(size: 20, sw: sw)),
@@ -73,14 +51,14 @@ class _ViajeActualMapaState extends State<ViajeActualMapa> with TickerProviderSt
               child: Container(
                 margin: EdgeInsets.symmetric(horizontal: sp(15, sw)),
                 decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(30),
+                  color: AppColors.white,
+                  borderRadius: BorderRadius.circular(20),
                   boxShadow: [
-                    BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 15)
+                    BoxShadow(color: Colors.black.withValues(alpha: 0.07), blurRadius: 8)
                   ],
                 ),
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(30),
+                  borderRadius: BorderRadius.circular(20),
                   child: Stack(
                     children: [
                       Positioned.fill(
@@ -97,17 +75,17 @@ class _ViajeActualMapaState extends State<ViajeActualMapa> with TickerProviderSt
                         child: Container(
                           padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 15),
                           decoration: BoxDecoration(
-                            color: primaryBlue.withOpacity(0.95),
+                            color: AppColors.primary.withValues(alpha: 0.95),
                             borderRadius: BorderRadius.circular(15),
                           ),
                           child: Row(
                             children: [
-                              const Icon(Icons.turn_right, color: Colors.white, size: 30),
+                              const Icon(Icons.turn_right, color: AppColors.white, size: 30),
                               const SizedBox(width: 10),
                               Expanded(
                                 child: Text(
                                   'En 300m gire a la derecha por Av. Central',
-                                  style: mBold(color: Colors.white, size: 13, sw: sw),
+                                  style: mBold(color: AppColors.white, size: 13, sw: sw),
                                 ),
                               ),
                             ],
@@ -118,26 +96,10 @@ class _ViajeActualMapaState extends State<ViajeActualMapa> with TickerProviderSt
                       Positioned(
                         top: 100,
                         right: 15,
-                        child: GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              _isVoiceActive = !_isVoiceActive;
-                              if (_isVoiceActive) {
-                                _pulseController.repeat(reverse: true);
-                              } else {
-                                _pulseController.stop();
-                                _pulseController.reset();
-                              }
-                            });
-                          },
-                          child: ScaleTransition(
-                            scale: _pulseAnimation,
-                            child: Image.asset(
-                              _isVoiceActive ? 'assets/escuchando.png' : 'assets/controlvoz.png',
-                              width: sp(60, sw),
-                              height: sp(60, sw),
-                            ),
-                          ),
+                        child: MicButton(
+                          isActive: _isVoiceActive,
+                          onTap: () => setState(() => _isVoiceActive = !_isVoiceActive),
+                          size: 52,
                         ),
                       ),
 
@@ -163,8 +125,8 @@ class _ViajeActualMapaState extends State<ViajeActualMapa> with TickerProviderSt
     return Container(
       padding: EdgeInsets.all(sp(15, sw)),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(color: Colors.black12, blurRadius: 10, offset: const Offset(0, -2))
         ],
@@ -179,7 +141,7 @@ class _ViajeActualMapaState extends State<ViajeActualMapa> with TickerProviderSt
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text('15 min', style: mBold(size: 22, color: Colors.green, sw: sw)),
-                  Text('4.2 km - Llegada 10:45', style: mBold(size: 13, color: Colors.grey, sw: sw)),
+                  Text('4.2 km - Llegada 10:45', style: mBold(size: 13, color: AppColors.textSecondary, sw: sw)),
                 ],
               ),
               GestureDetector(
@@ -187,10 +149,10 @@ class _ViajeActualMapaState extends State<ViajeActualMapa> with TickerProviderSt
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                   decoration: BoxDecoration(
-                    color: Colors.redAccent,
-                    borderRadius: BorderRadius.circular(15),
+                    color: AppColors.error,
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Text('DETENER', style: mBold(color: Colors.white, size: 12, sw: sw)),
+                  child: Text('DETENER', style: mBold(color: AppColors.white, size: 12, sw: sw)),
                 ),
               )
             ],
@@ -202,9 +164,9 @@ class _ViajeActualMapaState extends State<ViajeActualMapa> with TickerProviderSt
               const SizedBox(width: 10),
               Text('Juan Pérez', style: mBold(size: 14, sw: sw)),
               const Spacer(),
-              const Icon(Icons.message, color: primaryBlue),
+              const Icon(Icons.message, color: AppColors.primary),
               const SizedBox(width: 15),
-              const Icon(Icons.phone, color: primaryBlue),
+              const Icon(Icons.phone, color: AppColors.primary),
             ],
           )
         ],

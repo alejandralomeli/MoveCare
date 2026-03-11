@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../services/pagos/pagos_service.dart';
+import '../app_theme.dart';
 
 class MetodosPagoVista extends StatefulWidget {
   const MetodosPagoVista({super.key});
@@ -14,9 +15,6 @@ class _MetodosPagoVistaState extends State<MetodosPagoVista> {
   static const Color lightBlueBg = Color(0xFFB3D4FF);
   static const Color cardBlue = Color(0xFFD6E8FF);
   static const Color statusRed = Color(0xFFEF5350);
-  static const Color navBarBg = Color(0xFFD6E8FF);
-
-  int _selectedIndex = 3; 
 
   // Variables de estado para la BD
   List<dynamic> tarjetas = [];
@@ -194,7 +192,7 @@ class _MetodosPagoVistaState extends State<MetodosPagoVista> {
           ),
         ],
       ),
-      bottomNavigationBar: _buildCustomBottomNav(context),
+      bottomNavigationBar: const PassengerBottomNav(selectedIndex: 3),
     );
   }
 
@@ -251,53 +249,4 @@ class _MetodosPagoVistaState extends State<MetodosPagoVista> {
     );
   }
 
-  Widget _buildCustomBottomNav(BuildContext context) {
-    return Container(
-      height: sp(85, context), 
-      padding: EdgeInsets.symmetric(horizontal: sp(10, context)),
-      decoration: const BoxDecoration(
-        color: navBarBg,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          _navIcon(0, Icons.home, context),
-          _navIcon(1, Icons.location_on, context),
-          _navIcon(2, Icons.history, context),
-          _navIcon(3, Icons.person, context),
-        ],
-      ),
-    );
-  }
-
-  Widget _navIcon(int index, IconData icon, BuildContext context) {
-    bool active = _selectedIndex == index;
-    return GestureDetector(
-      onTap: () {
-        setState(() => _selectedIndex = index);
-        if(index == 0) Navigator.pop(context);
-      },
-      child: Container(
-        width: sp(45, context),
-        height: sp(45, context), 
-        decoration: BoxDecoration(
-          color: active ? primaryBlue : Colors.white,
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Icon(
-          icon, 
-          color: active ? Colors.white : primaryBlue, 
-          size: sp(26, context) 
-        ),
-      ),
-    );
-  }
 }

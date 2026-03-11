@@ -1,21 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../app_theme.dart';
 
 class Bienvenido extends StatelessWidget {
   const Bienvenido({super.key});
 
-  static const Color primaryBlue = Color(0xFF1559B2);
-
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
-    final bool isSmallScreen = size.height < 600;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFC5DFFF),
       body: Stack(
         children: [
-          // Fondo
+          // Background image
           Positioned.fill(
             child: Image.asset(
               'assets/ruta.png',
@@ -23,93 +20,124 @@ class Bienvenido extends StatelessWidget {
             ),
           ),
 
-          // Contenido Principal
-          SafeArea(
-            child: SingleChildScrollView(
-              child: SizedBox(
-                width: double.infinity,
-                // Usamos constraints para asegurar que ocupe al menos la pantalla
-                // pero permita scroll si es muy pequeña
-                height: size.height - MediaQuery.of(context).padding.top,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  children: [
-                    SizedBox(height: size.height * 0.22),
-
-                    // Logo Principal
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 40),
-                      child: Image.asset(
-                        'assets/movecare_principal.png',
-                        fit: BoxFit.contain,
-                        width: size.width * 0.75,
-                        errorBuilder: (c, e, s) => const Icon(Icons.image,
-                            size: 150, color: primaryBlue),
-                      ),
-                    ),
-
-                    SizedBox(height: size.height * 0.05),
-
-                    // Botones de Acción
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 10),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          _buildSimpleButton(
-                              context, 'Iniciar Sesión', '/iniciar_sesion', size),
-                          Padding(
-                            padding: EdgeInsets.symmetric(
-                                horizontal: size.width * 0.03),
-                            child: Text(
-                              '|',
-                              style: GoogleFonts.montserrat(
-                                color: primaryBlue,
-                                fontSize: isSmallScreen ? 24 : 30,
-                                fontWeight: FontWeight.w300,
-                              ),
-                            ),
-                          ),
-                          _buildSimpleButton(
-                              context, 'Registrarse', '/registro', size),
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(height: 20),
+          // Gradient overlay for readability
+          Positioned.fill(
+            child: Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Color(0x00000000),
+                    Color(0xCC000000),
                   ],
+                  stops: [0.35, 1.0],
                 ),
               ),
             ),
           ),
+
+          // Content
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 28),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  // Logo
+                  Image.asset(
+                    'assets/movecare_principal.png',
+                    width: size.width * 0.6,
+                    fit: BoxFit.contain,
+                    errorBuilder: (c, e, s) => Column(
+                      children: [
+                        const Icon(Icons.local_hospital_rounded,
+                            size: 72, color: AppColors.white),
+                        const SizedBox(height: 8),
+                        Text(
+                          'MoveCare',
+                          style: GoogleFonts.montserrat(
+                            color: AppColors.white,
+                            fontSize: 30,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  Text(
+                    'Tu movilidad, nuestra prioridad',
+                    style: GoogleFonts.montserrat(
+                      color: AppColors.white.withValues(alpha: 0.8),
+                      fontSize: 14,
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+
+                  SizedBox(height: size.height * 0.05),
+
+                  // Login button
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () =>
+                          Navigator.pushNamed(context, '/iniciar_sesion'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: AppColors.white,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: Text(
+                        'Iniciar Sesión',
+                        style: GoogleFonts.montserrat(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 15,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  // Register button
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton(
+                      onPressed: () =>
+                          Navigator.pushNamed(context, '/registro'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.white,
+                        side: BorderSide(
+                            color: AppColors.white.withValues(alpha: 0.6),
+                            width: 1.5),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: Text(
+                        'Crear cuenta',
+                        style: GoogleFonts.montserrat(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 15,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  SizedBox(height: size.height * 0.05),
+                ],
+              ),
+            ),
+          ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildSimpleButton(
-      BuildContext context, String text, String route, Size screenSize) {
-    double fontSize = screenSize.width * 0.035;
-    if (fontSize > 16) fontSize = 16;
-    if (fontSize < 12) fontSize = 12;
-
-    return ElevatedButton(
-      onPressed: () => Navigator.pushNamed(context, route),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: primaryBlue,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
-        padding: EdgeInsets.symmetric(
-            horizontal: screenSize.width * 0.05, vertical: 15),
-        elevation: 5,
-        shadowColor: Colors.black26,
-      ),
-      child: Text(
-        text,
-        style: GoogleFonts.montserrat(
-          color: Colors.white,
-          fontWeight: FontWeight.bold,
-          fontSize: fontSize,
-        ),
       ),
     );
   }

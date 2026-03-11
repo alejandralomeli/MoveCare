@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../services/auth/auth_service.dart';
+import '../app_theme.dart';
 
 class RegistroPasajero extends StatefulWidget {
   const RegistroPasajero({super.key});
@@ -12,21 +13,20 @@ class RegistroPasajero extends StatefulWidget {
 }
 
 class _RegistroPasajeroState extends State<RegistroPasajero> {
-  static const Color primaryBlue = Color(0xFF1559B2);
-  static const Color fieldBlue = Color(0xFFD6E8FF);
   final _nombreCtrl = TextEditingController();
   final _correoCtrl = TextEditingController();
   final _telefonoCtrl = TextEditingController();
-  final _direccionCtrl = TextEditingController(); 
+  final _direccionCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
   final _confirmCtrl = TextEditingController();
-  
+
   File? _imageFile;
   final ImagePicker _picker = ImagePicker();
 
   bool _obscurePass = true;
   bool _obscureConfirmPass = true;
   bool _loading = false;
+
   double sp(double size, BuildContext context) {
     double sw = MediaQuery.of(context).size.width;
     return sw * (size / 375);
@@ -61,13 +61,17 @@ class _RegistroPasajeroState extends State<RegistroPasajero> {
         child: Wrap(
           children: [
             ListTile(
-              leading: const Icon(Icons.photo_library, color: primaryBlue),
-              title: const Text('Fototeca'),
+              leading: const Icon(Icons.photo_library_rounded,
+                  color: AppColors.primary),
+              title: Text('Fototeca',
+                  style: GoogleFonts.montserrat(fontSize: 14)),
               onTap: () => _pickImage(ImageSource.gallery),
             ),
             ListTile(
-              leading: const Icon(Icons.camera_alt, color: primaryBlue),
-              title: const Text('Cámara'),
+              leading: const Icon(Icons.camera_alt_rounded,
+                  color: AppColors.primary),
+              title: Text('Cámara',
+                  style: GoogleFonts.montserrat(fontSize: 14)),
               onTap: () => _pickImage(ImageSource.camera),
             ),
           ],
@@ -79,31 +83,54 @@ class _RegistroPasajeroState extends State<RegistroPasajero> {
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
-    final sw = size.width;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.white,
       body: Stack(
         children: [
+          // Top image
           Positioned(
             top: 0,
             left: 0,
             right: 0,
-            height: size.height * 0.45,
-            child: Image.asset('assets/ruta.png', fit: BoxFit.cover),
+            height: size.height * 0.36,
+            child: Stack(
+              children: [
+                Image.asset(
+                  'assets/ruta.png',
+                  width: double.infinity,
+                  height: double.infinity,
+                  fit: BoxFit.cover,
+                  errorBuilder: (c, e, s) =>
+                      Container(color: AppColors.primaryLight),
+                ),
+                Container(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [Color(0x55000000), Color(0x00000000)],
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
 
+          // Back button
           Positioned(
-            top: MediaQuery.of(context).padding.top + 35,
-            left: 15,
+            top: MediaQuery.of(context).padding.top + 4,
+            left: 4,
             child: IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new, color: primaryBlue, size: 20),
+              icon: const Icon(Icons.arrow_back_ios_new,
+                  color: AppColors.white, size: 20),
               onPressed: () => Navigator.pop(context),
             ),
           ),
 
+          // Profile photo picker
           Positioned(
-            top: size.height * 0.10,
+            top: size.height * 0.12,
             left: 0,
             right: 0,
             child: Center(
@@ -112,32 +139,47 @@ class _RegistroPasajeroState extends State<RegistroPasajero> {
                 child: Stack(
                   children: [
                     Container(
-                      width: sp(110, context), 
-                      height: sp(110, context),
+                      width: 96,
+                      height: 96,
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: AppColors.primaryLight,
                         shape: BoxShape.circle,
-                        boxShadow: const [
-                          BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, 5))
-                        ],
-                        image: _imageFile != null 
-                          ? DecorationImage(image: FileImage(_imageFile!), fit: BoxFit.cover)
-                          : null,
-                      ),
-                      child: _imageFile == null 
-                        ? Padding(
-                            padding: const EdgeInsets.all(15),
-                            child: Image.asset('assets/movecare.png'),
+                        border: Border.all(color: AppColors.white, width: 3),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.15),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
                           )
-                        : null,
+                        ],
+                        image: _imageFile != null
+                            ? DecorationImage(
+                                image: FileImage(_imageFile!),
+                                fit: BoxFit.cover)
+                            : null,
+                      ),
+                      child: _imageFile == null
+                          ? Padding(
+                              padding: const EdgeInsets.all(20),
+                              child: Image.asset('assets/movecare.png',
+                                  fit: BoxFit.contain),
+                            )
+                          : null,
                     ),
                     Positioned(
                       bottom: 0,
                       right: 0,
-                      child: CircleAvatar(
-                        backgroundColor: primaryBlue,
-                        radius: 18,
-                        child: const Icon(Icons.camera_alt, color: Colors.white, size: 18),
+                      child: Container(
+                        width: 30,
+                        height: 30,
+                        decoration: BoxDecoration(
+                          color: AppColors.primary,
+                          shape: BoxShape.circle,
+                          border:
+                              Border.all(color: AppColors.white, width: 2),
+                        ),
+                        child: const Icon(Icons.camera_alt_rounded,
+                            color: AppColors.white, size: 14),
                       ),
                     ),
                   ],
@@ -146,86 +188,98 @@ class _RegistroPasajeroState extends State<RegistroPasajero> {
             ),
           ),
 
+          // White bottom panel
           Align(
             alignment: Alignment.bottomCenter,
             child: Container(
-              height: size.height * 0.68,
+              height: size.height * 0.70,
               width: double.infinity,
               decoration: const BoxDecoration(
-                color: Colors.white,
+                color: AppColors.white,
                 borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(50),
-                  topRight: Radius.circular(50),
+                  topLeft: Radius.circular(28),
+                  topRight: Radius.circular(28),
                 ),
               ),
               child: SingleChildScrollView(
                 physics: const BouncingScrollPhysics(),
-                padding: EdgeInsets.symmetric(horizontal: sw * 0.08), 
+                padding: const EdgeInsets.symmetric(horizontal: 28),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    SizedBox(height: sp(35, context)), 
+                    const SizedBox(height: 28),
                     Text(
-                      'Crea una cuenta de Pasajero',
+                      'Crear cuenta de Pasajero',
                       textAlign: TextAlign.center,
                       style: GoogleFonts.montserrat(
-                        color: primaryBlue,
-                        fontWeight: FontWeight.bold,
-                        fontSize: sp(18, context),
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
                       ),
                     ),
-                    SizedBox(height: sp(25, context)), 
+                    const SizedBox(height: 4),
+                    Text(
+                      'Completa tu información para continuar',
+                      style: GoogleFonts.montserrat(
+                        fontSize: 13,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
 
-                    _buildTextField(context, label: 'Nombre', iconColor: Colors.blue.shade800, ctrl: _nombreCtrl),
-                    _buildTextField(context, label: 'Correo electrónico', iconColor: Colors.blue.shade400, ctrl: _correoCtrl),
-                    _buildTextField(context, label: 'Teléfono de contacto', iconColor: Colors.blue.shade800, ctrl: _telefonoCtrl),
-                    _buildTextField(context, label: 'Dirección particular', iconColor: Colors.blue.shade400, ctrl: _direccionCtrl),
-
+                    _buildField(
+                        ctrl: _nombreCtrl,
+                        hint: 'Nombre completo',
+                        icon: Icons.person_outline_rounded),
+                    _buildField(
+                        ctrl: _correoCtrl,
+                        hint: 'Correo electrónico',
+                        icon: Icons.mail_outline_rounded,
+                        keyboardType: TextInputType.emailAddress),
+                    _buildField(
+                        ctrl: _telefonoCtrl,
+                        hint: 'Teléfono de contacto',
+                        icon: Icons.phone_outlined,
+                        keyboardType: TextInputType.phone),
+                    _buildField(
+                        ctrl: _direccionCtrl,
+                        hint: 'Dirección particular',
+                        icon: Icons.home_outlined),
                     _buildPasswordField(
-                      context: context,
-                      label: 'Contraseña',
-                      iconColor: Colors.blue.shade800,
                       ctrl: _passwordCtrl,
+                      hint: 'Contraseña',
                       isObscured: _obscurePass,
-                      onToggle: () => setState(() => _obscurePass = !_obscurePass),
+                      onToggle: () =>
+                          setState(() => _obscurePass = !_obscurePass),
                     ),
-
                     _buildPasswordField(
-                      context: context,
-                      label: 'Confirmación de contraseña',
-                      iconColor: Colors.blue.shade400,
                       ctrl: _confirmCtrl,
+                      hint: 'Confirmar contraseña',
                       isObscured: _obscureConfirmPass,
-                      onToggle: () => setState(() => _obscureConfirmPass = !_obscureConfirmPass),
+                      onToggle: () => setState(
+                          () => _obscureConfirmPass = !_obscureConfirmPass),
                     ),
 
-                    SizedBox(height: sp(25, context)),
+                    const SizedBox(height: 24),
 
                     SizedBox(
-                      width: sw * 0.75,
-                      height: 55,
+                      width: double.infinity,
                       child: ElevatedButton(
                         onPressed: _loading ? null : _register,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: primaryBlue,
-                          elevation: 3,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-                        ),
                         child: _loading
-                            ? const CircularProgressIndicator(color: Colors.white)
-                            : Text(
-                                'Registrarme',
-                                style: GoogleFonts.montserrat(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: sp(14, context), 
-                                ),
-                              ),
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                    color: Colors.white, strokeWidth: 2),
+                              )
+                            : const Text('Registrarme'),
                       ),
                     ),
 
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 16),
                     _buildFooter(context),
-                    SizedBox(height: sp(30, context)),
+                    const SizedBox(height: 28),
                   ],
                 ),
               ),
@@ -236,59 +290,52 @@ class _RegistroPasajeroState extends State<RegistroPasajero> {
     );
   }
 
-  Widget _buildTextField(BuildContext context, {required String label, required Color iconColor, required TextEditingController ctrl}) {
+  Widget _buildField({
+    required TextEditingController ctrl,
+    required String hint,
+    required IconData icon,
+    TextInputType keyboardType = TextInputType.text,
+  }) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Container(
-        decoration: BoxDecoration(color: fieldBlue, borderRadius: BorderRadius.circular(20)),
-        child: TextField(
-          controller: ctrl,
-          style: GoogleFonts.montserrat(fontSize: sp(14, context), color: Colors.black87),
-          decoration: InputDecoration(
-            hintText: label,
-            hintStyle: GoogleFonts.montserrat(
-              color: primaryBlue.withOpacity(0.7), 
-              fontSize: sp(13, context), 
-              fontWeight: FontWeight.w600
-            ),
-            prefixIcon: Padding(
-              padding: const EdgeInsets.all(12),
-              child: CircleAvatar(backgroundColor: iconColor, radius: 8),
-            ),
-            border: InputBorder.none,
-            contentPadding: const EdgeInsets.symmetric(vertical: 18), 
-          ),
+      padding: const EdgeInsets.only(bottom: 14),
+      child: TextField(
+        controller: ctrl,
+        keyboardType: keyboardType,
+        style: GoogleFonts.montserrat(
+            fontSize: 14, color: AppColors.textPrimary),
+        decoration: InputDecoration(
+          hintText: hint,
+          prefixIcon: Icon(icon),
         ),
       ),
     );
   }
 
-  Widget _buildPasswordField({required BuildContext context, required String label, required Color iconColor, required TextEditingController ctrl, required bool isObscured, required VoidCallback onToggle}) {
+  Widget _buildPasswordField({
+    required TextEditingController ctrl,
+    required String hint,
+    required bool isObscured,
+    required VoidCallback onToggle,
+  }) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Container(
-        decoration: BoxDecoration(color: fieldBlue, borderRadius: BorderRadius.circular(20)),
-        child: TextField(
-          controller: ctrl,
-          obscureText: isObscured,
-          style: GoogleFonts.montserrat(fontSize: sp(14, context), color: Colors.black87),
-          decoration: InputDecoration(
-            hintText: label,
-            hintStyle: GoogleFonts.montserrat(
-              color: primaryBlue.withOpacity(0.7), 
-              fontSize: sp(13, context), 
-              fontWeight: FontWeight.w600
+      padding: const EdgeInsets.only(bottom: 14),
+      child: TextField(
+        controller: ctrl,
+        obscureText: isObscured,
+        style: GoogleFonts.montserrat(
+            fontSize: 14, color: AppColors.textPrimary),
+        decoration: InputDecoration(
+          hintText: hint,
+          prefixIcon: const Icon(Icons.lock_outline_rounded),
+          suffixIcon: IconButton(
+            icon: Icon(
+              isObscured
+                  ? Icons.visibility_off_outlined
+                  : Icons.visibility_outlined,
+              color: AppColors.textSecondary,
+              size: 20,
             ),
-            prefixIcon: Padding(
-              padding: const EdgeInsets.all(12),
-              child: CircleAvatar(backgroundColor: iconColor, radius: 8),
-            ),
-            suffixIcon: IconButton(
-              icon: Icon(isObscured ? Icons.visibility_off : Icons.visibility, color: primaryBlue, size: 20),
-              onPressed: onToggle,
-            ),
-            border: InputBorder.none,
-            contentPadding: const EdgeInsets.symmetric(vertical: 18),
+            onPressed: onToggle,
           ),
         ),
       ),
@@ -296,15 +343,24 @@ class _RegistroPasajeroState extends State<RegistroPasajero> {
   }
 
   Widget _buildFooter(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Text('¿Ya tienes cuenta? ', style: GoogleFonts.montserrat(fontSize: sp(13, context))),
-        GestureDetector(
-          onTap: () => Navigator.pushNamed(context, '/iniciar_sesion'),
-          child: Text('Inicia Sesión', style: GoogleFonts.montserrat(color: primaryBlue, fontWeight: FontWeight.bold, fontSize: sp(13, context))),
+    return GestureDetector(
+      onTap: () => Navigator.pushNamed(context, '/iniciar_sesion'),
+      child: RichText(
+        text: TextSpan(
+          style: GoogleFonts.montserrat(
+              color: AppColors.textSecondary, fontSize: 13),
+          children: [
+            const TextSpan(text: '¿Ya tienes cuenta? '),
+            TextSpan(
+              text: 'Inicia Sesión',
+              style: GoogleFonts.montserrat(
+                color: AppColors.primary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 
@@ -332,9 +388,17 @@ class _RegistroPasajeroState extends State<RegistroPasajero> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: Text(title),
-        content: Text(msg),
-        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Aceptar'))],
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(title,
+            style: GoogleFonts.montserrat(fontWeight: FontWeight.w700)),
+        content: Text(msg, style: GoogleFonts.montserrat(fontSize: 14)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Aceptar'),
+          )
+        ],
       ),
     );
   }

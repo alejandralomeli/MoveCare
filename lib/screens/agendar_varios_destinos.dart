@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../app_theme.dart';
 import '../screens/widgets/modals/confirm_modal.dart';
+import 'widgets/mic_button.dart';
 import '../services/acompanante/acompanante_service.dart';
 import '../services/viaje/viaje_service.dart';
 import '../services/pagos/pagos_service.dart';
 import '../core/utils/auth_helper.dart';
-import 'package:latlong2/latlong.dart';
-import '../services/map/osm_service.dart';
-import '../screens/widgets/route_map_widget.dart';
 
 class AgendarVariosDestinos extends StatefulWidget {
   const AgendarVariosDestinos({super.key});
@@ -17,13 +16,6 @@ class AgendarVariosDestinos extends StatefulWidget {
 }
 
 class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
-  // --- CONSTANTES DE COLOR ---
-  static const Color primaryBlue = Color(0xFF1559B2);
-  static const Color lightBlueBg = Color(0xFFB3D4FF);
-  static const Color containerBlue = Color(0xFFD6E8FF);
-  static const Color accentBlue = Color(0xFF64A1F4);
-  static const Color labelBlue = Color(0xFF42A5F5);
-
   // --- VARIABLES DE ESTADO (LÓGICA) ---
   bool _isCreatingTrip = false;
   bool _isVoiceActive = false; // Estado para el header dinámico
@@ -33,20 +25,10 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
   final TextEditingController origenController = TextEditingController();
 
   // Fechas y Horas
-  DateTime _weekStart = DateTime.now();
+  DateTime _weekStart = DateTime.now().subtract(Duration(days: DateTime.now().weekday - 1));
   DateTime? _selectedDateTime;
   String? selectedHour;
   String? selectedMinute;
-
-  // Variables de Mapa y Ruta
-  LatLng? startCoord;
-  LatLng? endCoord;
-  List<LatLng> routePoints = [];
-  List<LatLng> paradasCoords = [];
-  double? distanciaTotalKm;
-  int? duracionMin;
-  String? polylineRuta;
-  bool calculandoRuta = false;
 
   // Listas para Dropdowns
   final List<String> hoursList = List.generate(
@@ -87,7 +69,6 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
   String? especificaciones;
   String? selectedPayment;
   int _cantidadDestinos = 2;
-  int _selectedIndex = 1;
 
   // ACOMPAÑANTES
   String? selectedAcompananteId;
@@ -100,16 +81,19 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
   List<Map<String, String>> tarjetas = [];
   bool cargandoTarjetas = false;
 
-  // --- ESTILOS DE TEXTO (RESPONSIVE) ---
+  // --- ESTILOS DE TEXTO ---
   TextStyle mSemibold(
     double sw, {
     Color color = Colors.black,
     double size = 14,
-  }) => GoogleFonts.montserrat(
-    color: color,
-    fontSize: (sw * (size / 375)),
-    fontWeight: FontWeight.w600,
-  );
+  }) {
+    double finalSize = sw < 350 ? size - 2 : size;
+    return GoogleFonts.montserrat(
+      color: color,
+      fontSize: finalSize,
+      fontWeight: FontWeight.w600,
+    );
+  }
 
   TextStyle oldMSemibold({Color color = Colors.black, double size = 14}) {
     return GoogleFonts.montserrat(
@@ -123,14 +107,17 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
     double sw, {
     Color color = Colors.black,
     double size = 18,
-  }) => GoogleFonts.montserrat(
-    color: color,
-    fontSize: (sw * (size / 375)),
-    fontWeight: FontWeight.w800,
-  );
+  }) {
+    double finalSize = sw < 350 ? size - 2 : size;
+    return GoogleFonts.montserrat(
+      color: color,
+      fontSize: finalSize,
+      fontWeight: FontWeight.w800,
+    );
+  }
 
   TextStyle labelStyle(double sw, {double size = 14}) => GoogleFonts.montserrat(
-    color: labelBlue,
+    color: AppColors.primary,
     fontSize: (sw * (size / 375)),
     fontWeight: FontWeight.w700,
   );
@@ -223,72 +210,12 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
     );
   }
 
-  Future<void> _calcularRutaMultiDestino() async {
-    final originText = origenController.text.trim();
-    final destTexts = _destinoControllers.map((c) => c.text.trim()).toList();
-
-    if (originText.isEmpty || destTexts.any((t) => t.isEmpty)) return;
-
-    setState(() => calculandoRuta = true);
-
-    try {
-      // 1. Obtenemos el origen
-      LatLng? start = await OsmService.obtenerCoordenadas(originText);
-      if (start == null) return;
-
-      List<LatLng> coordenadasRuta = [start];
-      List<LatLng> paradasTemp = [];
-
-      // 2. Procesamos cada destino con una pausa obligatoria para no bloquear Nominatim
-      for (String destText in destTexts) {
-        // 🔥 EL TEMPORIZADOR: Esperamos 1.5 segundos entre cada petición a la API
-        await Future.delayed(const Duration(milliseconds: 1500));
-
-        LatLng? dest = await OsmService.obtenerCoordenadas(destText);
-        if (dest != null) {
-          coordenadasRuta.add(dest);
-          paradasTemp.add(dest); // Guardamos la parada para dibujarle su pin
-        }
-      }
-
-      // 3. Calculamos la ruta
-      if (coordenadasRuta.length >= 2) {
-        final routeData = await OsmService.obtenerRutaMultiple(coordenadasRuta);
-
-        if (routeData != null && mounted) {
-          setState(() {
-            startCoord = start;
-            endCoord = coordenadasRuta.last;
-            routePoints = routeData['puntos'];
-            distanciaTotalKm = routeData['distancia'];
-            duracionMin = routeData['duracion'];
-            paradasCoords =
-                paradasTemp; // <--- Actualizamos la lista de paradas
-          });
-        }
-      }
-    } catch (e) {
-      print("Error calculando ruta multidestino: $e");
-    } finally {
-      if (mounted) setState(() => calculandoRuta = false);
-    }
-  }
-
-  Future<List<Map<String, dynamic>>> _buildDestinosPayload() async {
+  List<Map<String, dynamic>> _buildDestinosPayload() {
     final List<Map<String, dynamic>> destinos = [];
     for (int i = 0; i < _destinoControllers.length; i++) {
       final text = _destinoControllers[i].text.trim();
       if (text.isEmpty) throw Exception('Completa todos los destinos');
-
-      // Obtenemos las coordenadas de cada destino antes de guardarlo
-      LatLng? coords = await OsmService.obtenerCoordenadas(text);
-
-      destinos.add({
-        "direccion": text,
-        "lat": coords?.latitude,
-        "lng": coords?.longitude,
-        "orden": i + 1,
-      });
+      destinos.add({"direccion": text, "orden": i + 1});
     }
     return destinos;
   }
@@ -333,46 +260,15 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
       return;
     }
 
-    // Validamos que el mapa ya haya calculado la ruta
-    if (startCoord == null || endCoord == null || distanciaTotalKm == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Por favor espera a que se calcule la ruta en el mapa'),
-        ),
-      );
-      return;
-    }
-
     setState(() => _isCreatingTrip = true);
 
     try {
       final fechaHoraInicio = _buildFechaHoraInicio();
-
-      // 🔥 Ahora le ponemos 'await' para que termine de armar los destinos con lat/lng
-      final destinos = await _buildDestinosPayload();
-
-      // 🔥 ARMAMOS EL JSON DE LA RUTA PARA EL BACKEND
-      Map<String, dynamic> rutaPayload = {
-        "origen": {
-          "lat": startCoord!.latitude,
-          "lng": startCoord!.longitude,
-          "direccion": origenController.text.trim(),
-        },
-        "destino": {
-          // Usamos el ÚLTIMO destino como destino final para la ruta
-          "lat": endCoord!.latitude,
-          "lng": endCoord!.longitude,
-          "direccion": _destinoControllers.last.text.trim(),
-        },
-        "distancia_km": double.parse(distanciaTotalKm!.toStringAsFixed(2)),
-        "duracion_min": duracionMin ?? 0,
-        "polyline": "ruta_multidestino", // Texto indicativo
-      };
+      final destinos = _buildDestinosPayload();
 
       final viajeId = await ViajeService.crearViaje(
-        ruta: rutaPayload, // <--- AQUÍ LE PASAMOS LA RUTA
         puntoInicio: origenController.text.trim(),
-        destino: null,
+        destino: null, // Es null porque usamos 'destinos' (lista)
         destinos: destinos,
         checkVariosDestinos: true,
         fechaHoraInicio: fechaHoraInicio.toIso8601String(),
@@ -381,8 +277,6 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
         especificaciones: especificaciones,
         checkAcompanante: hasCompanion,
         idAcompanante: hasCompanion ? selectedAcompananteId : null,
-        costo: null,
-        duracionEstimada: duracionMin, // <--- TAMBIÉN ENVIAMOS LA DURACIÓN
       );
 
       if (!mounted) return;
@@ -401,13 +295,14 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
 
   // --- LÓGICA DE FECHAS ---
   String _dayLetter(DateTime d) {
-    const days = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
+    const days = ['L', 'M', 'Mi', 'J', 'V', 'S', 'D'];
     return days[d.weekday - 1];
   }
 
   List<DateTime> get _diasSemana =>
       List.generate(7, (i) => _weekStart.add(Duration(days: i)));
 
+  // --- BUILD UI ---
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
@@ -417,15 +312,15 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
         selectedPayment == 'Tarjeta de débito';
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.white,
       body: CustomScrollView(
         physics: const BouncingScrollPhysics(),
         slivers: [
           SliverPersistentHeader(
             pinned: true,
             delegate: _DynamicHeaderDelegate(
-              maxHeight: 110,
-              minHeight: 85,
+              maxHeight: 80,
+              minHeight: 80,
               isVoiceActive: _isVoiceActive,
               onVoiceTap: () =>
                   setState(() => _isVoiceActive = !_isVoiceActive),
@@ -448,7 +343,7 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
                     children: [
                       Text(
                         'Seleccionar fecha',
-                        style: mExtrabold(sw, size: 20),
+                        style: mSemibold(sw, color: AppColors.textPrimary, size: 18),
                       ),
                       Row(
                         children: [
@@ -474,15 +369,35 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
                   ),
                   const SizedBox(height: 10),
                   _buildDateRow(sw),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton.icon(
+                      onPressed: () async {
+                        final picked = await showDatePicker(
+                          context: context,
+                          initialDate: DateTime.now(),
+                          firstDate: DateTime.now(),
+                          lastDate: DateTime.now().add(const Duration(days: 365)),
+                        );
+                        if (picked != null) {
+                          setState(() => _weekStart = picked.subtract(Duration(days: picked.weekday - 1)));
+                        }
+                      },
+                      icon: const Icon(Icons.calendar_month_outlined, size: 16),
+                      label: const Text('Ver más'),
+                      style: TextButton.styleFrom(foregroundColor: AppColors.primary),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
 
                   // Formulario Principal
                   Container(
                     padding: EdgeInsets.all(sw * 0.05),
                     decoration: BoxDecoration(
-                      color:
-                          containerBlue, // O la variable que uses para el color
-                      borderRadius: BorderRadius.circular(30),
+                      color: AppColors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppColors.border, width: 1),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -515,15 +430,10 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
                         const SizedBox(height: 15),
                         Text('Lugar', style: mSemibold(sw)),
                         const SizedBox(height: 8),
-
-                        // ORIGEN
                         _buildZMGAutocomplete(
-                          hint: 'Ubicación actual',
-                          controller: origenController,
-                          sw: sw,
-                          onSelected: (String ubicacion) {
-                            _calcularRutaMultiDestino();
-                          },
+                          'Ubicación actual',
+                          origenController,
+                          sw,
                         ),
 
                         const SizedBox(height: 15),
@@ -534,7 +444,7 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
                                 'Cantidad de destinos',
                                 style: mSemibold(
                                   sw,
-                                  color: primaryBlue, // O la variable que uses
+                                  color: AppColors.primary,
                                   size: 12,
                                 ),
                               ),
@@ -548,32 +458,14 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
                           return Padding(
                             padding: const EdgeInsets.only(top: 8),
                             child: _buildZMGAutocomplete(
-                              hint: 'Parada ${index + 1}',
-                              controller: _destinoControllers[index],
-                              sw: sw,
-                              onSelected: (String ubicacion) {
-                                _calcularRutaMultiDestino();
-                              },
+                              'Parada ${index + 1}',
+                              _destinoControllers[index],
+                              sw,
                             ),
                           );
                         }),
 
-                        const SizedBox(height: 15),
-
-                        // 🔥 MAPA INTEGRADO AQUÍ 🔥
-                        RouteMapWidget(
-                          startCoord: startCoord,
-                          endCoord:
-                              endCoord, // En multidestino este suele ser el último punto
-                          routePoints:
-                              routePoints ?? [], // Manejo seguro de nulos
-                          paradas: paradasCoords,
-                          distanciaTotalKm: distanciaTotalKm,
-                          isLoading:
-                              calculandoRuta, // Pasamos el booleano que indica la carga
-                        ),
-                        const SizedBox(height: 15),
-
+                        const SizedBox(height: 10),
                         _buildOneDestinationButton(),
                         const SizedBox(height: 15),
                         _buildCompanionSection(sw),
@@ -592,7 +484,7 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
                         Center(
                           child: Text(
                             'Seleccionar forma de pago',
-                            style: mSemibold(sw, color: primaryBlue, size: 13),
+                            style: mSemibold(sw, color: AppColors.primary, size: 13),
                           ),
                         ),
                         const SizedBox(height: 8),
@@ -630,7 +522,7 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
           ),
         ],
       ),
-      bottomNavigationBar: _buildCustomBottomNav(sw),
+      bottomNavigationBar: const PassengerBottomNav(selectedIndex: 1),
     );
   }
 
@@ -642,16 +534,16 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
         onPressed: () {
           Navigator.pushNamed(context, '/agendar_viaje');
         },
-        icon: const Icon(Icons.alt_route, color: Colors.white),
+        icon: const Icon(Icons.alt_route, color: AppColors.white),
         label: Text(
           'Agendar un solo destino',
-          style: oldMSemibold(color: Colors.white),
+          style: oldMSemibold(color: AppColors.white),
         ),
         style: ElevatedButton.styleFrom(
-          backgroundColor: primaryBlue,
+          backgroundColor: AppColors.primary,
           minimumSize: const Size(260, 45),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(25),
+            borderRadius: BorderRadius.circular(14),
           ),
           elevation: 2,
         ),
@@ -660,76 +552,64 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
   }
 
   Widget _buildDateRow(double sw) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      physics: const BouncingScrollPhysics(),
-      child: Row(
-        children: _diasSemana.map((date) {
-          final isPast = date.isBefore(
-            DateTime.now().subtract(const Duration(days: 1)),
-          );
-          final isSelected =
-              _selectedDateTime != null &&
-              date.day == _selectedDateTime!.day &&
-              date.month == _selectedDateTime!.month;
+    return Row(
+      children: _diasSemana.map((date) {
+        final isPast = date.isBefore(
+          DateTime.now().subtract(const Duration(days: 1)),
+        );
+        final isSelected =
+            _selectedDateTime != null &&
+            date.day == _selectedDateTime!.day &&
+            date.month == _selectedDateTime!.month;
 
-          return GestureDetector(
+        return Expanded(
+          child: GestureDetector(
             onTap: isPast
                 ? null
                 : () => setState(() => _selectedDateTime = date),
             child: Opacity(
               opacity: isPast ? 0.4 : 1,
-              child: _dateItem(
-                _dayLetter(date),
-                date.day.toString(),
-                isSelected,
-                sw,
+              child: Container(
+                height: 65,
+                margin: const EdgeInsets.symmetric(horizontal: 3),
+                decoration: BoxDecoration(
+                  color: AppColors.primaryLight,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isSelected ? AppColors.primary : Colors.transparent,
+                    width: 2,
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 2),
+                      decoration: const BoxDecoration(
+                        color: AppColors.primary,
+                        borderRadius: BorderRadius.vertical(top: Radius.circular(10)),
+                      ),
+                      child: Text(
+                        _dayLetter(date),
+                        textAlign: TextAlign.center,
+                        style: mSemibold(sw, color: AppColors.white, size: 11),
+                      ),
+                    ),
+                    Expanded(
+                      child: Center(
+                        child: Text(
+                          date.day.toString(),
+                          style: mExtrabold(sw, color: AppColors.primary, size: 16),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          );
-        }).toList(),
-      ),
-    );
-  }
-
-  Widget _dateItem(String day, String num, bool isSelected, double sw) {
-    return Container(
-      width: sw * 0.155,
-      height: 75,
-      margin: const EdgeInsets.symmetric(horizontal: 4),
-      decoration: BoxDecoration(
-        color: const Color(0xFFE3F2FD),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isSelected ? primaryBlue : Colors.transparent,
-          width: 2,
-        ),
-      ),
-      child: Column(
-        children: [
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 2),
-            decoration: const BoxDecoration(
-              color: primaryBlue,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(10)),
-            ),
-            child: Text(
-              day,
-              textAlign: TextAlign.center,
-              style: mSemibold(sw, color: Colors.white, size: 11),
-            ),
           ),
-          Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(num, style: mExtrabold(sw, color: primaryBlue, size: 16)),
-              ],
-            ),
-          ),
-        ],
-      ),
+        );
+      }).toList(),
     );
   }
 
@@ -746,17 +626,17 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
               });
             }
           },
-          icon: const Icon(Icons.remove_circle, color: primaryBlue, size: 28),
+          icon: const Icon(Icons.remove_circle, color: AppColors.primary, size: 28),
         ),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 5),
           decoration: BoxDecoration(
-            color: primaryBlue,
+            color: AppColors.primary,
             borderRadius: BorderRadius.circular(12),
           ),
           child: Text(
             '$_cantidadDestinos',
-            style: mSemibold(sw, color: Colors.white, size: 16),
+            style: mSemibold(sw, color: AppColors.white, size: 16),
           ),
         ),
         IconButton(
@@ -768,85 +648,52 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
               });
             }
           },
-          icon: const Icon(Icons.add_circle, color: primaryBlue, size: 28),
+          icon: const Icon(Icons.add_circle, color: AppColors.primary, size: 28),
         ),
       ],
     );
   }
 
-  Widget _buildZMGAutocomplete({
-    required double sw,
-    required String hint,
-    required TextEditingController controller,
-    required Function(String) onSelected,
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 15),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Autocomplete<String>(
-        optionsBuilder: (TextEditingValue value) {
-          if (value.text.isEmpty) return const Iterable<String>.empty();
-          return zmgLocations.where(
-            (loc) => loc.toLowerCase().contains(value.text.toLowerCase()),
-          );
-        },
-        onSelected: (selection) {
-          controller.text = selection;
-          onSelected(selection);
-          FocusManager.instance.primaryFocus?.unfocus();
-        },
-        fieldViewBuilder:
-            (context, textController, focusNode, onFieldSubmitted) {
-              if (controller.text.isNotEmpty && textController.text.isEmpty) {
-                textController.text = controller.text;
-              }
-
-              return TextField(
-                controller: textController,
-                focusNode: focusNode,
-                textInputAction: TextInputAction.search,
-                onChanged: (value) {
-                  controller.text = value;
-                },
-                onSubmitted: (value) {
-                  if (value.isNotEmpty) {
-                    controller.text = value;
-                    onSelected(value);
-                    onFieldSubmitted();
-                  }
-                },
-
-                style: mSemibold(sw, color: primaryBlue),
-                decoration: InputDecoration(
-                  hintText: hint,
-                  hintStyle: mSemibold(sw, color: accentBlue, size: 13),
-                  icon: const Icon(
-                    Icons.location_on,
-                    color: primaryBlue,
-                    size: 20,
-                  ),
-                  border: InputBorder.none,
-                  suffixIcon: IconButton(
-                    icon: const Icon(
-                      Icons.search,
-                      color: primaryBlue,
-                      size: 20,
-                    ),
-                    onPressed: () {
-                      if (textController.text.isNotEmpty) {
-                        controller.text = textController.text;
-                        onSelected(textController.text);
-                        FocusManager.instance.primaryFocus?.unfocus();
-                      }
-                    },
-                  ),
-                ),
-              );
-            },
-      ),
+  Widget _buildZMGAutocomplete(
+    String hint,
+    TextEditingController controller,
+    double sw,
+  ) {
+    return Autocomplete<String>(
+      optionsBuilder: (v) => v.text.isEmpty
+          ? const Iterable.empty()
+          : zmgLocations.where(
+              (l) => l.toLowerCase().contains(v.text.toLowerCase()),
+            ),
+      onSelected: (v) => controller.text = v,
+      fieldViewBuilder: (c, ct, f, o) {
+        if (ct.text.isEmpty && controller.text.isNotEmpty)
+          ct.text = controller.text;
+        return TextField(
+          controller: ct,
+          focusNode: f,
+          onChanged: (text) => controller.text = text,
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: mSemibold(sw, color: AppColors.textSecondary, size: 13),
+            prefixIcon: const Icon(Icons.location_on_outlined, color: AppColors.primary, size: 20),
+            filled: true,
+            fillColor: AppColors.surface,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: const BorderSide(color: AppColors.border),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: const BorderSide(color: AppColors.border),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: const BorderSide(color: AppColors.primary, width: 2),
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -860,8 +707,9 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.border),
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
@@ -881,8 +729,9 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 15),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.border),
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
@@ -912,15 +761,16 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 15),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.border),
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
           value: v,
           hint: Row(
             children: [
-              Icon(i, color: primaryBlue, size: 20),
+              Icon(i, color: AppColors.primary, size: 20),
               const SizedBox(width: 10),
               Text(h, style: labelStyle(sw, size: 13)),
             ],
@@ -991,15 +841,15 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
           context,
           '/registro_acompanante',
         ).then((_) => _cargarAcompanantes()),
-        icon: const Icon(Icons.person_add, size: 18, color: primaryBlue),
+        icon: const Icon(Icons.person_add, size: 18, color: AppColors.primary),
         label: Text(
           "Registrar nuevo acompañante",
-          style: mSemibold(sw, color: primaryBlue),
+          style: mSemibold(sw, color: AppColors.primary),
         ),
         style: OutlinedButton.styleFrom(
-          side: const BorderSide(color: primaryBlue),
+          side: const BorderSide(color: AppColors.primary),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(14),
           ),
         ),
       ),
@@ -1014,15 +864,15 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
           context,
           '/registro_tarjeta',
         ).then((_) => _cargarTarjetas()),
-        icon: const Icon(Icons.add_card, color: Colors.white, size: 18),
+        icon: const Icon(Icons.add_card, color: AppColors.white, size: 18),
         label: Text(
           "Registrar Tarjeta",
-          style: mSemibold(sw, color: Colors.white),
+          style: mSemibold(sw, color: AppColors.white),
         ),
         style: ElevatedButton.styleFrom(
-          backgroundColor: accentBlue,
+          backgroundColor: AppColors.primary,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(14),
           ),
           elevation: 0,
         ),
@@ -1035,12 +885,12 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
       children: [
         Checkbox(
           value: hasCompanion,
-          activeColor: primaryBlue,
+          activeColor: AppColors.primary,
           onChanged: (v) => setState(() => hasCompanion = v!),
         ),
         Text(
           'Registrar acompañante',
-          style: mSemibold(sw, color: accentBlue, size: 13),
+          style: mSemibold(sw, color: AppColors.primary, size: 13),
         ),
       ],
     );
@@ -1050,17 +900,17 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
       decoration: BoxDecoration(
-        color: accentBlue,
-        borderRadius: BorderRadius.circular(20),
+        color: AppColors.primary,
+        borderRadius: BorderRadius.circular(14),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.info_outline, color: Colors.white, size: 20),
+          const Icon(Icons.info_outline, color: AppColors.white, size: 20),
           const SizedBox(width: 8),
           Text(
             'Ingresa los datos para agendar',
-            style: mSemibold(sw, color: Colors.white, size: 12),
+            style: mSemibold(sw, color: AppColors.white, size: 12),
           ),
         ],
       ),
@@ -1073,15 +923,16 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
         ElevatedButton(
           onPressed: () {},
           style: ElevatedButton.styleFrom(
-            backgroundColor: primaryBlue,
-            minimumSize: Size(sw * 0.6, 48),
+            backgroundColor: AppColors.primary,
+            elevation: 0,
+            minimumSize: Size(sw * 0.55, 44),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(25),
+              borderRadius: BorderRadius.circular(10),
             ),
           ),
           child: Text(
             'Mostrar estimación',
-            style: mSemibold(sw, color: Colors.white, size: 16),
+            style: mSemibold(sw, color: AppColors.white, size: 13),
           ),
         ),
         const SizedBox(height: 15),
@@ -1093,7 +944,7 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
                 padding: const EdgeInsets.symmetric(horizontal: 5),
                 child: _actionBtn(
                   'Agendar viaje',
-                  accentBlue,
+                  const Color.fromARGB(255, 46, 195, 38),
                   sw,
                   () => showConfirmModal(
                     context: context,
@@ -1108,7 +959,7 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
                 padding: const EdgeInsets.symmetric(horizontal: 5),
                 child: _actionBtn(
                   'Cancelar',
-                  accentBlue,
+                  const Color.fromARGB(255, 219, 26, 26),
                   sw,
                   () => Navigator.pushReplacementNamed(
                     context,
@@ -1128,52 +979,18 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
       onPressed: onTap,
       style: ElevatedButton.styleFrom(
         backgroundColor: c,
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        elevation: 0,
+        padding: const EdgeInsets.symmetric(vertical: 11),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
       child: Text(
         l,
         textAlign: TextAlign.center,
-        style: mSemibold(sw, color: Colors.white, size: 12),
+        style: mSemibold(sw, color: AppColors.white, size: 12),
       ),
     );
   }
 
-  Widget _buildCustomBottomNav(double sw) {
-    return Container(
-      height: sw * 0.2,
-      decoration: const BoxDecoration(color: containerBlue),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          _navIcon(0, Icons.home),
-          _navIcon(1, Icons.location_on),
-          _navIcon(2, Icons.history),
-          _navIcon(3, Icons.person),
-        ],
-      ),
-    );
-  }
-
-  Widget _navIcon(int i, IconData ic) {
-    bool a = _selectedIndex == i;
-    return GestureDetector(
-      onTap: () {
-        setState(() => _selectedIndex = i);
-        if (i == 0)
-          Navigator.pushReplacementNamed(context, '/principal_pasajero');
-        // Agregar otras rutas aquí si es necesario
-      },
-      child: Container(
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          color: a ? primaryBlue : Colors.white,
-          shape: BoxShape.circle,
-        ),
-        child: Icon(ic, color: a ? Colors.white : primaryBlue, size: 28),
-      ),
-    );
-  }
 }
 
 // --- CLASES AUXILIARES DEL HEADER DINÁMICO ---
@@ -1199,14 +1016,42 @@ class _DynamicHeaderDelegate extends SliverPersistentHeaderDelegate {
     double shrinkOffset,
     bool overlapsContent,
   ) {
-    final double percent = shrinkOffset / maxHeight;
-    final double opacity = 1.0 - percent.clamp(0.0, 1.0);
-
-    return _VoicePulseWrapper(
-      maxHeight: maxHeight,
-      opacity: opacity,
-      isVoiceActive: isVoiceActive,
-      onVoiceTap: onVoiceTap,
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Container(
+          height: maxHeight,
+          width: double.infinity,
+          decoration: const BoxDecoration(color: AppColors.primaryLight),
+          child: Center(
+            child: Text(
+              'Agenda tu viaje',
+              style: GoogleFonts.montserrat(
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textPrimary,
+              ),
+            ),
+          ),
+        ),
+        Positioned(
+          left: 10,
+          bottom:20,
+          child: IconButton(
+            icon: const Icon(
+              Icons.arrow_back_ios_new,
+              color: AppColors.primary,
+              size: 20,
+            ),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+        ),
+        Positioned(
+          right: 20,
+          bottom: -20,
+          child: MicButton(isActive: isVoiceActive, onTap: onVoiceTap, size: 42),
+        ),
+      ],
     );
   }
 
@@ -1216,123 +1061,4 @@ class _DynamicHeaderDelegate extends SliverPersistentHeaderDelegate {
   double get minExtent => minHeight;
   @override
   bool shouldRebuild(covariant _DynamicHeaderDelegate oldDelegate) => true;
-}
-
-class _VoicePulseWrapper extends StatefulWidget {
-  final double maxHeight;
-  final double opacity;
-  final bool isVoiceActive;
-  final VoidCallback onVoiceTap;
-
-  const _VoicePulseWrapper({
-    required this.maxHeight,
-    required this.opacity,
-    required this.isVoiceActive,
-    required this.onVoiceTap,
-  });
-
-  @override
-  State<_VoicePulseWrapper> createState() => _VoicePulseWrapperState();
-}
-
-class _VoicePulseWrapperState extends State<_VoicePulseWrapper>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _animation;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1000),
-    );
-    _animation = Tween<double>(
-      begin: 1.0,
-      end: 1.2,
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
-    if (widget.isVoiceActive) _controller.repeat(reverse: true);
-  }
-
-  @override
-  void didUpdateWidget(covariant _VoicePulseWrapper oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.isVoiceActive) {
-      _controller.repeat(reverse: true);
-    } else {
-      _controller.stop();
-      _controller.value = 0;
-    }
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        Container(
-          height: widget.maxHeight,
-          width: double.infinity,
-          decoration: const BoxDecoration(color: Color(0xFFB3D4FF)),
-          child: Opacity(
-            opacity: widget.opacity,
-            child: Center(
-              child: Padding(
-                padding: const EdgeInsets.only(top: 5),
-                child: Text(
-                  'Agenda tu viaje',
-                  style: GoogleFonts.montserrat(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.black,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-        Positioned(
-          left: 10,
-          bottom: 35,
-          child: IconButton(
-            icon: const Icon(
-              Icons.arrow_back_ios_new,
-              color: Color(0xFF1559B2),
-              size: 20,
-            ),
-            onPressed: () => Navigator.of(context).pop(),
-          ),
-        ),
-        Positioned(
-          right: 20,
-          bottom: -25,
-          child: GestureDetector(
-            onTap: widget.onVoiceTap,
-            child: ScaleTransition(
-              scale: _animation,
-              child: Image.asset(
-                widget.isVoiceActive
-                    ? 'assets/escuchando.png'
-                    : 'assets/controlvoz.png',
-                height: 65,
-                width: 65,
-                errorBuilder: (c, e, s) => const CircleAvatar(
-                  backgroundColor: Color(0xFF1559B2),
-                  radius: 32,
-                  child: Icon(Icons.mic, color: Colors.white, size: 30),
-                ),
-                fit: BoxFit.contain,
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
 }
