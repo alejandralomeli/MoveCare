@@ -474,93 +474,89 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
 
   Widget _bottomSheetContent(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.fromLTRB(16, 0, 16, 20),
-      decoration: BoxDecoration(
-        color: AppColors.primary,
-        borderRadius: BorderRadius.circular(28),
+      padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 32),
+      decoration: const BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 28),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Barra de arrastre
+          // Pill indicador
           Container(
             width: 40,
             height: 4,
-            margin: const EdgeInsets.only(bottom: 20),
             decoration: BoxDecoration(
-              color: AppColors.white.withValues(alpha: 0.4),
+              color: AppColors.border,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
+          const SizedBox(height: 24),
 
           Text(
-            'Tipo de Viaje',
+            'Tipo de viaje',
             style: GoogleFonts.montserrat(
-              fontSize: 22,
-              fontWeight: FontWeight.w900,
-              color: AppColors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            '¿Cuántos destinos tiene tu viaje?',
+            style: GoogleFonts.montserrat(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textSecondary,
             ),
           ),
           const SizedBox(height: 28),
 
-          // BOTÓN 1: Un destino -> /agendar_viaje
+          // BOTÓN 1: Un destino
           SizedBox(
             width: double.infinity,
-            height: 52,
+            height: 50,
             child: ElevatedButton(
               onPressed: () {
                 Navigator.pop(context);
                 Navigator.pushNamed(context, '/agendar_viaje');
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.white,
-                foregroundColor: AppColors.primary,
+                backgroundColor: AppColors.primary,
+                foregroundColor: AppColors.white,
                 elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
               child: Text(
                 'Un destino',
-                style: GoogleFonts.montserrat(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.primary,
-                ),
+                style: GoogleFonts.montserrat(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.white),
               ),
             ),
           ),
 
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
 
-          // BOTÓN 2: Varios destinos -> /agendar_varios_destinos
+          // BOTÓN 2: Varios destinos
           SizedBox(
             width: double.infinity,
-            height: 52,
+            height: 50,
             child: OutlinedButton(
               onPressed: () {
                 Navigator.pop(context);
                 Navigator.pushNamed(context, '/agendar_varios_destinos');
               },
               style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.white,
-                side: const BorderSide(color: AppColors.white, width: 2),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
+                foregroundColor: AppColors.primary,
+                side: const BorderSide(color: AppColors.primary, width: 1.5),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
               child: Text(
                 'Dos o más destinos',
-                style: GoogleFonts.montserrat(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.white,
-                ),
+                style: GoogleFonts.montserrat(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.primary),
               ),
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 8),
         ],
       ),
     );

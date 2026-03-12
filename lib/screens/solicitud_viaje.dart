@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../app_theme.dart';
-import 'widgets/mic_button.dart';
 
 class SolicitudViaje extends StatefulWidget {
   final String? idViaje;
@@ -16,46 +15,77 @@ class _SolicitudViajeState extends State<SolicitudViaje> {
   bool _isVoiceActive = false;
 
   // --- PANEL DE ESTADO (ACEPTADO / RECHAZADO) ---
-  void _mostrarPanelEstado(BuildContext context, String mensaje, String imagen) {
+  void _mostrarPanelEstado(BuildContext context, String mensaje, {bool esAceptado = true}) {
+    final Color accentColor = esAceptado ? const Color(0xFF16A34A) : AppColors.error;
+
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (context) {
         return Container(
-          height: MediaQuery.of(context).size.height * 0.45,
-          width: double.infinity,
-          decoration: BoxDecoration(
-            color: AppColors.primaryLight.withValues(alpha: 0.9),
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(40)),
+          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 32),
+          decoration: const BoxDecoration(
+            color: AppColors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
           ),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
             children: [
+              // Pill indicador
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.border,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 28),
+
+              // Mensaje
               Text(
                 mensaje,
+                textAlign: TextAlign.center,
                 style: GoogleFonts.montserrat(
-                  fontSize: 28,
-                  fontWeight: FontWeight.w900,
-                  color: AppColors.textPrimary,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                  color: accentColor,
                 ),
               ),
-              const SizedBox(height: 30),
+
+              const SizedBox(height: 8),
+
+              Text(
+                esAceptado
+                    ? 'El pasajero ha sido notificado'
+                    : 'La solicitud ha sido rechazada',
+                style: GoogleFonts.montserrat(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+
+              const SizedBox(height: 28),
+
               SizedBox(
-                height: 180,
-                width: 180,
-                child: Image.asset(
-                  'assets/$imagen',
-                  fit: BoxFit.contain,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Icon(
-                      imagen == 'aceptado.png' ? Icons.check_circle : Icons.cancel,
-                      size: 120,
-                      color: AppColors.primary,
-                    );
-                  },
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: accentColor,
+                    foregroundColor: AppColors.white,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: Text('Continuar',
+                      style: GoogleFonts.montserrat(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.white)),
                 ),
               ),
+
+              const SizedBox(height: 8),
             ],
           ),
         );
@@ -247,10 +277,10 @@ class _SolicitudViajeState extends State<SolicitudViaje> {
     return Row(
       children: [
         Expanded(child: _btn('Aceptar', const Color(0xFF16A34A),
-            () => _mostrarPanelEstado(context, '¡Viaje Aceptado!', 'aceptado.png'))),
+            () => _mostrarPanelEstado(context, '¡Viaje Aceptado!', esAceptado: true))),
         const SizedBox(width: 14),
         Expanded(child: _btn('Rechazar', AppColors.error,
-            () => _mostrarPanelEstado(context, '¡Viaje Rechazado!', 'rechazado.png'))),
+            () => _mostrarPanelEstado(context, '¡Viaje Rechazado!', esAceptado: false))),
       ],
     );
   }
