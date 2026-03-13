@@ -3,11 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:latlong2/latlong.dart'; 
+import 'package:latlong2/latlong.dart';
 
 // Widgets propios
 import 'widgets/modals/viaje_detalles_modal.dart';
-import 'widgets/home_map_preview.dart'; 
+import 'widgets/home_map_preview.dart';
 import '../providers/user_provider.dart';
 import '../services/home/home_service.dart';
 import '../core/utils/auth_helper.dart';
@@ -19,7 +19,8 @@ class PrincipalConductor extends StatefulWidget {
   State<PrincipalConductor> createState() => _PrincipalConductorState();
 }
 
-class _PrincipalConductorState extends State<PrincipalConductor> with TickerProviderStateMixin {
+class _PrincipalConductorState extends State<PrincipalConductor>
+    with TickerProviderStateMixin {
   // Paleta de colores oficial
   static const Color primaryBlue = Color(0xFF1559B2);
   static const Color lightBlueBg = Color(0xFFB3D4FF);
@@ -41,7 +42,10 @@ class _PrincipalConductorState extends State<PrincipalConductor> with TickerProv
   @override
   void initState() {
     super.initState();
-    _pulseController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1000));
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1000),
+    );
     _pulseAnimation = Tween<double>(begin: 1.0, end: 1.2).animate(
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
@@ -78,14 +82,19 @@ class _PrincipalConductorState extends State<PrincipalConductor> with TickerProv
   }
 
   void _buildCalendarDates(DateTime baseDate) {
-    _calendarDates = List.generate(5, (i) => baseDate.add(Duration(days: i - 2)));
+    _calendarDates = List.generate(
+      5,
+      (i) => baseDate.add(Duration(days: i - 2)),
+    );
     _selectedDateNum = baseDate.day.toString();
   }
 
   // --- ACCIONES ---
   Future<void> _hacerLlamada(String? telefono) async {
     if (telefono == null || telefono.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Teléfono no disponible")));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Teléfono no disponible")));
       return;
     }
     final Uri launchUri = Uri(scheme: 'tel', path: telefono);
@@ -95,13 +104,19 @@ class _PrincipalConductorState extends State<PrincipalConductor> with TickerProv
   }
 
   TextStyle mBold({Color color = Colors.black, double size = 14}) {
-    return GoogleFonts.montserrat(color: color, fontSize: size, fontWeight: FontWeight.bold);
+    return GoogleFonts.montserrat(
+      color: color,
+      fontSize: size,
+      fontWeight: FontWeight.bold,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     if (_loadingHome) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator(color: primaryBlue)));
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator(color: primaryBlue)),
+      );
     }
 
     final user = context.watch<UserProvider>().user;
@@ -123,9 +138,9 @@ class _PrincipalConductorState extends State<PrincipalConductor> with TickerProv
                   const SizedBox(height: 25),
                   Text('Viaje actual', style: mBold(size: 18)),
                   const SizedBox(height: 10),
-                  _buildCurrentTripCard(), 
+                  _buildCurrentTripCard(),
                   const SizedBox(height: 20),
-                  _buildRouteSection(), 
+                  _buildRouteSection(), // 🔥 Aquí va el mapa actualizado y el botón
                   const SizedBox(height: 25),
                   Text('Próximos viajes', style: mBold(size: 18)),
                   const SizedBox(height: 15),
@@ -154,14 +169,17 @@ class _PrincipalConductorState extends State<PrincipalConductor> with TickerProv
         Container(height: 120, width: double.infinity, color: lightBlueBg),
         SafeArea(
           child: Padding(
-            padding: EdgeInsets.fromLTRB(20, 20, 20, 0),
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
             child: Row(
               children: [
                 CircleAvatar(
                   radius: 48,
                   backgroundImage: (user != null && user.fotoPerfil.isNotEmpty)
-                      ? MemoryImage(base64Decode(user.fotoPerfil.split(',').last))
-                      : const AssetImage('assets/conductor.png') as ImageProvider,
+                      ? MemoryImage(
+                          base64Decode(user.fotoPerfil.split(',').last),
+                        )
+                      : const AssetImage('assets/conductor.png')
+                            as ImageProvider,
                 ),
                 const SizedBox(width: 15),
                 Expanded(
@@ -169,7 +187,10 @@ class _PrincipalConductorState extends State<PrincipalConductor> with TickerProv
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text('Bienvenido!', style: mBold(size: 26)),
-                      Text(user?.nombre ?? 'Conductor', style: mBold(size: 20, color: Colors.black87)),
+                      Text(
+                        user?.nombre ?? 'Conductor',
+                        style: mBold(size: 20, color: Colors.black87),
+                      ),
                       _buildBadgeStatus(),
                     ],
                   ),
@@ -179,15 +200,24 @@ class _PrincipalConductorState extends State<PrincipalConductor> with TickerProv
           ),
         ),
         Positioned(
-          top: 90, right: 20,
+          top: 90,
+          right: 20,
           child: GestureDetector(
             onTap: () => setState(() {
               _isVoiceActive = !_isVoiceActive;
-              _isVoiceActive ? _pulseController.repeat(reverse: true) : _pulseController.reset();
+              _isVoiceActive
+                  ? _pulseController.repeat(reverse: true)
+                  : _pulseController.reset();
             }),
             child: ScaleTransition(
               scale: _pulseAnimation,
-              child: Image.asset(_isVoiceActive ? 'assets/escuchando.png' : 'assets/controlvoz.png', width: 65, height: 65),
+              child: Image.asset(
+                _isVoiceActive
+                    ? 'assets/escuchando.png'
+                    : 'assets/controlvoz.png',
+                width: 65,
+                height: 65,
+              ),
             ),
           ),
         ),
@@ -199,8 +229,13 @@ class _PrincipalConductorState extends State<PrincipalConductor> with TickerProv
     if (_viajeProximo == null) {
       return Container(
         padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(color: cardBlue, borderRadius: BorderRadius.circular(30)),
-        child: Center(child: Text("Sin viajes próximos", style: mBold(color: primaryBlue))),
+        decoration: BoxDecoration(
+          color: cardBlue,
+          borderRadius: BorderRadius.circular(30),
+        ),
+        child: Center(
+          child: Text("Sin viajes próximos", style: mBold(color: primaryBlue)),
+        ),
       );
     }
 
@@ -209,16 +244,30 @@ class _PrincipalConductorState extends State<PrincipalConductor> with TickerProv
 
     return Container(
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(color: cardBlue, borderRadius: BorderRadius.circular(30)),
+      decoration: BoxDecoration(
+        color: cardBlue,
+        borderRadius: BorderRadius.circular(30),
+      ),
       child: Column(
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Expanded(child: Text('Hoy - ${fecha.day}/${fecha.month}\nPasajero: ${_viajeProximo!['nombre_pasajero']}', style: mBold(size: 15))),
+              Expanded(
+                child: Text(
+                  'Hoy - ${fecha.day}/${fecha.month}\nPasajero: ${_viajeProximo!['nombre_pasajero']}',
+                  style: mBold(size: 15),
+                ),
+              ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
-                decoration: BoxDecoration(color: primaryBlue, borderRadius: BorderRadius.circular(20)),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 15,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: primaryBlue,
+                  borderRadius: BorderRadius.circular(20),
+                ),
                 child: Text(hora, style: mBold(color: Colors.white, size: 14)),
               ),
             ],
@@ -227,9 +276,21 @@ class _PrincipalConductorState extends State<PrincipalConductor> with TickerProv
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Expanded(child: Text(_viajeProximo!['punto_inicio'] ?? 'Origen', textAlign: TextAlign.center, style: mBold(color: primaryBlue, size: 13))),
+              Expanded(
+                child: Text(
+                  _viajeProximo!['punto_inicio'] ?? 'Origen',
+                  textAlign: TextAlign.center,
+                  style: mBold(color: primaryBlue, size: 13),
+                ),
+              ),
               const Icon(Icons.arrow_forward, color: Colors.red, size: 24),
-              Expanded(child: Text(_viajeProximo!['destino'] ?? 'Destino', textAlign: TextAlign.center, style: mBold(color: primaryBlue, size: 13))),
+              Expanded(
+                child: Text(
+                  _viajeProximo!['destino'] ?? 'Destino',
+                  textAlign: TextAlign.center,
+                  style: mBold(color: primaryBlue, size: 13),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 20),
@@ -240,13 +301,20 @@ class _PrincipalConductorState extends State<PrincipalConductor> with TickerProv
                   context: context,
                   isScrollControlled: true,
                   backgroundColor: Colors.transparent,
-                  builder: (context) => ViajeDetallesModal(viaje: _viajeProximo!, esConductor: true),
+                  builder: (context) => ViajeDetallesModal(
+                    viaje: _viajeProximo!,
+                    esConductor: true,
+                  ),
                 );
               }),
               const SizedBox(width: 10),
-              _expandedBtn('Contactar', primaryBlue, () => _hacerLlamada(_viajeProximo!['telefono_pasajero'])),
+              _expandedBtn(
+                'Contactar',
+                primaryBlue,
+                () => _hacerLlamada(_viajeProximo!['telefono_pasajero']),
+              ),
             ],
-          )
+          ),
         ],
       ),
     );
@@ -255,27 +323,36 @@ class _PrincipalConductorState extends State<PrincipalConductor> with TickerProv
   Widget _expandedBtn(String label, Color color, VoidCallback onTap) {
     return Expanded(
       child: ElevatedButton(
-        style: ElevatedButton.styleFrom(backgroundColor: color, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: color,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
+          ),
+        ),
         onPressed: onTap,
-        child: Text(label, style: mBold(color: Colors.white, size: 12), textAlign: TextAlign.center),
+        child: Text(
+          label,
+          style: mBold(color: Colors.white, size: 12),
+          textAlign: TextAlign.center,
+        ),
       ),
     );
   }
 
   Widget _buildRouteSection() {
-    // Si tu backend manda coordenadas, las usamos. Si no, mandamos nulo para el centro por defecto.
-    LatLng? start;
-    LatLng? end;
-    if (_viajeProximo != null && _viajeProximo!['lat_inicio'] != null) {
-      start = LatLng(_viajeProximo!['lat_inicio'], _viajeProximo!['lng_inicio']);
-      end = LatLng(_viajeProximo!['lat_destino'], _viajeProximo!['lng_destino']);
-    }
+    final latLngConductorActual = const LatLng(20.676667, -103.3475);
 
     return HomeMapPreview(
-      startCoord: start,
-      endCoord: end,
-      routePoints: const [], // Puedes integrar un servicio de rutas aquí después
-      onOpenRoute: () => Navigator.pushReplacementNamed(context, '/viaje_actual'),
+      viajeProximo: _viajeProximo,
+      ubicacionConductor: latLngConductorActual,
+      onOpenRoute: () {
+        final idViaje = _viajeProximo!['id_viaje'] ?? _viajeProximo!['id'];
+        Navigator.pushNamed(
+          context,
+          '/viaje_actual',
+          arguments: {'id_viaje': idViaje},
+        );
+      },
     );
   }
 
@@ -283,24 +360,36 @@ class _PrincipalConductorState extends State<PrincipalConductor> with TickerProv
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       physics: const BouncingScrollPhysics(),
-      child: Row(children: _calendarDates.map((date) => _calendarDay(date)).toList()),
+      child: Row(
+        children: _calendarDates.map((date) => _calendarDay(date)).toList(),
+      ),
     );
   }
 
   Widget _calendarDay(DateTime date) {
     bool isSelected = _selectedDateNum == date.day.toString();
     return Container(
-      width: 65, margin: const EdgeInsets.symmetric(horizontal: 5),
+      width: 65,
+      margin: const EdgeInsets.symmetric(horizontal: 5),
       decoration: BoxDecoration(
-        color: Colors.white, borderRadius: BorderRadius.circular(15),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(15),
         border: isSelected ? Border.all(color: primaryBlue, width: 2) : null,
       ),
       child: Column(
         children: [
           Container(
-            width: double.infinity, padding: const EdgeInsets.symmetric(vertical: 5),
-            decoration: const BoxDecoration(color: primaryBlue, borderRadius: BorderRadius.vertical(top: Radius.circular(13))),
-            child: Text(['D','L','M','M','J','V','S'][date.weekday % 7], textAlign: TextAlign.center, style: mBold(color: Colors.white, size: 12)),
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 5),
+            decoration: const BoxDecoration(
+              color: primaryBlue,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(13)),
+            ),
+            child: Text(
+              ['D', 'L', 'M', 'M', 'J', 'V', 'S'][date.weekday % 7],
+              textAlign: TextAlign.center,
+              style: mBold(color: Colors.white, size: 12),
+            ),
           ),
           const SizedBox(height: 8),
           Text(date.day.toString(), style: mBold(color: primaryBlue, size: 16)),
@@ -312,22 +401,33 @@ class _PrincipalConductorState extends State<PrincipalConductor> with TickerProv
 
   Widget _buildHistorySection() {
     if (_historialViajes.isEmpty) return const Text("Sin historial");
-    return Column(children: _historialViajes.take(3).map((v) => _historyCard(v)).toList());
+    return Column(
+      children: _historialViajes.take(3).map((v) => _historyCard(v)).toList(),
+    );
   }
 
   Widget _historyCard(dynamic viaje) {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(15),
-      decoration: BoxDecoration(borderRadius: BorderRadius.circular(20), border: Border.all(color: primaryBlue.withOpacity(0.3))),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: primaryBlue.withOpacity(0.3)),
+      ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(viaje['nombre_pasajero'] ?? 'Pasajero', style: mBold(color: primaryBlue)),
-              Text(viaje['destino'] ?? 'Destino', style: mBold(size: 12, color: Colors.grey)),
+              Text(
+                viaje['nombre_pasajero'] ?? 'Pasajero',
+                style: mBold(color: primaryBlue),
+              ),
+              Text(
+                viaje['destino'] ?? 'Destino',
+                style: mBold(size: 12, color: Colors.grey),
+              ),
             ],
           ),
           IconButton(
@@ -336,9 +436,10 @@ class _PrincipalConductorState extends State<PrincipalConductor> with TickerProv
               context: context,
               isScrollControlled: true,
               backgroundColor: Colors.transparent,
-              builder: (context) => ViajeDetallesModal(viaje: viaje, esConductor: true),
+              builder: (context) =>
+                  ViajeDetallesModal(viaje: viaje, esConductor: true),
             ),
-          )
+          ),
         ],
       ),
     );
@@ -348,7 +449,10 @@ class _PrincipalConductorState extends State<PrincipalConductor> with TickerProv
     return Container(
       margin: const EdgeInsets.only(top: 5),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(color: buttonLightBlue, borderRadius: BorderRadius.circular(20)),
+      decoration: BoxDecoration(
+        color: buttonLightBlue,
+        borderRadius: BorderRadius.circular(20),
+      ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -362,7 +466,8 @@ class _PrincipalConductorState extends State<PrincipalConductor> with TickerProv
 
   Widget _buildCustomBottomNav(BuildContext context) {
     return Container(
-      height: 70, decoration: const BoxDecoration(color: cardBlue),
+      height: 70,
+      decoration: const BoxDecoration(color: cardBlue),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
@@ -382,15 +487,25 @@ class _PrincipalConductorState extends State<PrincipalConductor> with TickerProv
         if (active) return;
         String route = '';
         switch (index) {
-          case 0: route = '/principal_conductor'; break;
-          case 2: route = '/viajes_conductor'; break;
-          case 3: route = '/mi_perfil_conductor'; break;
+          case 0:
+            route = '/principal_conductor';
+            break;
+          case 2:
+            route = '/viajes_conductor';
+            break;
+          case 3:
+            route = '/mi_perfil_conductor';
+            break;
         }
         if (route.isNotEmpty) Navigator.pushReplacementNamed(context, route);
       },
       child: Container(
-        width: 45, height: 45,
-        decoration: BoxDecoration(color: active ? primaryBlue : Colors.white, shape: BoxShape.circle),
+        width: 45,
+        height: 45,
+        decoration: BoxDecoration(
+          color: active ? primaryBlue : Colors.white,
+          shape: BoxShape.circle,
+        ),
         child: Icon(icon, color: active ? Colors.white : primaryBlue, size: 25),
       ),
     );

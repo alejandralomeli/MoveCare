@@ -232,7 +232,7 @@ class _CompletarPerfilPasajeroState extends State<CompletarPerfilPasajero>
       final base64Anverso = base64Encode(_ineAnversoBytes!);
       final base64Reverso = base64Encode(_ineReversoBytes!);
 
-      final exito = await ValidacionService.enviarValidacionINE(
+      final exito = await ValidacionService.enviarValidacionDocumentos(
         ineFrenteBase64: base64Anverso,
         ineReversoBase64: base64Reverso,
       );

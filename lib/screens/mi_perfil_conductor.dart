@@ -168,12 +168,12 @@ class _MiPerfilConductorState extends State<MiPerfilConductor> {
                           context,
                           onTap: () => Navigator.pushNamed(context, '/completar_perfil_conductor'),
                         ),
-                        _profileItem(
-                          Icons.bar_chart,
-                          "Mis Métricas y Ganancias",
-                          context,
-                          onTap: () => print("Navegar a Métricas"),
-                        ),
+                        // _profileItem(
+                        //   Icons.bar_chart,
+                        //   "Mis Métricas y Ganancias",
+                        //   context,
+                        //   onTap: () => print("Navegar a Métricas"),
+                        // ),
                         _profileItem(
                           Icons.history,
                           "Historial de Viajes",

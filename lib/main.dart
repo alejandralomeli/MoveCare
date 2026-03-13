@@ -110,9 +110,8 @@ class MyApp extends StatelessWidget {
         '/historial_viajes_conductor': (context) => const HistorialViajesConductor(), 
         '/viajes_conductor': (context) => const SolicitudesViajesConductor(),
         //'/solicitud_viaje': (context) => const SolicitudViaje(), Listo, pero la ruta ya no es necesaria
-
-        '/viaje_actual': (context) => const ViajeActualMapa(), //Pendiente
-        '/completar_perfil_conductor': (context) => const CompletarPerfilConductor(), //Pendiente
+        '/viaje_actual': (context) => const ViajeActualMapa(), //Pendeinte IA para calcular tiempo y distancia
+        '/completar_perfil_conductor': (context) => const CompletarPerfilConductor(), 
 
         // Módulo Administrativo
         '/reporte_incidencia': (context) => const ReporteIncidencia(), //Pendiente
