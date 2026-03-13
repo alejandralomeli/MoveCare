@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../app_theme.dart';
 
 class GestionUsuarios extends StatefulWidget {
   const GestionUsuarios({super.key});
@@ -9,12 +10,6 @@ class GestionUsuarios extends StatefulWidget {
 }
 
 class _GestionUsuariosState extends State<GestionUsuarios> {
-  static const Color primaryBlue = Color(0xFF1559B2);
-  static const Color lightBlueBg = Color(0xFFB3D4FF);
-  static const Color cardBlue = Color(0xFFD6E8FF);
-  static const Color statusRed = Color(0xFFEF5350);
-  static const Color buttonLightBlue = Color(0xFF64A1F4);
-
   double sp(double size, BuildContext context) {
     double sw = MediaQuery.of(context).size.width;
     double res = sw * (size / 375);
@@ -34,22 +29,24 @@ class _GestionUsuariosState extends State<GestionUsuarios> {
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text('Rechazar a $usuario', style: mExtrabold(size: 18, context: context, color: primaryBlue)),
+        title: Text('Rechazar a $usuario', style: mExtrabold(size: 18, context: context, color: AppColors.primary)),
         content: TextField(
           maxLines: 3,
           decoration: InputDecoration(
             hintText: 'Motivo del rechazo...',
             filled: true,
-            fillColor: Colors.white,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: const BorderSide(color: primaryBlue)),
+            fillColor: AppColors.surface,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: AppColors.border)),
+            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: AppColors.border)),
+            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: AppColors.primary, width: 2)),
           ),
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: statusRed, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
             onPressed: () => Navigator.pop(context),
-            child: Text('Confirmar', style: mExtrabold(color: Colors.white, size: 12, context: context)),
+            child: Text('Confirmar', style: mExtrabold(color: AppColors.white, size: 12, context: context)),
           ),
         ],
       ),
@@ -63,20 +60,20 @@ class _GestionUsuariosState extends State<GestionUsuarios> {
     return DefaultTabController(
       length: 2,
       child: Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.white,
         body: Column(
           children: [
             Container(
-              height: 135,
+              height: 80,
               width: double.infinity,
-              color: lightBlueBg,
+              color: AppColors.primaryLight,
               child: Stack(
                 children: [
                   Positioned(
                     top: 35,
                     left: 10,
                     child: IconButton(
-                      icon: const Icon(Icons.arrow_back_ios_new, color: primaryBlue, size: 20),
+                      icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.primary, size: 20),
                       onPressed: () => Navigator.pop(context),
                     ),
                   ),
@@ -86,15 +83,15 @@ class _GestionUsuariosState extends State<GestionUsuarios> {
                       padding: const EdgeInsets.only(top: 0),
                       child: Text(
                         'Gestión de Usuarios',
-                        style: GoogleFonts.montserrat(fontSize: sp(20, context), fontWeight: FontWeight.w900, color: const Color.fromARGB(255, 0, 0, 0)),
+                        style: GoogleFonts.montserrat(fontSize: sp(20, context), fontWeight: FontWeight.w900, color: AppColors.textPrimary),
                       ),
                     ),
                   ),
                   Align(
                     alignment: Alignment.bottomCenter,
                     child: TabBar(
-                      indicatorColor: primaryBlue,
-                      labelColor: primaryBlue,
+                      indicatorColor: AppColors.primary,
+                      labelColor: AppColors.primary,
                       unselectedLabelColor: Colors.black54,
                       labelStyle: mExtrabold(size: 13, context: context),
                       tabs: const [Tab(text: 'Conductores'), Tab(text: 'Pasajeros')],
@@ -124,12 +121,16 @@ class _GestionUsuariosState extends State<GestionUsuarios> {
       itemBuilder: (context, index) => Container(
         margin: const EdgeInsets.only(bottom: 15),
         padding: const EdgeInsets.all(15),
-        decoration: BoxDecoration(color: cardBlue, borderRadius: BorderRadius.circular(20), border: Border.all(color: primaryBlue.withOpacity(0.1))),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: AppColors.border),
+        ),
         child: Column(
           children: [
             Row(
               children: [
-                CircleAvatar(backgroundColor: Colors.white, child: Icon(tipo == 'Conductor' ? Icons.directions_car : Icons.person, color: primaryBlue)),
+                CircleAvatar(backgroundColor: AppColors.white, child: Icon(tipo == 'Conductor' ? Icons.directions_car : Icons.person, color: AppColors.primary)),
                 const SizedBox(width: 15),
                 Expanded(
                   child: Column(
@@ -140,15 +141,15 @@ class _GestionUsuariosState extends State<GestionUsuarios> {
                     ],
                   ),
                 ),
-                const Icon(Icons.arrow_forward_ios, size: 14, color: primaryBlue),
+                const Icon(Icons.arrow_forward_ios, size: 14, color: AppColors.primary),
               ],
             ),
             const Divider(height: 25),
             Row(
               children: [
-                _btn('Rechazar', Colors.white, statusRed, context, () => _mostrarDialogoRechazo('$tipo #${index + 1}')),
+                _btn('Rechazar', AppColors.white, AppColors.error, context, () => _mostrarDialogoRechazo('$tipo #${index + 1}')),
                 const SizedBox(width: 10),
-                _btn('Aceptar', primaryBlue, Colors.white, context, () {}),
+                _btn('Aceptar', AppColors.primary, AppColors.white, context, () {}),
               ],
             )
           ],
@@ -161,7 +162,14 @@ class _GestionUsuariosState extends State<GestionUsuarios> {
     return Expanded(
       child: ElevatedButton(
         onPressed: onTap,
-        style: ElevatedButton.styleFrom(backgroundColor: bg, elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10), side: bg == Colors.white ? const BorderSide(color: statusRed) : BorderSide.none)),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: bg,
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+            side: bg == AppColors.white ? BorderSide(color: AppColors.error) : BorderSide.none,
+          ),
+        ),
         child: Text(label, style: mExtrabold(color: txt, size: 11, context: context)),
       ),
     );

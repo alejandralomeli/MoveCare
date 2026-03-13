@@ -1,12 +1,17 @@
 import 'dart:io';
-import 'dart:typed_data';
-import 'dart:convert';
+import 'dart:convert'; // Necesario para base64
+import 'dart:typed_data'; // Necesario para Uint8List
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart'; // Añadido para context.read
+
+// Importaciones de tu proyecto
+import '../app_theme.dart';
+import 'widgets/mic_button.dart';
+// Asumo que tienes estos imports en tu archivo original para los servicios
+import '../services/auth/auth_service.dart';
 import '../services/auth/validacion_service.dart';
-import '../services/auth/auth_service.dart'; // 🔥 IMPORTAMOS EL AUTH SERVICE
-import 'package:provider/provider.dart';
 import '../providers/user_provider.dart';
 
 class CompletarPerfilPasajero extends StatefulWidget {
@@ -17,69 +22,63 @@ class CompletarPerfilPasajero extends StatefulWidget {
       _CompletarPerfilPasajeroState();
 }
 
-class _CompletarPerfilPasajeroState extends State<CompletarPerfilPasajero>
-    with SingleTickerProviderStateMixin {
-  static const Color primaryBlue = Color(0xFF1559B2);
-  static const Color lightBlueBg = Color(0xFFB3D4FF);
-  static const Color accentBlue = Color(0xFF64A1F4);
-  static const Color statusRed = Color(0xFFEF5350);
-  static const Color statusGreen = Color(0xFF4CAF50);
-
+class _CompletarPerfilPasajeroState extends State<CompletarPerfilPasajero> with SingleTickerProviderStateMixin {
+  // --- ESTADO LÓGICO Y VISUAL ---
   final Set<String> _selectedNeeds = {};
-  int _selectedIndex = 3;
   bool _isListening = false;
   bool _isInit = false;
 
-  late AnimationController _pulseController;
-  
-  Uint8List? _ineAnversoBytes;
-  Uint8List? _ineReversoBytes;
-  Uint8List? _fotoPerfilBytes; 
+  File? _ineAnverso;
+  File? _ineReverso;
   final ImagePicker _picker = ImagePicker();
 
   bool _isSavingIne = false;
-  bool _isSavingProfile = false; // 🔥 NUEVO: Estado para el guardado de perfil
+  bool _isSavingProfile = false;
+
+  // Variables para la lógica de Provider/Guardado que faltaban declarar
+  Uint8List? _fotoPerfilBytes;
+  Uint8List? _ineAnversoBytes;
+  Uint8List? _ineReversoBytes;
+  late AnimationController _pulseController;
 
   final TextEditingController _nombreController = TextEditingController();
   final TextEditingController _telefonoController = TextEditingController();
   final TextEditingController _direccionController = TextEditingController();
   DateTime? _fechaNacimiento;
 
+  // --- CICLO DE VIDA ---
   @override
   void initState() {
     super.initState();
-    _pulseController =
-        AnimationController(
-          vsync: this,
-          duration: const Duration(milliseconds: 600),
-          lowerBound: 1.0,
-          upperBound: 1.15,
-        )..addStatusListener((status) {
-          if (status == AnimationStatus.completed) {
-            _pulseController.reverse();
-          } else if (status == AnimationStatus.dismissed && _isListening) {
-            _pulseController.forward();
-          }
-        });
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+      lowerBound: 1.0,
+      upperBound: 1.15,
+    )..addStatusListener((status) {
+        if (status == AnimationStatus.completed) {
+          _pulseController.reverse();
+        } else if (status == AnimationStatus.dismissed && _isListening) {
+          _pulseController.forward();
+        }
+      });
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (!_isInit) {
+      // Nota: Asegúrate de tener importado UserProvider
       final user = context.read<UserProvider>().user;
       if (user != null) {
-        // 1. Asignamos los textos directos
         _nombreController.text = user.nombre;
         _telefonoController.text = user.telefono; 
         _direccionController.text = user.direccion;
 
-        // 2. Fecha de Nacimiento
         if (user.fechaNacimiento.isNotEmpty) {
           _fechaNacimiento = DateTime.tryParse(user.fechaNacimiento);
         }
 
-        // 3. Foto de Perfil
         if (user.fotoPerfil.isNotEmpty) {
           try {
             String base64String = user.fotoPerfil;
@@ -92,10 +91,8 @@ class _CompletarPerfilPasajeroState extends State<CompletarPerfilPasajero>
           }
         }
 
-        // 4. Discapacidad (El backend envía: "Tercera Edad, Movilidad reducida")
         if (user.discapacidad.isNotEmpty) {
           final listaDiscapacidades = user.discapacidad.split(',').map((e) => e.trim());
-          // 🔥 Esto asegura que los botones se pinten seleccionados al entrar
           _selectedNeeds.addAll(listaDiscapacidades);
         }
       }
@@ -112,6 +109,7 @@ class _CompletarPerfilPasajeroState extends State<CompletarPerfilPasajero>
     super.dispose();
   }
 
+  // --- LÓGICA DE FUNCIONES ---
   void _toggleListening() {
     setState(() {
       _isListening = !_isListening;
@@ -134,7 +132,7 @@ class _CompletarPerfilPasajeroState extends State<CompletarPerfilPasajero>
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: const ColorScheme.light(
-              primary: primaryBlue,
+              primary: AppColors.primary, // Ajustado para usar el color de AppTheme
               onPrimary: Colors.white,
               onSurface: Colors.black,
             ),
@@ -150,32 +148,28 @@ class _CompletarPerfilPasajeroState extends State<CompletarPerfilPasajero>
     }
   }
 
-  // 🔥 NUEVA FUNCIÓN: Guardar datos personales, foto y discapacidades
   Future<void> _guardarPerfil() async {
     setState(() => _isSavingProfile = true);
 
     try {
-      // 1. Formatear la foto a base64
       String? base64Foto;
       if (_fotoPerfilBytes != null) {
         base64Foto = base64Encode(_fotoPerfilBytes!);
       }
 
-      // 2. Formatear la fecha (YYYY-MM-DD)
       String? fechaNacStr;
       if (_fechaNacimiento != null) {
         fechaNacStr = "${_fechaNacimiento!.year}-${_fechaNacimiento!.month.toString().padLeft(2, '0')}-${_fechaNacimiento!.day.toString().padLeft(2, '0')}";
       }
 
-      // 3. Unir las discapacidades separadas por comas
       String? discapacidadesStr;
       if (_selectedNeeds.isNotEmpty) {
         discapacidadesStr = _selectedNeeds.join(", ");
       } else {
-        discapacidadesStr = ""; // Opcional: enviar vacío si las desmarcó todas
+        discapacidadesStr = "";
       }
 
-      // 4. Enviar al backend
+      // Llama a tu servicio
       final res = await AuthService.updateProfile(
         nombreCompleto: _nombreController.text.isNotEmpty ? _nombreController.text : null,
         telefono: _telefonoController.text.isNotEmpty ? _telefonoController.text : null,
@@ -189,23 +183,21 @@ class _CompletarPerfilPasajeroState extends State<CompletarPerfilPasajero>
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(res['mensaje'] ?? 'Perfil guardado con éxito'),
-            backgroundColor: statusGreen,
+            backgroundColor: Colors.green, // statusGreen
           ),
         );
-        // Opcional: Aquí podrías volver a llamar a la función que descarga 
-        // los datos del usuario para actualizar el Provider en tiempo real.
       } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(res['error'] ?? 'Error al guardar el perfil'),
-            backgroundColor: statusRed,
+            backgroundColor: AppColors.error, // statusRed
           ),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: statusRed),
+          SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.error),
         );
       }
     } finally {
@@ -220,7 +212,7 @@ class _CompletarPerfilPasajeroState extends State<CompletarPerfilPasajero>
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Por favor selecciona ambas fotos de la INE'),
-          backgroundColor: statusRed,
+          backgroundColor: AppColors.error,
         ),
       );
       return;
@@ -241,14 +233,14 @@ class _CompletarPerfilPasajeroState extends State<CompletarPerfilPasajero>
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Documentos enviados a revisión correctamente'),
-            backgroundColor: statusGreen,
+            backgroundColor: Colors.green,
           ),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString()), backgroundColor: statusRed),
+          SnackBar(content: Text(e.toString()), backgroundColor: AppColors.error),
         );
       }
     } finally {
@@ -258,580 +250,376 @@ class _CompletarPerfilPasajeroState extends State<CompletarPerfilPasajero>
     }
   }
 
-  double sp(double size, BuildContext context) {
-    double sw = MediaQuery.of(context).size.width;
-    double res = sw * (size / 375);
-    return (size <= 20 && res > 20) ? 20 : res;
-  }
-
-  TextStyle mBold(
-    BuildContext context, {
-    Color color = Colors.black,
-    double size = 11,
-  }) => GoogleFonts.montserrat(
-    color: color,
-    fontSize: sp(size, context),
-    fontWeight: FontWeight.bold,
-  );
-
-  TextStyle mExtrabold(
-    BuildContext context, {
-    Color color = Colors.black,
-    double size = 14,
-  }) => GoogleFonts.montserrat(
-    color: color,
-    fontSize: sp(size, context),
-    fontWeight: FontWeight.w700,
-  );
-
-  @override
-  Widget build(BuildContext context) {
-    final sw = MediaQuery.of(context).size.width;
-    final user = context.watch<UserProvider>().user;
-    final String nombreUsuario = user?.nombre ?? "Usuario";
-    final bool isActivo = user?.activo ?? false;
-
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: Stack(
-        children: [
-          SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildHeader(context, nombreUsuario, isActivo),
-                const SizedBox(height: 110),
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: sw * 0.06),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildStatusButton(context, isActivo),
-                      const SizedBox(height: 25),
-
-                      _buildDatosPersonalesSection(context),
-                      const SizedBox(height: 25),
-
-                      Text(
-                        '¿Presenta alguna necesidad especial?',
-                        style: mExtrabold(context, size: 17),
-                      ),
-                      Text(
-                        'Seleccione las casillas que se ajusten a su necesidad',
-                        style: mBold(context, color: Colors.red, size: 10),
-                      ),
-                      const SizedBox(height: 25),
-                      _buildNeedsGrid(context),
-                      const SizedBox(height: 35),
-
-                      // 🔥 BOTÓN GUARDAR PERFIL
-                      Center(
-                        child: _isSavingProfile
-                            ? const CircularProgressIndicator(color: primaryBlue)
-                            : ElevatedButton(
-                                onPressed: _guardarPerfil,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: primaryBlue,
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 35,
-                                    vertical: 15,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(30),
-                                  ),
-                                ),
-                                child: Text(
-                                  'Guardar Cambios de Perfil',
-                                  style: mBold(
-                                    context,
-                                    color: Colors.white,
-                                    size: 14, // Lo hice un poco más grande
-                                  ),
-                                ),
-                              ),
-                      ),
-                      const SizedBox(height: 35),
-
-                      if (!isActivo) ...[
-                        const Divider(thickness: 1, color: Color(0xFFE0E0E0)),
-                        const SizedBox(height: 25),
-                        Text(
-                          'Foto de INE',
-                          style: mExtrabold(context, size: 18),
-                        ),
-                        const SizedBox(height: 15),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _buildDocCard(
-                                context,
-                                'Anverso',
-                                _ineAnversoBytes,
-                                'assets/ine_anverso.png',
-                                'anverso',
-                              ),
-                            ),
-                            const SizedBox(width: 15),
-                            Expanded(
-                              child: _buildDocCard(
-                                context,
-                                'Reverso',
-                                _ineReversoBytes,
-                                'assets/ine_reverso.png',
-                                'reverso',
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 25),
-                        Center(
-                          child: _isSavingIne
-                              ? const CircularProgressIndicator(
-                                  color: primaryBlue,
-                                )
-                              : ElevatedButton(
-                                  onPressed: _guardarINE,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: primaryBlue,
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 35,
-                                      vertical: 15,
-                                    ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(30),
-                                    ),
-                                  ),
-                                  child: Text(
-                                    'Enviar INE a revisión',
-                                    style: mBold(
-                                      context,
-                                      color: Colors.white,
-                                      size: 12,
-                                    ),
-                                  ),
-                                ),
-                        ),
-                        const SizedBox(height: 35),
-                      ],
-
-                      Center(
-                        child: ElevatedButton(
-                          onPressed: () {},
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.white, // Cambié a blanco para que no compita visualmente con Guardar
-                            side: const BorderSide(color: primaryBlue),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 35,
-                              vertical: 15,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(30),
-                            ),
-                          ),
-                          child: Text(
-                            'Registrar un acompañante',
-                            style: mBold(
-                              context,
-                              color: primaryBlue, // Texto azul
-                              size: 12,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 40),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Positioned(
-            top: 87.5,
-            right: 20,
-            child: GestureDetector(
-              onTap: _toggleListening,
-              child: ScaleTransition(
-                scale: _pulseController,
-                child: Image.asset(
-                  _isListening
-                      ? 'assets/escuchando.png'
-                      : 'assets/controlvoz.png',
-                  width: 65,
-                  height: 65,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDatosPersonalesSection(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('Datos personales', style: mExtrabold(context, size: 18)),
-        const SizedBox(height: 15),
-        _buildTextField(
-          context: context,
-          label: 'Nombre completo',
-          controller: _nombreController,
-          icon: Icons.person_outline,
-        ),
-        const SizedBox(height: 15),
-        _buildTextField(
-          context: context,
-          label: 'Teléfono',
-          controller: _telefonoController,
-          icon: Icons.phone_android_outlined,
-          keyboardType: TextInputType.phone,
-        ),
-        const SizedBox(height: 15),
-        _buildTextField(
-          context: context,
-          label: 'Dirección',
-          controller: _direccionController,
-          icon: Icons.location_on_outlined,
-          maxLines: 2,
-        ),
-        const SizedBox(height: 15),
-        
-        GestureDetector(
-          onTap: () => _seleccionarFecha(context),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 15),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(15),
-              border: Border.all(color: accentBlue.withOpacity(0.5)),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.calendar_today_outlined, color: primaryBlue, size: 20),
-                const SizedBox(width: 10),
-                Text(
-                  _fechaNacimiento == null
-                      ? 'Fecha de nacimiento'
-                      : '${_fechaNacimiento!.day.toString().padLeft(2, '0')}/${_fechaNacimiento!.month.toString().padLeft(2, '0')}/${_fechaNacimiento!.year}',
-                  style: GoogleFonts.montserrat(
-                    color: _fechaNacimiento == null ? Colors.grey : Colors.black,
-                    fontSize: 14,
-                    fontWeight: _fechaNacimiento == null ? FontWeight.w500 : FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildTextField({
-    required BuildContext context,
-    required String label,
-    required TextEditingController controller,
-    required IconData icon,
-    TextInputType keyboardType = TextInputType.text,
-    int maxLines = 1,
-  }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: accentBlue.withOpacity(0.5)),
-      ),
-      child: TextField(
-        controller: controller,
-        keyboardType: keyboardType,
-        maxLines: maxLines,
-        style: GoogleFonts.montserrat(
-          fontSize: 14,
-          fontWeight: FontWeight.w600,
-        ),
-        decoration: InputDecoration(
-          hintText: label,
-          hintStyle: GoogleFonts.montserrat(color: Colors.grey, fontWeight: FontWeight.w500),
-          prefixIcon: Icon(icon, color: primaryBlue, size: 20),
-          border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 15, vertical: 15),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHeader(
-    BuildContext context,
-    String nombreUsuario,
-    bool isActivo,
-  ) {
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        Container(
-          height: 120,
-          width: double.infinity,
-          color: lightBlueBg,
-          child: Align(
-            alignment: Alignment.topLeft,
-            child: Padding(
-              padding: const EdgeInsets.only(top: 35),
-              child: IconButton(
-                icon: const Icon(
-                  Icons.arrow_back_ios_new,
-                  color: primaryBlue,
-                  size: 20,
-                ),
-                onPressed: () => Navigator.pop(context),
-              ),
-            ),
-          ),
-        ),
-        Positioned(
-          bottom: -50,
-          left: 20,
-          child: GestureDetector(
-            onTap: () => _pickImage('perfil'),
-            child: Container(
-              width: 100,
-              height: 100,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white,
-                border: Border.all(color: Colors.white, width: 2),
-                image: DecorationImage(
-                  image: _fotoPerfilBytes != null
-                      ? MemoryImage(_fotoPerfilBytes!) as ImageProvider
-                      : const AssetImage('assets/pasajero.png'),
-                  fit: BoxFit.cover,
-                ),
-              ),
-              child: Align(
-                alignment: Alignment.bottomRight,
-                child: Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: const BoxDecoration(
-                    color: primaryBlue,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.camera_alt, color: Colors.white, size: 16),
-                ),
-              ),
-            ),
-          ),
-        ),
-        Positioned(
-          bottom: -100,
-          left: 130,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                _nombreController.text.isNotEmpty ? _nombreController.text : nombreUsuario,
-                style: GoogleFonts.montserrat(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-              Row(
-                children: [
-                  const Icon(Icons.star, color: Colors.amber, size: 18),
-                  const Icon(Icons.star, color: Colors.amber, size: 18),
-                  const Icon(Icons.star, color: Colors.amber, size: 18),
-                  const Icon(Icons.star, color: Colors.amber, size: 18),
-                  const Icon(Icons.star, color: Colors.amber, size: 18),
-                  const SizedBox(width: 5),
-                  Text(
-                    '5.00',
-                    style: mBold(context, color: primaryBlue, size: 12),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 4),
-              if (isActivo)
-                _buildBadge(
-                  "Verificado",
-                  Icons.check_circle_outline,
-                  statusGreen,
-                )
-              else
-                _buildBadge(
-                  "Pendiente de verificación",
-                  Icons.error_outline,
-                  statusRed,
-                ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildBadge(String text, IconData icon, Color bgColor) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(15),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, color: Colors.white, size: 14),
-          const SizedBox(width: 5),
-          Text(text, style: mBold(context, color: Colors.white, size: 10)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatusButton(BuildContext context, bool isActivo) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: isActivo ? statusGreen : statusRed,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            isActivo ? Icons.check_circle : Icons.error_outline,
-            color: Colors.white,
-            size: 20,
-          ),
-          const SizedBox(width: 8),
-          Text(
-            isActivo ? 'Perfil completo' : 'Completar perfil',
-            style: mBold(context, color: Colors.white, size: 14),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDocCard(
-    BuildContext context,
-    String label,
-    Uint8List? imageBytes,
-    String placeholder,
-    String type,
-  ) {
-    return Column(
-      children: [
-        GestureDetector(
-          onTap: () => _pickImage(type),
-          child: Container(
-            height: 110,
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(
-                color: accentBlue.withOpacity(0.5),
-                width: 1.5,
-              ),
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: imageBytes != null
-                  ? Image.memory(imageBytes, fit: BoxFit.cover)
-                  : Image.asset(placeholder, fit: BoxFit.contain),
-            ),
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(label, style: mBold(context, color: primaryBlue, size: 14)),
-      ],
-    );
-  }
-
-  Widget _buildNeedsGrid(BuildContext context) {
-    final needs = [
-      {'label': 'Tercera Edad', 'icon': 'assets/tercera_edad.png'},
-      {'label': 'Movilidad reducida', 'icon': 'assets/silla_ruedas.png'},
-      {'label': 'Discapacidad auditiva', 'icon': 'assets/auditiva.png'},
-      {'label': 'Obesidad', 'icon': 'assets/obesidad.png'},
-      {'label': 'Discapacidad visual', 'icon': 'assets/visual.png'},
-    ];
-
-    return Center(
-      child: Wrap(
-        alignment: WrapAlignment.center,
-        runAlignment: WrapAlignment.center,
-        spacing: 15,
-        runSpacing: 20,
-        children: needs
-            .map((n) => _buildNeedItem(context, n['label']!, n['icon']!))
-            .toList(),
-      ),
-    );
-  }
-
-  Widget _buildNeedItem(BuildContext context, String label, String iconPath) {
-    // 🔥 Aquí funciona la magia: al cargar desde provider, verifica si el label existe en el Set.
-    bool isSelected = _selectedNeeds.contains(label);
-    
-    return GestureDetector(
-      onTap: () => setState(
-        () => isSelected
-            ? _selectedNeeds.remove(label)
-            : _selectedNeeds.add(label),
-      ),
-      child: SizedBox(
-        width: 100,
-        child: Column(
-          children: [
-            Container(
-              height: 90,
-              width: 90,
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                border: Border.all(
-                  color: isSelected ? primaryBlue : accentBlue,
-                  width: isSelected ? 3 : 1.5,
-                ),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Image.asset(iconPath, fit: BoxFit.contain),
-            ),
-            const SizedBox(height: 8),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-              decoration: BoxDecoration(
-                color: accentBlue,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Text(
-                label.replaceAll(' ', '\n'), 
-                textAlign: TextAlign.center,
-                style: mBold(context, color: Colors.white, size: 9),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Future<void> _pickImage(String type) async {
     final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
     if (image != null) {
-      final bytes = await image.readAsBytes();
+      final bytes = await image.readAsBytes(); // Se guardan en bytes para la validación de envío
       setState(() {
         if (type == 'anverso') {
+          _ineAnverso = File(image.path);
           _ineAnversoBytes = bytes;
-        } else if (type == 'reverso') {
+        } else {
+          _ineReverso = File(image.path);
           _ineReversoBytes = bytes;
-        } else if (type == 'perfil') {
-          _fotoPerfilBytes = bytes;
         }
       });
     }
   }
+
+  // --- BUILD ---
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.white,
+      body: CustomScrollView(
+        physics: const BouncingScrollPhysics(),
+        slivers: [
+          SliverPersistentHeader(
+            pinned: true,
+            delegate: _HeaderDelegate(
+              isVoiceActive: _isListening,
+              onVoiceTap: _toggleListening,
+            ),
+          ),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 22),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 35),
+
+                  // Badge de estado
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: AppColors.error,
+                      borderRadius: BorderRadius.circular(25),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.error_outline, color: AppColors.white, size: 17),
+                        const SizedBox(width: 7),
+                        Text('Completar perfil',
+                            style: GoogleFonts.montserrat(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.white,
+                            )),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 28),
+
+                  // Sección INE
+                  Row(
+                    children: [
+                      Text('Foto de ',
+                          style: GoogleFonts.montserrat(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textPrimary,
+                          )),
+                      Text('INE',
+                          style: GoogleFonts.montserrat(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.primary,
+                          )),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text('Sube una foto clara del anverso y reverso',
+                      style: GoogleFonts.montserrat(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.textSecondary,
+                      )),
+                  const SizedBox(height: 14),
+                  Row(
+                    children: [
+                      Expanded(child: _buildDocCard('Anverso', _ineAnverso, 'assets/ine_anverso.png', 'anverso')),
+                      const SizedBox(width: 15),
+                      Expanded(child: _buildDocCard('Reverso', _ineReverso, 'assets/ine_reverso.png', 'reverso')),
+                    ],
+                  ),
+
+                  const SizedBox(height: 32),
+                  const Divider(color: AppColors.border, height: 1),
+                  const SizedBox(height: 28),
+
+                  // Sección necesidades
+                  RichText(
+                    text: TextSpan(
+                      style: GoogleFonts.montserrat(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textPrimary,
+                      ),
+                      children: const [
+                        TextSpan(text: '¿Presenta alguna '),
+                        TextSpan(
+                          text: 'necesidad especial',
+                          style: TextStyle(color: AppColors.primary),
+                        ),
+                        TextSpan(text: '?'),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  RichText(
+                    text: TextSpan(
+                      style: GoogleFonts.montserrat(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.textSecondary,
+                      ),
+                      children: [
+                        const TextSpan(text: 'Selecciona '),
+                        TextSpan(
+                          text: 'todas',
+                          style: TextStyle(
+                            color: AppColors.error,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const TextSpan(text: ' las que apliquen a tu caso'),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  _buildNeedsGrid(),
+
+                  const SizedBox(height: 36),
+
+                  // Botón acompañante
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () {},
+                      icon: const Icon(Icons.person_add_outlined, size: 18),
+                      label: Text(
+                        'Registrar un acompañante',
+                        style: GoogleFonts.montserrat(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.primary,
+                        side: const BorderSide(color: AppColors.primary),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 14),
+
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: (_isSavingProfile || _isSavingIne) 
+                          ? null 
+                          : () async {
+                              // Se ejecutan ambas lógicas al presionar el botón guardar
+                              if (_ineAnverso != null && _ineReverso != null) {
+                                await _guardarINE();
+                              }
+                              await _guardarPerfil();
+                            },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: (_isSavingProfile || _isSavingIne)
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(color: AppColors.white, strokeWidth: 2))
+                          : Text(
+                              'Guardar',
+                              style: GoogleFonts.montserrat(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.white,
+                              ),
+                            ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 30),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+      // bottomNavigationBar: const PassengerBottomNav(selectedIndex: 3), // Descomenta si usas tu nav
+    );
+  }
+
+  Widget _buildDocCard(String label, File? file, String placeholder, String type) {
+    return GestureDetector(
+      onTap: () => _pickImage(type),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            height: 110,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: AppColors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: file != null ? AppColors.primary : AppColors.border,
+                width: file != null ? 1.5 : 1,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.05),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: file != null
+                  ? Image.file(file, fit: BoxFit.cover)
+                  : Image.asset(placeholder, fit: BoxFit.contain,
+                      errorBuilder: (c, e, s) => const Icon(
+                        Icons.add_a_photo_outlined, size: 32, color: AppColors.primary)),
+            ),
+          ),
+          const SizedBox(height: 7),
+          Text(label,
+              style: GoogleFonts.montserrat(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppColors.primary,
+              )),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNeedsGrid() {
+    final needs = [
+      {'label': 'Tercera Edad', 'icon': 'assets/tercera_edad.png'},
+      {'label': 'Movilidad reducida', 'icon': 'assets/silla_ruedas.png'},
+      {'label': 'Disc. auditiva', 'icon': 'assets/auditiva.png'},
+      {'label': 'Obesidad', 'icon': 'assets/obesidad.png'},
+      {'label': 'Disc. visual', 'icon': 'assets/visual.png'},
+    ];
+
+    return Wrap(
+      spacing: 12,
+      runSpacing: 14,
+      children: needs.map((n) => _buildNeedItem(n['label']!, n['icon']!)).toList(),
+    );
+  }
+
+  Widget _buildNeedItem(String label, String iconPath) {
+    final isSelected = _selectedNeeds.contains(label);
+    final itemWidth = (MediaQuery.of(context).size.width - 44 - 12 * 2) / 3;
+
+    return GestureDetector(
+      onTap: () => setState(() =>
+          isSelected ? _selectedNeeds.remove(label) : _selectedNeeds.add(label)),
+      child: SizedBox(
+        width: itemWidth,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? AppColors.primary.withValues(alpha: 0.07)
+                : AppColors.surface,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isSelected ? AppColors.primary : AppColors.border,
+              width: isSelected ? 2 : 1,
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Image.asset(iconPath,
+                  height: 52,
+                  fit: BoxFit.contain,
+                  errorBuilder: (c, e, s) =>
+                      const Icon(Icons.accessible, size: 52, color: AppColors.primary)),
+              const SizedBox(height: 10),
+              Text(
+                label,
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                style: GoogleFonts.montserrat(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: isSelected ? AppColors.primary : AppColors.textPrimary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _HeaderDelegate extends SliverPersistentHeaderDelegate {
+  final bool isVoiceActive;
+  final VoidCallback onVoiceTap;
+
+  _HeaderDelegate({required this.isVoiceActive, required this.onVoiceTap});
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Container(
+          height: maxExtent,
+          width: double.infinity,
+          decoration: const BoxDecoration(color: AppColors.primaryLight),
+          child: Center(
+            child: Text(
+              'Completar Perfil',
+              style: GoogleFonts.montserrat(
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textPrimary,
+              ),
+            ),
+          ),
+        ),
+        Positioned(
+          left: 10,
+          bottom: 20,
+          child: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new,
+                color: AppColors.primary, size: 20),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+        ),
+        Positioned(
+          right: 15,
+          bottom: -20,
+          child: MicButton(isActive: isVoiceActive, onTap: onVoiceTap, size: 42),
+        ),
+      ],
+    );
+  }
+
+  @override double get maxExtent => 80;
+  @override double get minExtent => 80;
+  @override bool shouldRebuild(covariant _HeaderDelegate oldDelegate) => true;
 }

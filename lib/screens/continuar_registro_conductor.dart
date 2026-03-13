@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../services/vehicle/vehicle_service.dart';
+import '../app_theme.dart';
 
 class ContinuarRegistroConductor extends StatefulWidget {
   const ContinuarRegistroConductor({super.key});
@@ -12,21 +13,14 @@ class ContinuarRegistroConductor extends StatefulWidget {
 
 class _ContinuarRegistroConductorState
     extends State<ContinuarRegistroConductor> {
-  static const Color primaryBlue = Color(0xFF1559B2);
-  static const Color fieldBlue = Color(0xFFD6E8FF);
-
-  // ================== UI HELPERS ==================
   double sp(double size, double sw) => sw * (size / 375);
 
-  // ================== IDS & LOGIC ==================
   late String idUsuario;
   String? idConductor;
 
-  // ================== CONTROLLERS ==================
   final TextEditingController modeloController = TextEditingController();
   final TextEditingController placasController = TextEditingController();
 
-  // ================== LISTAS ==================
   final List<String> marcas = [
     'Toyota Hiace',
     'Nissan Urvan',
@@ -55,16 +49,13 @@ class _ContinuarRegistroConductorState
     'Ninguno',
   ];
 
-  // ================== SELECCIONES ==================
   String? marcaSeleccionada;
   String? colorSeleccionado;
   String? accesorioSeleccionado;
 
-  // ================== INIT ==================
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Recuperamos el ID del argumento de la ruta
     final args = ModalRoute.of(context)?.settings.arguments;
     if (args != null && args is String) {
       idUsuario = args;
@@ -74,7 +65,6 @@ class _ContinuarRegistroConductorState
 
   Future<void> _obtenerIdConductor() async {
     final response = await VehicleService.getConductorId(idUsuario: idUsuario);
-
     if (response["ok"]) {
       setState(() {
         idConductor = response["id_conductor"];
@@ -84,180 +74,216 @@ class _ContinuarRegistroConductorState
     }
   }
 
-  // ================== UI BUILD ==================
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
-    final sw = size.width;
-
     return Scaffold(
-      body: Stack(
-        children: [
-          // Fondo
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            height: size.height * 0.4,
-            child: Image.asset('assets/ruta.png', fit: BoxFit.cover),
-          ),
-
-          // Botón de regresar (UI de Main)
-          Positioned(
-            top: sp(35, sw),
-            left: sp(15, sw),
-            child: Container(
-              decoration: const BoxDecoration(shape: BoxShape.circle),
-              child: IconButton(
-                icon: Icon(
-                  Icons.arrow_back_ios_new,
-                  color: primaryBlue,
-                  size: sp(22, sw),
-                ),
-                onPressed: () => Navigator.of(context).pop(),
-              ),
-            ),
-          ),
-
-          // Logo (UI de Main)
-          Positioned(
-            top: size.height * 0.15,
-            left: 0,
-            right: 0,
-            child: Center(
-              child: Container(
-                width: sp(100, sw),
-                height: sp(100, sw),
+      backgroundColor: AppColors.white,
+      appBar: AppHeader(title: 'Datos del Vehículo'),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header info
+              Container(
+                padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(25),
-                  boxShadow: const [
-                    BoxShadow(color: Colors.black12, blurRadius: 10),
-                  ],
+                  color: AppColors.primaryLight,
+                  borderRadius: BorderRadius.circular(16),
                 ),
-                child: Padding(
-                  padding: const EdgeInsets.all(10),
-                  child: Image.asset('assets/movecare.png'),
-                ),
-              ),
-            ),
-          ),
-
-          // Formulario
-          Align(
-            alignment: Alignment.bottomCenter,
-            child: Container(
-              height: size.height * 0.68,
-              width: double.infinity,
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(50),
-                  topRight: Radius.circular(50),
-                ),
-              ),
-              child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                padding: EdgeInsets.symmetric(horizontal: sp(30, sw)),
-                child: Column(
+                child: Row(
                   children: [
-                    SizedBox(height: sp(35, sw)),
-                    Text(
-                      'Datos de mi Vehículo',
-                      style: GoogleFonts.montserrat(
-                        color: primaryBlue,
-                        fontWeight: FontWeight.bold,
-                        fontSize: sp(20, sw),
+                    const Icon(Icons.directions_car_rounded,
+                        color: AppColors.primary, size: 24),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Registro de Vehículo',
+                            style: GoogleFonts.montserrat(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                          Text(
+                            'Completa los datos de tu van de traslado',
+                            style: GoogleFonts.montserrat(
+                              fontSize: 12,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    SizedBox(height: sp(25, sw)),
-
-                    // Campos del formulario (Estilo Main + Lógica Head)
-                    _buildDropdownField(
-                      sw: sw,
-                      label: 'Marca del auto (Van)',
-                      options: marcas,
-                      value: marcaSeleccionada,
-                      onChanged: (val) =>
-                          setState(() => marcaSeleccionada = val),
-                      iconColor: Colors.blue.shade900,
-                    ),
-                    _buildTextField(
-                      sw: sw,
-                      label: 'Modelo (Año)',
-                      iconColor: Colors.blue.shade400,
-                      controller: modeloController,
-                    ),
-                    _buildDropdownField(
-                      sw: sw,
-                      label: 'Color',
-                      options: colores,
-                      value: colorSeleccionado,
-                      onChanged: (val) =>
-                          setState(() => colorSeleccionado = val),
-                      iconColor: Colors.blue.shade900,
-                    ),
-                    _buildTextField(
-                      sw: sw,
-                      label: 'Placas',
-                      iconColor: Colors.blue.shade400,
-                      controller: placasController,
-                    ),
-                    _buildDropdownField(
-                      sw: sw,
-                      label: 'Accesorios especiales',
-                      options: accesorios,
-                      value: accesorioSeleccionado,
-                      onChanged: (val) =>
-                          setState(() => accesorioSeleccionado = val),
-                      iconColor: Colors.blue.shade900,
-                    ),
-
-                    SizedBox(height: sp(30, sw)),
-
-                    // Botón de Registrar (Estilo Main + Lógica Head)
-                    SizedBox(
-                      width: sw * 0.75,
-                      height: sp(55, sw),
-                      child: ElevatedButton(
-                        onPressed: _registrarVehiculo,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: primaryBlue,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(25),
-                          ),
-                        ),
-                        child: Text(
-                          'Registrarme',
-                          style: GoogleFonts.montserrat(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: sp(16, sw),
-                          ),
-                        ),
-                      ),
-                    ),
-                    SizedBox(height: sp(20, sw)),
-                    _buildFooter(context, sw),
-                    SizedBox(height: sp(40, sw)),
                   ],
                 ),
               ),
-            ),
+
+              const SizedBox(height: 28),
+
+              _sectionLabel('Marca del vehículo'),
+              const SizedBox(height: 8),
+              _buildDropdown(
+                options: marcas,
+                value: marcaSeleccionada,
+                hint: 'Selecciona la marca',
+                icon: Icons.directions_car_outlined,
+                onChanged: (val) => setState(() => marcaSeleccionada = val),
+              ),
+
+              const SizedBox(height: 16),
+
+              _sectionLabel('Modelo (Año)'),
+              const SizedBox(height: 8),
+              TextField(
+                controller: modeloController,
+                style: GoogleFonts.montserrat(
+                    fontSize: 14, color: AppColors.textPrimary),
+                decoration: const InputDecoration(
+                  hintText: 'Ej. 2022',
+                  prefixIcon:
+                      Icon(Icons.calendar_today_outlined),
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              _sectionLabel('Color'),
+              const SizedBox(height: 8),
+              _buildDropdown(
+                options: colores,
+                value: colorSeleccionado,
+                hint: 'Selecciona el color',
+                icon: Icons.palette_outlined,
+                onChanged: (val) => setState(() => colorSeleccionado = val),
+              ),
+
+              const SizedBox(height: 16),
+
+              _sectionLabel('Placas'),
+              const SizedBox(height: 8),
+              TextField(
+                controller: placasController,
+                style: GoogleFonts.montserrat(
+                    fontSize: 14, color: AppColors.textPrimary),
+                decoration: const InputDecoration(
+                  hintText: 'Ej. ABC-123-D',
+                  prefixIcon: Icon(Icons.credit_card_outlined),
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              _sectionLabel('Accesorios especiales'),
+              const SizedBox(height: 8),
+              _buildDropdown(
+                options: accesorios,
+                value: accesorioSeleccionado,
+                hint: 'Selecciona un accesorio',
+                icon: Icons.build_outlined,
+                onChanged: (val) =>
+                    setState(() => accesorioSeleccionado = val),
+              ),
+
+              const SizedBox(height: 32),
+
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _registrarVehiculo,
+                  child: const Text('Registrarme'),
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              Center(
+                child: GestureDetector(
+                  onTap: () =>
+                      Navigator.pushNamed(context, '/iniciar_sesion'),
+                  child: RichText(
+                    text: TextSpan(
+                      style: GoogleFonts.montserrat(
+                          color: AppColors.textSecondary, fontSize: 13),
+                      children: [
+                        const TextSpan(text: '¿Ya tienes cuenta? '),
+                        TextSpan(
+                          text: 'Inicia Sesión',
+                          style: GoogleFonts.montserrat(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 24),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
 
-  // ================== LOGICA DEL NEGOCIO ==================
+  Widget _sectionLabel(String label) {
+    return Text(
+      label,
+      style: GoogleFonts.montserrat(
+        fontSize: 13,
+        fontWeight: FontWeight.w600,
+        color: AppColors.textSecondary,
+      ),
+    );
+  }
+
+  Widget _buildDropdown({
+    required List<String> options,
+    required String? value,
+    required String hint,
+    required IconData icon,
+    required Function(String?) onChanged,
+  }) {
+    return DropdownButtonFormField<String>(
+      value: value,
+      isExpanded: true,
+      hint: Text(hint,
+          style: GoogleFonts.montserrat(
+              color: AppColors.textSecondary, fontSize: 14)),
+      icon: const Padding(
+        padding: EdgeInsets.only(right: 4),
+        child: Icon(Icons.arrow_drop_down, color: AppColors.textSecondary),
+      ),
+      decoration: InputDecoration(
+        prefixIcon: Icon(icon),
+      ),
+      dropdownColor: AppColors.surface,
+      borderRadius: BorderRadius.circular(12),
+      items: options
+          .map((opt) => DropdownMenuItem<String>(
+                value: opt,
+                child: Text(opt,
+                    style: GoogleFonts.montserrat(
+                        fontSize: 14, color: AppColors.textPrimary)),
+              ))
+          .toList(),
+      onChanged: onChanged,
+    );
+  }
+
   Future<void> _registrarVehiculo() async {
     if (idConductor == null) {
       _showError('No se pudo obtener el conductor');
       return;
     }
 
-    // Validación básica de campos vacíos
     if (marcaSeleccionada == null ||
         colorSeleccionado == null ||
         modeloController.text.isEmpty ||
@@ -275,8 +301,9 @@ class _ContinuarRegistroConductorState
       accesorios: accesorioSeleccionado,
     );
 
+    if (!mounted) return;
     if (response["ok"]) {
-      if (mounted) Navigator.pushReplacementNamed(context, '/iniciar_sesion');
+      Navigator.pushReplacementNamed(context, '/iniciar_sesion');
     } else {
       _showError(response["error"]);
     }
@@ -284,145 +311,7 @@ class _ContinuarRegistroConductorState
 
   void _showError(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
-  }
-
-  // ================== WIDGETS PERSONALIZADOS ==================
-
-  Widget _buildDropdownField({
-    required double sw,
-    required String label,
-    required List<String> options,
-    required String? value,
-    required Function(String?) onChanged,
-    required Color iconColor,
-  }) {
-    return Padding(
-      padding: EdgeInsets.only(bottom: sp(12, sw)),
-      child: Container(
-        decoration: BoxDecoration(
-          color: fieldBlue,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: DropdownButtonFormField<String>(
-          value: value,
-          isExpanded: true,
-          hint: Text(
-            label,
-            style: GoogleFonts.montserrat(
-              color: primaryBlue,
-              fontSize: sp(14, sw),
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          icon: const Padding(
-            padding: EdgeInsets.only(right: 15),
-            child: Icon(Icons.arrow_drop_down, color: primaryBlue),
-          ),
-          decoration: InputDecoration(
-            border: InputBorder.none,
-            prefixIcon: UnconstrainedBox(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 15),
-                child: CircleAvatar(
-                  backgroundColor: iconColor,
-                  radius: sp(10, sw),
-                ),
-              ),
-            ),
-            contentPadding: const EdgeInsets.symmetric(vertical: 18),
-          ),
-          dropdownColor: fieldBlue,
-          borderRadius: BorderRadius.circular(20),
-          items: options.map((String option) {
-            return DropdownMenuItem<String>(
-              value: option,
-              child: Text(
-                option,
-                style: GoogleFonts.montserrat(
-                  color: primaryBlue,
-                  fontSize: sp(14, sw),
-                ),
-              ),
-            );
-          }).toList(),
-          onChanged: onChanged,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTextField({
-    required double sw,
-    required String label,
-    required Color iconColor,
-    required TextEditingController controller, // Fusionado: Agregado controller
-  }) {
-    return Padding(
-      padding: EdgeInsets.only(bottom: sp(12, sw)),
-      child: Container(
-        decoration: BoxDecoration(
-          color: fieldBlue,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: TextField(
-          controller: controller, // Fusionado: Usando el controller
-          style: GoogleFonts.montserrat(
-            color: primaryBlue,
-            fontSize: sp(14, sw),
-          ),
-          decoration: InputDecoration(
-            hintText: label,
-            hintStyle: GoogleFonts.montserrat(
-              color: primaryBlue,
-              fontSize: sp(14, sw),
-              fontWeight: FontWeight.w600,
-            ),
-            prefixIcon: UnconstrainedBox(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 15),
-                child: CircleAvatar(
-                  backgroundColor: iconColor,
-                  radius: sp(10, sw),
-                ),
-              ),
-            ),
-            border: InputBorder.none,
-            contentPadding: const EdgeInsets.symmetric(
-              vertical: 18,
-              horizontal: 20,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFooter(BuildContext context, double sw) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Text(
-          '¿Ya tienes cuenta? ',
-          style: GoogleFonts.montserrat(
-            fontSize: sp(13, sw),
-            color: Colors.black54,
-          ),
-        ),
-        GestureDetector(
-          onTap: () => Navigator.pushNamed(context, '/iniciar_sesion'),
-          child: Text(
-            'Inicia Sesión',
-            style: GoogleFonts.montserrat(
-              color: primaryBlue,
-              fontWeight: FontWeight.bold,
-              fontSize: sp(13, sw),
-            ),
-          ),
-        ),
-      ],
-    );
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 }

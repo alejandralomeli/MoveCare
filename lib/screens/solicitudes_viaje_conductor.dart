@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:movecare/screens/solicitud_viaje.dart';
 import 'package:provider/provider.dart';
 
 import '../services/viaje/viaje_service.dart';
 import '../core/utils/auth_helper.dart';
 import '../providers/user_provider.dart';
 import 'solicitud_viaje.dart';
+import '../app_theme.dart';
 
 class SolicitudesViajesConductor extends StatefulWidget {
   const SolicitudesViajesConductor({super.key});
@@ -28,9 +28,6 @@ class _SolicitudesViajesConductorState
   bool _isLoading = true;
   List<dynamic> _solicitudesPendientes = [];
   List<dynamic> _viajesAgendados = [];
-
-  // Índice para el menú inferior (2 = Viajes)
-  final int _selectedIndex = 2;
 
   @override
   void initState() {
@@ -222,7 +219,7 @@ class _SolicitudesViajesConductorState
             ),
           ],
         ),
-        bottomNavigationBar: _buildCustomBottomNav(context),
+        bottomNavigationBar: const DriverBottomNav(selectedIndex: 2),
       ),
     );
   }
@@ -429,54 +426,4 @@ class _SolicitudesViajesConductorState
     );
   }
 
-  // --- NAVEGADOR INFERIOR (Igual que PrincipalConductor) ---
-  Widget _buildCustomBottomNav(BuildContext context) {
-    return Container(
-      height: 70,
-      decoration: const BoxDecoration(color: cardBlue),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          _navIcon(0, Icons.home),
-          _navIcon(1, Icons.location_on),
-          _navIcon(2, Icons.list_alt),
-          _navIcon(3, Icons.person),
-        ],
-      ),
-    );
-  }
-
-  Widget _navIcon(int index, IconData icon) {
-    bool active = _selectedIndex == index;
-    return GestureDetector(
-      onTap: () {
-        if (active) return;
-        String route = '';
-        switch (index) {
-          case 0:
-            route = '/principal_conductor';
-            break;
-          // case 1: route = '/mapa_conductor'; break; // Ajustar si tienes
-          case 2:
-            route = '/viajes_conductor';
-            break;
-          case 3:
-            route = '/mi_perfil_conductor';
-            break;
-        }
-        if (route.isNotEmpty) {
-          Navigator.pushReplacementNamed(context, route);
-        }
-      },
-      child: Container(
-        width: 45,
-        height: 45,
-        decoration: BoxDecoration(
-          color: active ? primaryBlue : Colors.white,
-          shape: BoxShape.circle,
-        ),
-        child: Icon(icon, color: active ? Colors.white : primaryBlue, size: 25),
-      ),
-    );
-  }
 }

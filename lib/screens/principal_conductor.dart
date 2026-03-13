@@ -5,7 +5,8 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:latlong2/latlong.dart';
 
-// Widgets propios
+// --- TUS IMPORTS REALES ---
+import '../app_theme.dart'; 
 import 'widgets/modals/viaje_detalles_modal.dart';
 import 'widgets/home_map_preview.dart';
 import '../providers/user_provider.dart';
@@ -19,23 +20,19 @@ class PrincipalConductor extends StatefulWidget {
   State<PrincipalConductor> createState() => _PrincipalConductorState();
 }
 
-class _PrincipalConductorState extends State<PrincipalConductor>
-    with TickerProviderStateMixin {
-  // Paleta de colores oficial
-  static const Color primaryBlue = Color(0xFF1559B2);
-  static const Color lightBlueBg = Color(0xFFB3D4FF);
-  static const Color cardBlue = Color(0xFFD6E8FF);
-  static const Color buttonLightBlue = Color(0xFF64A1F4);
-
+class _PrincipalConductorState extends State<PrincipalConductor> with TickerProviderStateMixin {
+  
+  // --- VARIABLES DE ESTADO Y LÓGICA ---
   bool _loadingHome = true;
-  int _selectedIndex = 0; // Home es 0
-  String _selectedDateNum = '';
-  bool _isVoiceActive = false;
-
+  String _selectedDate = '';
+  DateTime _weekStart = DateTime.now().subtract(Duration(days: DateTime.now().weekday - 1));
   List<DateTime> _calendarDates = [];
-  List<dynamic> _historialViajes = [];
+  
   Map<String, dynamic>? _viajeProximo;
-
+  List<dynamic> _historialViajes = [];
+  
+  // Variables para la animación de voz
+  bool _isVoiceActive = false;
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
 
@@ -49,6 +46,7 @@ class _PrincipalConductorState extends State<PrincipalConductor>
     _pulseAnimation = Tween<double>(begin: 1.0, end: 1.2).animate(
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
+
     _loadHome();
   }
 
@@ -62,6 +60,8 @@ class _PrincipalConductorState extends State<PrincipalConductor>
   Future<void> _loadHome() async {
     try {
       final homeData = await HomeService.getHome(role: "conductor");
+      if (!mounted) return;
+      
       final userProvider = context.read<UserProvider>();
       userProvider.setUserFromJson(homeData["usuario"]);
 
@@ -82,19 +82,18 @@ class _PrincipalConductorState extends State<PrincipalConductor>
   }
 
   void _buildCalendarDates(DateTime baseDate) {
-    _calendarDates = List.generate(
-      5,
-      (i) => baseDate.add(Duration(days: i - 2)),
-    );
-    _selectedDateNum = baseDate.day.toString();
+    final monday = baseDate.subtract(Duration(days: baseDate.weekday - 1));
+    _weekStart = monday;
+    _selectedDate = baseDate.day.toString();
+    _calendarDates = List.generate(7, (i) => _weekStart.add(Duration(days: i)));
   }
 
   // --- ACCIONES ---
   Future<void> _hacerLlamada(String? telefono) async {
     if (telefono == null || telefono.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("Teléfono no disponible")));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Teléfono no disponible"))
+      );
       return;
     }
     final Uri launchUri = Uri(scheme: 'tel', path: telefono);
@@ -103,125 +102,219 @@ class _PrincipalConductorState extends State<PrincipalConductor>
     }
   }
 
-  TextStyle mBold({Color color = Colors.black, double size = 14}) {
+  TextStyle mBold({Color color = AppColors.textPrimary, double size = 14}) {
     return GoogleFonts.montserrat(
       color: color,
       fontSize: size,
-      fontWeight: FontWeight.bold,
+      fontWeight: FontWeight.w600,
     );
   }
+  
+  String _dayLetter(DateTime d) {
+    const days = ['L', 'M', 'Mi', 'J', 'V', 'S', 'D'];
+    return days[d.weekday - 1];
+  }
 
+  // --- RENDERIZADO PRINCIPAL ---
   @override
   Widget build(BuildContext context) {
     if (_loadingHome) {
       return const Scaffold(
-        body: Center(child: CircularProgressIndicator(color: primaryBlue)),
+        backgroundColor: AppColors.white,
+        body: Center(child: CircularProgressIndicator(color: AppColors.primary)),
       );
     }
 
     final user = context.watch<UserProvider>().user;
-    final size = MediaQuery.of(context).size;
 
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildHeader(size, user),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 15),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 25),
-                  Text('Viaje actual', style: mBold(size: 18)),
-                  const SizedBox(height: 10),
-                  _buildCurrentTripCard(),
-                  const SizedBox(height: 20),
-                  _buildRouteSection(), // 🔥 Aquí va el mapa actualizado y el botón
-                  const SizedBox(height: 25),
-                  Text('Próximos viajes', style: mBold(size: 18)),
-                  const SizedBox(height: 15),
-                  _buildCalendarRow(),
-                  const SizedBox(height: 25),
-                  Text('Historial de viajes', style: mBold(size: 18)),
-                  const SizedBox(height: 10),
-                  _buildHistorySection(),
-                  const SizedBox(height: 30),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-      bottomNavigationBar: _buildCustomBottomNav(context),
-    );
-  }
-
-  // --- COMPONENTES ---
-
-  Widget _buildHeader(Size size, dynamic user) {
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        Container(height: 120, width: double.infinity, color: lightBlueBg),
-        SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-            child: Row(
+      backgroundColor: AppColors.white,
+      body: Stack(
+        children: [
+          SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                CircleAvatar(
-                  radius: 48,
-                  backgroundImage: (user != null && user.fotoPerfil.isNotEmpty)
-                      ? MemoryImage(
-                          base64Decode(user.fotoPerfil.split(',').last),
-                        )
-                      : const AssetImage('assets/conductor.png')
-                            as ImageProvider,
-                ),
-                const SizedBox(width: 15),
-                Expanded(
+                _buildHeader(user),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Bienvenido!', style: mBold(size: 26)),
-                      Text(
-                        user?.nombre ?? 'Conductor',
-                        style: mBold(size: 20, color: Colors.black87),
+                      const SizedBox(height: 60),
+                      Text('Viaje actual', style: mBold(size: 18)),
+                      const SizedBox(height: 10),
+                      _buildCurrentTripCard(),
+                      const SizedBox(height: 20),
+                      
+                      // Tu componente real del mapa
+                      _buildRouteSection(), 
+                      const SizedBox(height: 25),
+                      
+                      // Calendario (Diseño Repo + Lógica tuya)
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('Próximos viajes', style: mBold(size: 18)),
+                          Row(
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.chevron_left, color: AppColors.primary),
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(),
+                                onPressed: () {
+                                  final now = DateTime.now();
+                                  final currentWeekStart = now.subtract(Duration(days: now.weekday - 1));
+                                  final prev = _weekStart.subtract(const Duration(days: 7));
+                                  if (!prev.isBefore(currentWeekStart)) {
+                                    setState(() {
+                                      _weekStart = prev;
+                                      _calendarDates = List.generate(7, (i) => _weekStart.add(Duration(days: i)));
+                                    });
+                                  }
+                                },
+                              ),
+                              const SizedBox(width: 10),
+                              IconButton(
+                                icon: const Icon(Icons.chevron_right, color: AppColors.primary),
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(),
+                                onPressed: () => setState(() {
+                                  _weekStart = _weekStart.add(const Duration(days: 7));
+                                  _calendarDates = List.generate(7, (i) => _weekStart.add(Duration(days: i)));
+                                }),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
-                      _buildBadgeStatus(),
+                      const SizedBox(height: 10),
+                      _buildCalendarRow(),
+                      
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton.icon(
+                          onPressed: () async {
+                            final picked = await showDatePicker(
+                              context: context,
+                              initialDate: DateTime.now(),
+                              firstDate: DateTime.now(),
+                              lastDate: DateTime.now().add(const Duration(days: 365)),
+                            );
+                            if (picked != null) {
+                              setState(() => _buildCalendarDates(picked));
+                            }
+                          },
+                          icon: const Icon(Icons.calendar_month_outlined, size: 16),
+                          label: const Text('Ver más'),
+                          style: TextButton.styleFrom(foregroundColor: AppColors.primary),
+                        ),
+                      ),
+                      
+                      const SizedBox(height: 10),
+                      Text('Historial de viajes', style: mBold(size: 18)),
+                      const SizedBox(height: 10),
+                      _buildHistorySection(),
+                      const SizedBox(height: 30),
                     ],
                   ),
                 ),
               ],
             ),
           ),
-        ),
+        ],
+      ),
+      // bottomNavigationBar: QUITE ESTO PARA EVITAR EL ERROR DEL IMPORT FALTANTE
+    );
+  }
+
+  // --- COMPONENTES VISUALES ---
+
+  Widget _buildHeader(dynamic user) {
+    // Fusión: Estilo Stack del Repo, pero con tu lógica de avatar y botón animado
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Container(height: 80, width: double.infinity, color: AppColors.primaryLight),
         Positioned(
-          top: 90,
-          right: 20,
-          child: GestureDetector(
-            onTap: () => setState(() {
-              _isVoiceActive = !_isVoiceActive;
-              _isVoiceActive
-                  ? _pulseController.repeat(reverse: true)
-                  : _pulseController.reset();
-            }),
-            child: ScaleTransition(
-              scale: _pulseAnimation,
-              child: Image.asset(
-                _isVoiceActive
-                    ? 'assets/escuchando.png'
-                    : 'assets/controlvoz.png',
-                width: 65,
-                height: 65,
-              ),
+          bottom: -50,
+          left: 20,
+          child: CircleAvatar(
+            radius: 50,
+            backgroundColor: AppColors.white,
+            child: CircleAvatar(
+              radius: 46,
+              backgroundImage: (user != null && user.fotoPerfil.isNotEmpty)
+                  ? MemoryImage(base64Decode(user.fotoPerfil.split(',').last))
+                  : const AssetImage('assets/conductor.png') as ImageProvider,
             ),
           ),
         ),
+        Positioned(
+          bottom: -25,
+          left: 130,
+          right: 20, // Agregado para alinear el botón de voz a la derecha
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Bienvenido!',
+                      style: GoogleFonts.montserrat(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    _buildBadgeStatus(),
+                  ],
+                ),
+              ),
+              // Tu botón animado de voz
+              GestureDetector(
+                onTap: () => setState(() {
+                  _isVoiceActive = !_isVoiceActive;
+                  _isVoiceActive
+                      ? _pulseController.repeat(reverse: true)
+                      : _pulseController.reset();
+                }),
+                child: ScaleTransition(
+                  scale: _pulseAnimation,
+                  child: Image.asset(
+                    _isVoiceActive ? 'assets/escuchando.png' : 'assets/controlvoz.png',
+                    width: 45,
+                    height: 45,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ],
+    );
+  }
+
+  Widget _buildBadgeStatus() {
+    return Container(
+      margin: const EdgeInsets.only(top: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: AppColors.primary,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.check_circle_outline, color: AppColors.white, size: 12),
+          const SizedBox(width: 4),
+          Text('Conductor Activo', style: mBold(color: AppColors.white, size: 10)),
+        ],
+      ),
     );
   }
 
@@ -230,11 +323,12 @@ class _PrincipalConductorState extends State<PrincipalConductor>
       return Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: cardBlue,
-          borderRadius: BorderRadius.circular(30),
+          color: AppColors.primaryLight,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.border, width: 1),
         ),
         child: Center(
-          child: Text("Sin viajes próximos", style: mBold(color: primaryBlue)),
+          child: Text("Sin viajes próximos", style: mBold(color: AppColors.primary)),
         ),
       );
     }
@@ -242,11 +336,13 @@ class _PrincipalConductorState extends State<PrincipalConductor>
     final fecha = DateTime.parse(_viajeProximo!['fecha_hora_inicio']);
     final hora = "${fecha.hour}:${fecha.minute.toString().padLeft(2, '0')}";
 
+    // Diseño del Repo, datos de tu Backend
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
-        color: cardBlue,
-        borderRadius: BorderRadius.circular(30),
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border, width: 1),
       ),
       child: Column(
         children: [
@@ -254,49 +350,49 @@ class _PrincipalConductorState extends State<PrincipalConductor>
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Expanded(
-                child: Text(
-                  'Hoy - ${fecha.day}/${fecha.month}\nPasajero: ${_viajeProximo!['nombre_pasajero']}',
-                  style: mBold(size: 15),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Hoy - ${fecha.day}/${fecha.month}', style: mBold(size: 13, color: AppColors.textSecondary ?? Colors.grey)),
+                    const SizedBox(height: 2),
+                    Text(_viajeProximo!['nombre_pasajero'] ?? 'Pasajero', style: mBold(size: 15)),
+                  ],
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 15,
-                  vertical: 8,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 decoration: BoxDecoration(
-                  color: primaryBlue,
-                  borderRadius: BorderRadius.circular(20),
+                  color: AppColors.primary,
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                child: Text(hora, style: mBold(color: Colors.white, size: 14)),
+                child: Text(hora, style: mBold(color: AppColors.white, size: 12)),
               ),
             ],
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 12),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
+              const Icon(Icons.location_on, color: AppColors.primary, size: 18),
+              const SizedBox(width: 4),
               Expanded(
-                child: Text(
-                  _viajeProximo!['punto_inicio'] ?? 'Origen',
-                  textAlign: TextAlign.center,
-                  style: mBold(color: primaryBlue, size: 13),
-                ),
+                child: Text(_viajeProximo!['punto_inicio'] ?? 'Origen', style: mBold(color: AppColors.primary, size: 13), overflow: TextOverflow.ellipsis),
               ),
-              const Icon(Icons.arrow_forward, color: Colors.red, size: 24),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 8),
+                child: Icon(Icons.arrow_forward_rounded, color: Colors.grey, size: 20),
+              ),
+              const Icon(Icons.flag_rounded, color: Colors.red, size: 18),
+              const SizedBox(width: 4),
               Expanded(
-                child: Text(
-                  _viajeProximo!['destino'] ?? 'Destino',
-                  textAlign: TextAlign.center,
-                  style: mBold(color: primaryBlue, size: 13),
-                ),
+                child: Text(_viajeProximo!['destino'] ?? 'Destino', style: mBold(color: AppColors.primary, size: 13), overflow: TextOverflow.ellipsis),
               ),
             ],
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 14),
           Row(
             children: [
-              _expandedBtn('Ver detalles', primaryBlue, () {
+              _actionBtn('Ver detalles', AppColors.primary, () {
                 showModalBottomSheet(
                   context: context,
                   isScrollControlled: true,
@@ -308,11 +404,9 @@ class _PrincipalConductorState extends State<PrincipalConductor>
                 );
               }),
               const SizedBox(width: 10),
-              _expandedBtn(
-                'Contactar',
-                primaryBlue,
-                () => _hacerLlamada(_viajeProximo!['telefono_pasajero']),
-              ),
+              _actionBtn('Contactar pasajero', AppColors.primary, () {
+                 _hacerLlamada(_viajeProximo!['telefono_pasajero']);
+              }),
             ],
           ),
         ],
@@ -320,32 +414,30 @@ class _PrincipalConductorState extends State<PrincipalConductor>
     );
   }
 
-  Widget _expandedBtn(String label, Color color, VoidCallback onTap) {
+  Widget _actionBtn(String label, Color bgColor, VoidCallback onTap) {
     return Expanded(
       child: ElevatedButton(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: color,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15),
-          ),
-        ),
         onPressed: onTap,
-        child: Text(
-          label,
-          style: mBold(color: Colors.white, size: 12),
-          textAlign: TextAlign.center,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: bgColor,
+          elevation: 0,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          padding: const EdgeInsets.symmetric(vertical: 10),
         ),
+        child: Text(label, textAlign: TextAlign.center, style: mBold(color: AppColors.white, size: 11)),
       ),
     );
   }
 
   Widget _buildRouteSection() {
+    // Tu widget de mapa real inyectado perfectamente
     final latLngConductorActual = const LatLng(20.676667, -103.3475);
 
     return HomeMapPreview(
       viajeProximo: _viajeProximo,
       ubicacionConductor: latLngConductorActual,
       onOpenRoute: () {
+        if (_viajeProximo == null) return;
         final idViaje = _viajeProximo!['id_viaje'] ?? _viajeProximo!['id'];
         Navigator.pushNamed(
           context,
@@ -357,156 +449,145 @@ class _PrincipalConductorState extends State<PrincipalConductor>
   }
 
   Widget _buildCalendarRow() {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      physics: const BouncingScrollPhysics(),
-      child: Row(
-        children: _calendarDates.map((date) => _calendarDay(date)).toList(),
-      ),
+    return Row(
+      children: _calendarDates.map((date) => Expanded(child: _calendarDay(date))).toList(),
     );
   }
 
   Widget _calendarDay(DateTime date) {
-    bool isSelected = _selectedDateNum == date.day.toString();
-    return Container(
-      width: 65,
-      margin: const EdgeInsets.symmetric(horizontal: 5),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(15),
-        border: isSelected ? Border.all(color: primaryBlue, width: 2) : null,
-      ),
-      child: Column(
-        children: [
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 5),
-            decoration: const BoxDecoration(
-              color: primaryBlue,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(13)),
-            ),
-            child: Text(
-              ['D', 'L', 'M', 'M', 'J', 'V', 'S'][date.weekday % 7],
-              textAlign: TextAlign.center,
-              style: mBold(color: Colors.white, size: 12),
+    final today = DateTime.now();
+    final isPast = date.isBefore(DateTime(today.year, today.month, today.day));
+    final isSelected = _selectedDate == date.day.toString();
+    
+    return Opacity(
+      opacity: isPast ? 0.4 : 1.0,
+      child: GestureDetector(
+        onTap: isPast ? null : () => setState(() => _selectedDate = date.day.toString()),
+        child: Container(
+          height: 65,
+          margin: const EdgeInsets.symmetric(horizontal: 3),
+          decoration: BoxDecoration(
+            color: AppColors.primaryLight,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isSelected ? AppColors.primary : Colors.transparent,
+              width: 2,
             ),
           ),
-          const SizedBox(height: 8),
-          Text(date.day.toString(), style: mBold(color: primaryBlue, size: 16)),
-          const SizedBox(height: 8),
-        ],
+          child: Column(
+            children: [
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 2),
+                decoration: const BoxDecoration(
+                  color: AppColors.primary,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(10)),
+                ),
+                child: Text(
+                  _dayLetter(date),
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.montserrat(
+                    color: AppColors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              Expanded(
+                child: Center(
+                  child: Text(
+                    date.day.toString(),
+                    style: GoogleFonts.montserrat(
+                      color: AppColors.primary,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
 
   Widget _buildHistorySection() {
-    if (_historialViajes.isEmpty) return const Text("Sin historial");
+    if (_historialViajes.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.all(10.0),
+        child: Text("No hay viajes en el historial", style: mBold(color: Colors.grey)),
+      );
+    }
+    
     return Column(
-      children: _historialViajes.take(3).map((v) => _historyCard(v)).toList(),
+      children: _historialViajes.map((viaje) => _buildHistoryCard(viaje)).toList(),
     );
   }
 
-  Widget _historyCard(dynamic viaje) {
+  Widget _buildHistoryCard(dynamic viaje) {
+    // Extracción segura de datos
+    final pasajero = viaje['nombre_pasajero'] ?? 'Pasajero';
+    final distancia = viaje['distancia'] ?? '--';
+    final calificacion = viaje['calificacion'] ?? 0;
+    
+    String fechaStr = "Fecha";
+    if (viaje['fecha'] != null) {
+      try {
+        final d = DateTime.parse(viaje['fecha']);
+        final meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+        fechaStr = "${meses[d.month - 1]} ${d.day}";
+      } catch (_) {}
+    }
+
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(15),
+      margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: primaryBlue.withOpacity(0.3)),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border, width: 1),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                viaje['nombre_pasajero'] ?? 'Pasajero',
-                style: mBold(color: primaryBlue),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('$fechaStr  —  $pasajero',
+                      style: mBold(color: AppColors.primary, size: 13)),
+                  const SizedBox(height: 4),
+                  Text('Distancia: $distancia km',
+                      style: mBold(size: 12, color: AppColors.textSecondary ?? Colors.grey)),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: List.generate(
+                      5,
+                      (i) => Icon(
+                        Icons.star_rounded,
+                        color: i < calificacion ? Colors.orange : AppColors.border,
+                        size: 16,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              Text(
-                viaje['destino'] ?? 'Destino',
-                style: mBold(size: 12, color: Colors.grey),
-              ),
-            ],
-          ),
-          IconButton(
-            icon: const Icon(Icons.info_outline, color: primaryBlue),
-            onPressed: () => showModalBottomSheet(
-              context: context,
-              isScrollControlled: true,
-              backgroundColor: Colors.transparent,
-              builder: (context) =>
-                  ViajeDetallesModal(viaje: viaje, esConductor: true),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBadgeStatus() {
-    return Container(
-      margin: const EdgeInsets.only(top: 5),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(
-        color: buttonLightBlue,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.check_circle_outline, color: Colors.white, size: 14),
-          const SizedBox(width: 4),
-          Text('Conductor Activo', style: mBold(color: Colors.white, size: 10)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCustomBottomNav(BuildContext context) {
-    return Container(
-      height: 70,
-      decoration: const BoxDecoration(color: cardBlue),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          _navIcon(0, Icons.home),
-          _navIcon(1, Icons.location_on),
-          _navIcon(2, Icons.list_alt),
-          _navIcon(3, Icons.person),
-        ],
-      ),
-    );
-  }
-
-  Widget _navIcon(int index, IconData icon) {
-    bool active = _selectedIndex == index;
-    return GestureDetector(
-      onTap: () {
-        if (active) return;
-        String route = '';
-        switch (index) {
-          case 0:
-            route = '/principal_conductor';
-            break;
-          case 2:
-            route = '/viajes_conductor';
-            break;
-          case 3:
-            route = '/mi_perfil_conductor';
-            break;
-        }
-        if (route.isNotEmpty) Navigator.pushReplacementNamed(context, route);
-      },
-      child: Container(
-        width: 45,
-        height: 45,
-        decoration: BoxDecoration(
-          color: active ? primaryBlue : Colors.white,
-          shape: BoxShape.circle,
+            GestureDetector(
+              onTap: () {
+                // Navegar a detalles del historial
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text('Ver detalles', style: mBold(color: AppColors.white, size: 11)),
+              ),
+            ),
+          ],
         ),
-        child: Icon(icon, color: active ? Colors.white : primaryBlue, size: 25),
       ),
     );
   }

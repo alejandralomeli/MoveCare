@@ -1,8 +1,9 @@
-import 'dart:io'; // NUEVO para manejar el archivo de imagen
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:image_picker/image_picker.dart'; // Requiere la dependencia image_picker
+import 'package:image_picker/image_picker.dart';
 import '../../services/auth/auth_service.dart';
+import '../app_theme.dart';
 
 class RegistroConductor extends StatefulWidget {
   const RegistroConductor({super.key});
@@ -12,25 +13,20 @@ class RegistroConductor extends StatefulWidget {
 }
 
 class _DriverRegisterScreenState extends State<RegistroConductor> {
-  static const Color primaryBlue = Color(0xFF1559B2);
-  static const Color fieldBlue = Color(0xFFD6E8FF);
-
-  // Controladores y estados de lógica (HEAD)
   final _nombreController = TextEditingController();
   final _correoController = TextEditingController();
   final _telefonoController = TextEditingController();
-  final _direccionController = TextEditingController(); // NUEVO controlador
+  final _direccionController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
-  File? _imageFile; // NUEVO para almacenar la foto
+  File? _imageFile;
   final ImagePicker _picker = ImagePicker();
 
   bool _loading = false;
   bool _obscurePass = true;
   bool _obscureConfirmPass = true;
 
-  // Función de escalado responsivo (main)
   double sp(double size, BuildContext context) {
     double sw = MediaQuery.of(context).size.width;
     return sw * (size / 375);
@@ -41,13 +37,12 @@ class _DriverRegisterScreenState extends State<RegistroConductor> {
     _nombreController.dispose();
     _correoController.dispose();
     _telefonoController.dispose();
-    _direccionController.dispose(); // NUEVO dispose
+    _direccionController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
   }
 
-  // Lógica para seleccionar imagen (NUEVO)
   Future<void> _pickImage(ImageSource source) async {
     final pickedFile = await _picker.pickImage(source: source);
     if (pickedFile != null) {
@@ -56,7 +51,6 @@ class _DriverRegisterScreenState extends State<RegistroConductor> {
     if (mounted) Navigator.pop(context);
   }
 
-  // Menú de opciones para foto (NUEVO)
   void _showImageSourceActionSheet(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -67,13 +61,17 @@ class _DriverRegisterScreenState extends State<RegistroConductor> {
         child: Wrap(
           children: [
             ListTile(
-              leading: const Icon(Icons.photo_library, color: primaryBlue),
-              title: const Text('Elegir de Fototeca'),
+              leading: const Icon(Icons.photo_library_rounded,
+                  color: AppColors.primary),
+              title: Text('Elegir de Fototeca',
+                  style: GoogleFonts.montserrat(fontSize: 14)),
               onTap: () => _pickImage(ImageSource.gallery),
             ),
             ListTile(
-              leading: const Icon(Icons.camera_alt, color: primaryBlue),
-              title: const Text('Tomar Foto'),
+              leading: const Icon(Icons.camera_alt_rounded,
+                  color: AppColors.primary),
+              title: Text('Tomar Foto',
+                  style: GoogleFonts.montserrat(fontSize: 14)),
               onTap: () => _pickImage(ImageSource.camera),
             ),
           ],
@@ -85,34 +83,54 @@ class _DriverRegisterScreenState extends State<RegistroConductor> {
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
-    final sw = size.width;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.white,
       body: Stack(
         children: [
-          // Imagen de fondo superior
+          // Top image
           Positioned(
             top: 0,
             left: 0,
             right: 0,
-            height: size.height * 0.45,
-            child: Image.asset('assets/ruta.png', fit: BoxFit.cover),
+            height: size.height * 0.36,
+            child: Stack(
+              children: [
+                Image.asset(
+                  'assets/ruta.png',
+                  width: double.infinity,
+                  height: double.infinity,
+                  fit: BoxFit.cover,
+                  errorBuilder: (c, e, s) =>
+                      Container(color: AppColors.primaryLight),
+                ),
+                Container(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [Color(0x55000000), Color(0x00000000)],
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
 
-          // Botón de retroceso
+          // Back button
           Positioned(
-            top: MediaQuery.of(context).padding.top + 35,
-            left: 15,
+            top: MediaQuery.of(context).padding.top + 4,
+            left: 4,
             child: IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new, color: primaryBlue, size: 20),
+              icon: const Icon(Icons.arrow_back_ios_new,
+                  color: AppColors.white, size: 20),
               onPressed: () => Navigator.pop(context),
             ),
           ),
 
-          // Logo/Foto de perfil interactiva (MODIFICADO)
+          // Profile photo picker
           Positioned(
-            top: size.height * 0.10,
+            top: size.height * 0.12,
             left: 0,
             right: 0,
             child: Center(
@@ -121,32 +139,47 @@ class _DriverRegisterScreenState extends State<RegistroConductor> {
                 child: Stack(
                   children: [
                     Container(
-                      width: sp(110, context),
-                      height: sp(110, context),
+                      width: 96,
+                      height: 96,
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: AppColors.primaryLight,
                         shape: BoxShape.circle,
-                        boxShadow: const [
-                          BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, 5)),
+                        border: Border.all(color: AppColors.white, width: 3),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.15),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          )
                         ],
                         image: _imageFile != null
-                            ? DecorationImage(image: FileImage(_imageFile!), fit: BoxFit.cover)
+                            ? DecorationImage(
+                                image: FileImage(_imageFile!),
+                                fit: BoxFit.cover)
                             : null,
                       ),
                       child: _imageFile == null
                           ? Padding(
-                              padding: const EdgeInsets.all(15),
-                              child: Image.asset('assets/movecare.png'),
+                              padding: const EdgeInsets.all(20),
+                              child: Image.asset('assets/movecare.png',
+                                  fit: BoxFit.contain),
                             )
                           : null,
                     ),
                     Positioned(
                       bottom: 0,
                       right: 0,
-                      child: CircleAvatar(
-                        backgroundColor: primaryBlue,
-                        radius: 18,
-                        child: const Icon(Icons.camera_alt, color: Colors.white, size: 18),
+                      child: Container(
+                        width: 30,
+                        height: 30,
+                        decoration: BoxDecoration(
+                          color: AppColors.primary,
+                          shape: BoxShape.circle,
+                          border:
+                              Border.all(color: AppColors.white, width: 2),
+                        ),
+                        child: const Icon(Icons.camera_alt_rounded,
+                            color: AppColors.white, size: 14),
                       ),
                     ),
                   ],
@@ -155,89 +188,98 @@ class _DriverRegisterScreenState extends State<RegistroConductor> {
             ),
           ),
 
-          // Formulario
+          // White bottom panel
           Align(
             alignment: Alignment.bottomCenter,
             child: Container(
-              height: size.height * 0.68,
+              height: size.height * 0.70,
               width: double.infinity,
               decoration: const BoxDecoration(
-                color: Colors.white,
+                color: AppColors.white,
                 borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(50),
-                  topRight: Radius.circular(50),
+                  topLeft: Radius.circular(28),
+                  topRight: Radius.circular(28),
                 ),
               ),
               child: SingleChildScrollView(
                 physics: const BouncingScrollPhysics(),
-                padding: EdgeInsets.symmetric(horizontal: sw * 0.08),
+                padding: const EdgeInsets.symmetric(horizontal: 28),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    SizedBox(height: sp(35, context)),
+                    const SizedBox(height: 28),
                     Text(
-                      'Crea una cuenta de Conductor',
+                      'Crear cuenta de Conductor',
                       textAlign: TextAlign.center,
                       style: GoogleFonts.montserrat(
-                        color: primaryBlue,
-                        fontWeight: FontWeight.bold,
-                        fontSize: sp(18, context),
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
                       ),
                     ),
-                    SizedBox(height: sp(25, context)),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Completa tu información para continuar',
+                      style: GoogleFonts.montserrat(
+                        fontSize: 13,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
 
-                    _buildTextField(context, label: 'Nombre', iconColor: Colors.blue.shade800, controller: _nombreController),
-                    _buildTextField(context, label: 'Correo electrónico', iconColor: Colors.blue.shade400, controller: _correoController),
-                    _buildTextField(context, label: 'Teléfono de contacto', iconColor: Colors.blue.shade800, controller: _telefonoController),
-                    _buildTextField(context, label: 'Dirección particular', iconColor: Colors.blue.shade400, controller: _direccionController), // NUEVO
-
-                    _buildTextField(
-                      context,
-                      label: 'Contraseña',
-                      iconColor: Colors.blue.shade800,
-                      isPassword: true,
+                    _buildField(
+                        controller: _nombreController,
+                        hint: 'Nombre completo',
+                        icon: Icons.person_outline_rounded),
+                    _buildField(
+                        controller: _correoController,
+                        hint: 'Correo electrónico',
+                        icon: Icons.mail_outline_rounded,
+                        keyboardType: TextInputType.emailAddress),
+                    _buildField(
+                        controller: _telefonoController,
+                        hint: 'Teléfono de contacto',
+                        icon: Icons.phone_outlined,
+                        keyboardType: TextInputType.phone),
+                    _buildField(
+                        controller: _direccionController,
+                        hint: 'Dirección particular',
+                        icon: Icons.home_outlined),
+                    _buildPasswordField(
                       controller: _passwordController,
-                      obscure: _obscurePass,
-                      onToggle: () => setState(() => _obscurePass = !_obscurePass),
+                      hint: 'Contraseña',
+                      isObscured: _obscurePass,
+                      onToggle: () =>
+                          setState(() => _obscurePass = !_obscurePass),
                     ),
-
-                    _buildTextField(
-                      context,
-                      label: 'Confirmación de contraseña',
-                      iconColor: Colors.blue.shade400,
-                      isPassword: true,
+                    _buildPasswordField(
                       controller: _confirmPasswordController,
-                      obscure: _obscureConfirmPass,
-                      onToggle: () => setState(() => _obscureConfirmPass = !_obscureConfirmPass),
+                      hint: 'Confirmar contraseña',
+                      isObscured: _obscureConfirmPass,
+                      onToggle: () => setState(
+                          () => _obscureConfirmPass = !_obscureConfirmPass),
                     ),
 
-                    SizedBox(height: sp(25, context)),
+                    const SizedBox(height: 24),
 
                     SizedBox(
-                      width: sw * 0.75,
-                      height: 55,
+                      width: double.infinity,
                       child: ElevatedButton(
                         onPressed: _loading ? null : _registerDriver,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: primaryBlue,
-                          elevation: 3,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-                        ),
                         child: _loading
-                            ? const CircularProgressIndicator(color: Colors.white)
-                            : Text(
-                                'Continuar con mi registro',
-                                style: GoogleFonts.montserrat(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: sp(14, context),
-                                ),
-                              ),
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                    color: Colors.white, strokeWidth: 2),
+                              )
+                            : const Text('Continuar con mi registro'),
                       ),
                     ),
 
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 16),
                     _buildFooter(context),
-                    SizedBox(height: sp(30, context)),
+                    const SizedBox(height: 28),
                   ],
                 ),
               ),
@@ -248,7 +290,80 @@ class _DriverRegisterScreenState extends State<RegistroConductor> {
     );
   }
 
-  // Lógica de registro (HEAD - SIN CAMBIOS DE LÓGICA)
+  Widget _buildField({
+    required TextEditingController controller,
+    required String hint,
+    required IconData icon,
+    TextInputType keyboardType = TextInputType.text,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: TextField(
+        controller: controller,
+        keyboardType: keyboardType,
+        style: GoogleFonts.montserrat(
+            fontSize: 14, color: AppColors.textPrimary),
+        decoration: InputDecoration(
+          hintText: hint,
+          prefixIcon: Icon(icon),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPasswordField({
+    required TextEditingController controller,
+    required String hint,
+    required bool isObscured,
+    required VoidCallback onToggle,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: TextField(
+        controller: controller,
+        obscureText: isObscured,
+        style: GoogleFonts.montserrat(
+            fontSize: 14, color: AppColors.textPrimary),
+        decoration: InputDecoration(
+          hintText: hint,
+          prefixIcon: const Icon(Icons.lock_outline_rounded),
+          suffixIcon: IconButton(
+            icon: Icon(
+              isObscured
+                  ? Icons.visibility_off_outlined
+                  : Icons.visibility_outlined,
+              color: AppColors.textSecondary,
+              size: 20,
+            ),
+            onPressed: onToggle,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFooter(BuildContext context) {
+    return GestureDetector(
+      onTap: () => Navigator.pushNamed(context, '/iniciar_sesion'),
+      child: RichText(
+        text: TextSpan(
+          style: GoogleFonts.montserrat(
+              color: AppColors.textSecondary, fontSize: 13),
+          children: [
+            const TextSpan(text: '¿Ya tienes cuenta? '),
+            TextSpan(
+              text: 'Inicia Sesión',
+              style: GoogleFonts.montserrat(
+                color: AppColors.primary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> _registerDriver() async {
     if (_passwordController.text != _confirmPasswordController.text) {
       _showMessage('Las contraseñas no coinciden');
@@ -262,57 +377,17 @@ class _DriverRegisterScreenState extends State<RegistroConductor> {
       password: _passwordController.text,
     );
     setState(() => _loading = false);
+    if (!mounted) return;
     if (result["ok"]) {
-      Navigator.pushNamed(context, '/continue_driver_register_screen', arguments: result["id_usuario"]);
+      Navigator.pushNamed(context, '/continue_driver_register_screen',
+          arguments: result["id_usuario"]);
     } else {
       _showMessage(result["error"]);
     }
   }
 
   void _showMessage(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
-  }
-
-  Widget _buildTextField(BuildContext context, {required String label, required Color iconColor, required TextEditingController controller, bool isPassword = false, bool? obscure, VoidCallback? onToggle}) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Container(
-        decoration: BoxDecoration(color: fieldBlue, borderRadius: BorderRadius.circular(20)),
-        child: TextField(
-          controller: controller,
-          obscureText: isPassword ? (obscure ?? true) : false,
-          style: GoogleFonts.montserrat(fontSize: sp(14, context), color: Colors.black87),
-          decoration: InputDecoration(
-            hintText: label,
-            hintStyle: GoogleFonts.montserrat(color: primaryBlue.withOpacity(0.7), fontSize: sp(13, context), fontWeight: FontWeight.w600),
-            prefixIcon: Padding(
-              padding: const EdgeInsets.all(12),
-              child: CircleAvatar(backgroundColor: iconColor, radius: 8),
-            ),
-            suffixIcon: isPassword
-                ? IconButton(
-                    icon: Icon(obscure! ? Icons.visibility_off : Icons.visibility, color: primaryBlue, size: 20),
-                    onPressed: onToggle,
-                  )
-                : null,
-            border: InputBorder.none,
-            contentPadding: const EdgeInsets.symmetric(vertical: 18),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFooter(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Text('¿Ya tienes cuenta? ', style: GoogleFonts.montserrat(fontSize: sp(13, context))),
-        GestureDetector(
-          onTap: () => Navigator.pushNamed(context, '/iniciar_sesion'),
-          child: Text('Inicia Sesión', style: GoogleFonts.montserrat(color: primaryBlue, fontWeight: FontWeight.bold, fontSize: sp(13, context))),
-        ),
-      ],
-    );
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(msg)));
   }
 }

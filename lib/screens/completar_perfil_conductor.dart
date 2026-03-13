@@ -5,14 +5,15 @@ import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:provider/provider.dart';
 
-// Importa tus servicios y proveedores (Ajusta las rutas según tu proyecto)
+// Estética y componentes del repositorio
+import '../app_theme.dart';
+import 'widgets/mic_button.dart';
+
+// Servicios y lógica de usuario
 import '../providers/user_provider.dart';
 import '../services/auth/auth_service.dart';
 import '../services/auth/validacion_service.dart';
 
-// -------------------------------------------------------------------
-// VISTA PRINCIPAL
-// -------------------------------------------------------------------
 class CompletarPerfilConductor extends StatefulWidget {
   const CompletarPerfilConductor({super.key});
 
@@ -21,25 +22,21 @@ class CompletarPerfilConductor extends StatefulWidget {
 }
 
 class _CompletarPerfilConductorState extends State<CompletarPerfilConductor> with TickerProviderStateMixin {
-  static const Color primaryBlue = Color(0xFF1559B2);
-  static const Color lightBlueBg = Color(0xFFB3D4FF);
-  static const Color accentBlue = Color(0xFF64A1F4);
-  
-  int _selectedIndex = 3;
+  // Lógica de estado
   bool _isVoiceActive = false;
   bool _isLoading = false;
-  bool _isInit = false; // Para cargar datos solo una vez
+  bool _isInit = false;
 
   late AnimationController _pulseController;
 
-  // Controladores Perfil adaptados al Backend
+  // Controladores de texto
   final TextEditingController _nombreCtrl = TextEditingController();
-  final TextEditingController _correoCtrl = TextEditingController(); 
+  final TextEditingController _correoCtrl = TextEditingController();
   final TextEditingController _telefonoCtrl = TextEditingController();
   final TextEditingController _direccionCtrl = TextEditingController();
   final TextEditingController _fechaNacCtrl = TextEditingController();
 
-  // Almacenamiento Base64 (Documentos y Foto de perfil)
+  // Almacenamiento de documentos en Base64
   String? fotoPerfilB64;
   String? ineFrenteB64;
   String? ineReversoB64;
@@ -69,16 +66,12 @@ class _CompletarPerfilConductorState extends State<CompletarPerfilConductor> wit
     if (!_isInit) {
       final user = context.read<UserProvider>().user;
       if (user != null) {
-        // Precargamos los datos del usuario desde el Provider
-        _nombreCtrl.text = user.nombre ?? user.nombre ?? ''; 
+        _nombreCtrl.text = user.nombre ?? '';
         _correoCtrl.text = user.correo ?? '';
-        _telefonoCtrl.text = user.telefono ?? ''; 
+        _telefonoCtrl.text = user.telefono ?? '';
         _direccionCtrl.text = user.direccion ?? '';
+        if (user.fechaNacimiento != null) _fechaNacCtrl.text = user.fechaNacimiento!;
         
-        if (user.fechaNacimiento != null) {
-          _fechaNacCtrl.text = user.fechaNacimiento!;
-        }
-
         if (user.fotoPerfil != null && user.fotoPerfil!.isNotEmpty) {
           String base64String = user.fotoPerfil!;
           if (base64String.contains(',')) base64String = base64String.split(',').last;
@@ -117,19 +110,16 @@ class _CompletarPerfilConductorState extends State<CompletarPerfilConductor> wit
   Future<void> _cambiarFotoPerfil() async {
     final XFile? image = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 50);
     if (image != null) {
-      final bytes = await image.readAsBytes(); 
-      setState(() {
-        fotoPerfilB64 = base64Encode(bytes);
-      });
+      final bytes = await image.readAsBytes();
+      setState(() => fotoPerfilB64 = base64Encode(bytes));
     }
   }
 
   Future<void> _pickImage(String tipoDocumento) async {
     final XFile? image = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 50);
     if (image != null) {
-      final bytes = await image.readAsBytes(); 
+      final bytes = await image.readAsBytes();
       final base64String = base64Encode(bytes);
-      
       setState(() {
         if (tipoDocumento == 'ineFrente') ineFrenteB64 = base64String;
         if (tipoDocumento == 'ineReverso') ineReversoB64 = base64String;
@@ -145,22 +135,19 @@ class _CompletarPerfilConductorState extends State<CompletarPerfilConductor> wit
       allowedExtensions: ['pdf'],
       withData: true,
     );
-
     if (result != null && result.files.single.bytes != null) {
       if (result.files.single.size > 3000000) {
-        if(mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('El PDF es muy pesado. Máximo 3MB.')));
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('El PDF es muy pesado. Máximo 3MB.')));
         return;
       }
-      setState(() {
-        polizaPdfB64 = base64Encode(result.files.single.bytes!);
-      });
+      setState(() => polizaPdfB64 = base64Encode(result.files.single.bytes!));
     }
   }
 
-  // --- LLAMADAS REALES AL BACKEND ---
+  // --- LLAMADAS AL BACKEND ---
+
   Future<void> _actualizarPerfil() async {
     setState(() => _isLoading = true);
-    
     try {
       final res = await AuthService.updateProfile(
         nombreCompleto: _nombreCtrl.text.isNotEmpty ? _nombreCtrl.text : null,
@@ -169,77 +156,47 @@ class _CompletarPerfilConductorState extends State<CompletarPerfilConductor> wit
         fechaNacimiento: _fechaNacCtrl.text.isNotEmpty ? _fechaNacCtrl.text : null,
         fotoPerfil: fotoPerfilB64,
       );
-
       if (res['ok'] && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Perfil actualizado con éxito'), backgroundColor: Colors.green));
-      } else if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['error'] ?? 'Error al actualizar'), backgroundColor: Colors.red));
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.error));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  // 🔥 ESTA ES LA FUNCIÓN CORREGIDA PARA VALIDACIONSERVICE 🔥
   Future<void> _enviarDocumentos() async {
     if (ineFrenteB64 == null || ineReversoB64 == null || licenciaFrenteB64 == null || licenciaReversoB64 == null || polizaPdfB64 == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Por favor, sube todos los documentos', style: TextStyle(color: Colors.white)), backgroundColor: Colors.red)
-      );
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Por favor, sube todos los documentos'), backgroundColor: AppColors.error));
       return;
     }
-    
     setState(() => _isLoading = true);
-    
     try {
-      // Ahora sí, pasamos todos los campos como los espera tu ValidacionService
       final exito = await ValidacionService.enviarValidacionDocumentos(
         ineFrenteBase64: ineFrenteB64!,
         ineReversoBase64: ineReversoB64!,
         licenciaFrenteBase64: licenciaFrenteB64,
         licenciaReversoBase64: licenciaReversoB64,
-        polizaBase64: polizaPdfB64, 
+        polizaBase64: polizaPdfB64,
       );
-
       if (exito && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Documentos enviados a revisión'), backgroundColor: Colors.green));
       }
     } catch (e) {
-      if (mounted) {
-        // En caso de error (como token inválido o fallo de la API) mostramos el mensaje que lanza tu excepción
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceAll('Exception: ', '')), backgroundColor: Colors.red));
-      }
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceAll('Exception: ', '')), backgroundColor: AppColors.error));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  void _mostrarModalVehiculo(double sw) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (context) => ModalInfoVehiculo(sw: sw), 
-    );
-  }
-
-  double sp(double size, double sw) => sw * (size / 375);
-
-  TextStyle mBold(double sw, {Color color = Colors.black, double size = 14}) {
-    return GoogleFonts.montserrat(color: color, fontSize: sp(size, sw), fontWeight: FontWeight.bold);
-  }
-
   @override
   Widget build(BuildContext context) {
-    final double sw = MediaQuery.of(context).size.width;
     final user = context.watch<UserProvider>().user;
-    final String nombreHeader = user?.nombre ?? user?.nombre ?? "Conductor";
     final bool isActivo = user?.activo ?? false;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.white,
       body: Stack(
         children: [
           CustomScrollView(
@@ -247,111 +204,97 @@ class _CompletarPerfilConductorState extends State<CompletarPerfilConductor> wit
             slivers: [
               SliverPersistentHeader(
                 pinned: true,
-                delegate: _ConductorHeaderDelegate(
-                  maxHeight: 110,
-                  minHeight: 85,
+                delegate: _HeaderDelegate(
                   isVoiceActive: _isVoiceActive,
-                  pulseAnimation: _pulseController,
                   onVoiceTap: _toggleVoice,
-                  onPhotoTap: _cambiarFotoPerfil, 
-                  fotoPerfilBase64: fotoPerfilB64, 
-                  nombreUsuario: nombreHeader, 
-                  sw: sw,
-                  mBold: mBold,
+                  fotoPerfilBase64: fotoPerfilB64,
+                  onPhotoTap: _cambiarFotoPerfil,
                 ),
               ),
-
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: sp(25, sw)),
+                  padding: const EdgeInsets.symmetric(horizontal: 22),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      SizedBox(height: sp(80, sw)), 
-                      
-                      if (!isActivo) ...[
-                        _buildCompleteProfileBanner(sw),
-                        SizedBox(height: sp(25, sw)),
-                      ],
+                      const SizedBox(height: 35),
 
-                      // DATOS PERSONALES
-                      Text('Información Personal', style: mBold(sw, size: 18, color: primaryBlue)),
-                      SizedBox(height: sp(15, sw)),
-                      _buildTextField(sw, 'Nombre Completo', _nombreCtrl),
-                      _buildTextField(sw, 'Correo Electrónico', _correoCtrl, readOnly: true), // Correo bloqueado
-                      _buildTextField(sw, 'Teléfono', _telefonoCtrl, isPhone: true),
-                      _buildTextField(sw, 'Dirección', _direccionCtrl),
-                      _buildTextField(sw, 'Fecha de Nacimiento (YYYY-MM-DD)', _fechaNacCtrl),
+                      if (!isActivo) _buildErrorBadge(),
+
+                      const SizedBox(height: 28),
+
+                      // INFORMACIÓN PERSONAL
+                      _buildSectionTitle('Información ', 'Personal'),
+                      const SizedBox(height: 18),
+                      _buildTextField('Nombre Completo', _nombreCtrl),
+                      _buildTextField('Correo Electrónico', _correoCtrl, readOnly: true),
+                      _buildTextField('Teléfono', _telefonoCtrl, isPhone: true),
+                      _buildTextField('Dirección', _direccionCtrl),
+                      _buildTextField('Fecha de Nacimiento (YYYY-MM-DD)', _fechaNacCtrl),
                       
-                      SizedBox(height: sp(10, sw)),
                       Center(
-                        child: ElevatedButton(
+                        child: TextButton(
                           onPressed: _actualizarPerfil,
-                          style: ElevatedButton.styleFrom(backgroundColor: accentBlue),
-                          child: Text('Actualizar Datos', style: mBold(sw, color: Colors.white)),
+                          child: Text('Actualizar Datos Personales', 
+                            style: GoogleFonts.montserrat(fontWeight: FontWeight.w700, color: AppColors.primary)),
                         ),
                       ),
-                      Divider(height: sp(50, sw), thickness: 2, color: Colors.grey[200]),
 
-                      // DOCUMENTOS
-                      Text('Validación de Documentos', style: mBold(sw, size: 18, color: primaryBlue)),
-                      SizedBox(height: sp(15, sw)),
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 20),
+                        child: Divider(color: AppColors.border, height: 1),
+                      ),
 
-                      Text('Foto de INE', style: mBold(sw, size: 14)),
-                      SizedBox(height: sp(10, sw)),
+                      // SECCIÓN INE
+                      _buildSectionTitle('Foto de ', 'INE'),
+                      _buildSubtitle('Sube una foto clara del anverso y reverso'),
+                      const SizedBox(height: 14),
                       Row(
                         children: [
-                          Expanded(child: _buildDocumentCard(sw, 'Anverso', ineFrenteB64 != null, () => _pickImage('ineFrente'))),
-                          SizedBox(width: sp(15, sw)),
-                          Expanded(child: _buildDocumentCard(sw, 'Reverso', ineReversoB64 != null, () => _pickImage('ineReverso'))),
+                          Expanded(child: _buildDocCard('Anverso', 'assets/ine_anverso.png', ineFrenteB64 != null, () => _pickImage('ineFrente'))),
+                          const SizedBox(width: 15),
+                          Expanded(child: _buildDocCard('Reverso', 'assets/ine_reverso.png', ineReversoB64 != null, () => _pickImage('ineReverso'))),
                         ],
                       ),
 
-                      SizedBox(height: sp(25, sw)),
-                      Text('Foto de Licencia de Conducir', style: mBold(sw, size: 14)),
-                      SizedBox(height: sp(10, sw)),
+                      const SizedBox(height: 28),
+                      const Divider(color: AppColors.border, height: 1),
+                      const SizedBox(height: 24),
+
+                      // SECCIÓN LICENCIA
+                      _buildSectionTitle('Licencia de ', 'Conducir'),
+                      _buildSubtitle('Sube una foto clara del anverso y reverso'),
+                      const SizedBox(height: 14),
                       Row(
                         children: [
-                          Expanded(child: _buildDocumentCard(sw, 'Anverso', licenciaFrenteB64 != null, () => _pickImage('licenciaFrente'))),
-                          SizedBox(width: sp(15, sw)),
-                          Expanded(child: _buildDocumentCard(sw, 'Reverso', licenciaReversoB64 != null, () => _pickImage('licenciaReverso'))),
+                          Expanded(child: _buildDocCard('Anverso', 'assets/ine_anverso.png', licenciaFrenteB64 != null, () => _pickImage('licenciaFrente'))),
+                          const SizedBox(width: 15),
+                          Expanded(child: _buildDocCard('Reverso', 'assets/ine_reverso.png', licenciaReversoB64 != null, () => _pickImage('licenciaReverso'))),
                         ],
                       ),
 
-                      SizedBox(height: sp(25, sw)),
-                      Text('Póliza de Seguro', style: mBold(sw, size: 14)),
-                      SizedBox(height: sp(10, sw)),
-                      GestureDetector(
-                        onTap: _pickPdf,
-                        child: Container(
-                          width: double.infinity,
-                          alignment: Alignment.center,
-                          padding: EdgeInsets.symmetric(horizontal: sp(20, sw), vertical: sp(15, sw)),
-                          decoration: BoxDecoration(
-                            border: Border.all(color: primaryBlue, width: 2),
-                            borderRadius: BorderRadius.circular(10),
-                            color: polizaPdfB64 != null ? lightBlueBg : Colors.white,
-                          ),
-                          child: Text(polizaPdfB64 != null ? 'PDF Cargado ✓' : 'Subir PDF (Máx 3MB)', style: mBold(sw, color: primaryBlue, size: 14)),
-                        ),
-                      ),
+                      const SizedBox(height: 28),
+                      const Divider(color: AppColors.border, height: 1),
+                      const SizedBox(height: 24),
 
-                      SizedBox(height: sp(30, sw)),
-                      SizedBox(
-                        width: double.infinity, height: sp(50, sw),
-                        child: ElevatedButton(
-                          onPressed: _enviarDocumentos,
-                          style: ElevatedButton.styleFrom(backgroundColor: primaryBlue, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))),
-                          child: Text('Enviar Documentos a Revisión', style: mBold(sw, color: Colors.white, size: 16)),
-                        ),
-                      ),
-                      Divider(height: sp(50, sw), thickness: 2, color: Colors.grey[200]),
+                      // SECCIÓN PÓLIZA
+                      _buildSectionTitle('Póliza de ', 'Seguro'),
+                      _buildSubtitle('Adjunta el PDF de tu póliza vigente'),
+                      const SizedBox(height: 14),
+                      _buildPdfPicker(),
 
-                      // ACCIONES EXTRA
-                      Center(
-                        child: _buildActionButton(sw, 'Datos de mi Vehículo', () => _mostrarModalVehiculo(sw)),
-                      ),
-                      SizedBox(height: sp(50, sw)), 
+                      const SizedBox(height: 36),
+
+                      // ACCIONES FINALES
+                      _buildOutlinedButton('Datos de mi Vehículo', Icons.directions_car_outlined, () {
+                        Navigator.pushNamed(context, 'Datos_Vehiculo');
+                      }),
+
+                      const SizedBox(height: 14),
+
+                      _buildPrimaryButton('Guardar y Enviar a Revisión', _enviarDocumentos),
+
+                      const SizedBox(height: 40),
                     ],
                   ),
                 ),
@@ -359,251 +302,245 @@ class _CompletarPerfilConductorState extends State<CompletarPerfilConductor> wit
             ],
           ),
           if (_isLoading)
-            Container(color: Colors.black12, child: const Center(child: CircularProgressIndicator())),
+            Container(color: Colors.black12, child: const Center(child: CircularProgressIndicator(color: AppColors.primary))),
         ],
       ),
-      bottomNavigationBar: _buildCustomBottomNav(sw),
+      bottomNavigationBar: const DriverBottomNav(selectedIndex: 3),
     );
   }
 
-  Widget _buildTextField(double sw, String label, TextEditingController controller, {bool isPhone = false, bool readOnly = false}) {
+  // --- WIDGETS DE ESTILO REPOSITORIO ---
+
+  Widget _buildErrorBadge() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(color: AppColors.error, borderRadius: BorderRadius.circular(25)),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.error_outline, color: AppColors.white, size: 17),
+          const SizedBox(width: 7),
+          Text('Completar perfil', style: GoogleFonts.montserrat(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.white)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSectionTitle(String normal, String bold) {
+    return Row(
+      children: [
+        Text(normal, style: GoogleFonts.montserrat(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+        Text(bold, style: GoogleFonts.montserrat(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.primary)),
+      ],
+    );
+  }
+
+  Widget _buildSubtitle(String text) {
     return Padding(
-      padding: EdgeInsets.only(bottom: sp(15, sw)),
+      padding: const EdgeInsets.only(top: 4),
+      child: Text(text, style: GoogleFonts.montserrat(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textSecondary)),
+    );
+  }
+
+  Widget _buildTextField(String label, TextEditingController controller, {bool isPhone = false, bool readOnly = false}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
       child: TextField(
         controller: controller,
-        keyboardType: isPhone ? TextInputType.phone : TextInputType.text,
         readOnly: readOnly,
-        style: TextStyle(color: readOnly ? Colors.grey[700] : Colors.black),
+        keyboardType: isPhone ? TextInputType.phone : TextInputType.text,
+        style: GoogleFonts.montserrat(fontSize: 14, color: readOnly ? AppColors.textSecondary : AppColors.textPrimary),
         decoration: InputDecoration(
-          labelText: label, labelStyle: mBold(sw, size: 12, color: Colors.grey),
-          fillColor: readOnly ? Colors.grey[100] : Colors.white,
+          labelText: label,
           filled: readOnly,
-          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: accentBlue.withOpacity(0.5))),
-          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: readOnly ? accentBlue.withOpacity(0.5) : primaryBlue)),
+          fillColor: readOnly ? AppColors.border.withOpacity(0.2) : AppColors.white,
+          labelStyle: GoogleFonts.montserrat(fontSize: 12, color: AppColors.textSecondary),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
+          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
+          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.primary, width: 1.5)),
         ),
       ),
     );
   }
 
-  Widget _buildDocumentCard(double sw, String label, bool isLoaded, VoidCallback onTap) {
+  Widget _buildDocCard(String label, String placeholder, bool isLoaded, VoidCallback onTap) {
     return GestureDetector(
       onTap: onTap,
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            height: sp(90, sw), width: double.infinity,
+            height: 110,
+            width: double.infinity,
             decoration: BoxDecoration(
-              color: isLoaded ? lightBlueBg : Colors.white,
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: accentBlue.withOpacity(0.3)),
+              color: isLoaded ? AppColors.primaryLight.withOpacity(0.3) : AppColors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: isLoaded ? AppColors.primary : AppColors.border, width: isLoaded ? 1.5 : 1),
+              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 6, offset: const Offset(0, 2))],
             ),
-            child: Center(
-              child: Icon(isLoaded ? Icons.check_circle : Icons.camera_alt, color: primaryBlue, size: 30),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  if (!isLoaded) Padding(padding: const EdgeInsets.all(8), child: Image.asset(placeholder, fit: BoxFit.contain, opacity: const AlwaysStoppedAnimation(.5))),
+                  if (isLoaded) const Icon(Icons.check_circle, color: AppColors.primary, size: 40),
+                  if (!isLoaded) const Icon(Icons.add_a_photo_outlined, size: 32, color: AppColors.primary),
+                ],
+              ),
             ),
           ),
-          const SizedBox(height: 8),
-          Text(label, style: mBold(sw, color: primaryBlue, size: 14)),
+          const SizedBox(height: 7),
+          Text(label, style: GoogleFonts.montserrat(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.primary)),
         ],
       ),
     );
   }
 
-  Widget _buildActionButton(double sw, String label, VoidCallback onTap) {
+  Widget _buildPdfPicker() {
+    return GestureDetector(
+      onTap: _pickPdf,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+        decoration: BoxDecoration(
+          color: polizaPdfB64 != null ? AppColors.primaryLight.withOpacity(0.3) : AppColors.white,
+          border: Border.all(color: AppColors.primary, width: 1.5),
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 6, offset: const Offset(0, 2))],
+        ),
+        child: Row(
+          children: [
+            Icon(polizaPdfB64 != null ? Icons.picture_as_pdf : Icons.picture_as_pdf_outlined, color: AppColors.primary, size: 22),
+            const SizedBox(width: 10),
+            Text(polizaPdfB64 != null ? 'Póliza cargada ✓' : 'Adjuntar PDF',
+                style: GoogleFonts.montserrat(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.primary)),
+            const Spacer(),
+            const Icon(Icons.chevron_right, color: AppColors.textSecondary, size: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOutlinedButton(String label, IconData icon, VoidCallback onTap) {
     return SizedBox(
-      width: sp(280, sw), height: sp(50, sw),
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: onTap,
+        icon: Icon(icon, size: 18),
+        label: Text(label, style: GoogleFonts.montserrat(fontSize: 13, fontWeight: FontWeight.w600)),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppColors.primary,
+          side: const BorderSide(color: AppColors.primary),
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPrimaryButton(String label, VoidCallback onTap) {
+    return SizedBox(
+      width: double.infinity,
       child: ElevatedButton(
         onPressed: onTap,
-        style: ElevatedButton.styleFrom(backgroundColor: accentBlue, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))),
-        child: Text(label, style: mBold(sw, color: Colors.white, size: 16)),
-      ),
-    );
-  }
-
-  Widget _buildCompleteProfileBanner(double sw) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
-      decoration: BoxDecoration(color: const Color(0xFFEF5350), borderRadius: BorderRadius.circular(20)),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.error_outline, color: Colors.white, size: 20),
-          const SizedBox(width: 10),
-          Text('Completar perfil', style: mBold(sw, color: Colors.white, size: 14)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCustomBottomNav(double sw) {
-    return Container(
-      height: 70, decoration: const BoxDecoration(color: Color(0xFFD6E8FF)),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          _navIcon(sw, 0, Icons.home), _navIcon(sw, 1, Icons.location_on),
-          _navIcon(sw, 2, Icons.history), _navIcon(sw, 3, Icons.person),
-        ],
-      ),
-    );
-  }
-
-  Widget _navIcon(double sw, int index, IconData icon) {
-    bool active = _selectedIndex == index;
-    return GestureDetector(
-      onTap: () => setState(() => _selectedIndex = index),
-      child: Container(
-        width: 45, height: 45,
-        decoration: BoxDecoration(color: active ? primaryBlue : Colors.white, shape: BoxShape.circle),
-        child: Icon(icon, color: active ? Colors.white : primaryBlue, size: 25),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.primary,
+          elevation: 0,
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+        child: Text(label, style: GoogleFonts.montserrat(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.white)),
       ),
     );
   }
 }
 
-// -------------------------------------------------------------------
-// DELEGATE DEL HEADER (Arriba)
-// -------------------------------------------------------------------
-class _ConductorHeaderDelegate extends SliverPersistentHeaderDelegate {
-  final double maxHeight; final double minHeight; final bool isVoiceActive; 
-  final Animation<double> pulseAnimation; final VoidCallback onVoiceTap; 
-  final VoidCallback onPhotoTap; final String? fotoPerfilBase64; 
-  final String nombreUsuario; 
-  final double sw; final TextStyle Function(double, {Color color, double size}) mBold;
+// --- DELEGATE DEL HEADER ---
 
-  _ConductorHeaderDelegate({
-    required this.maxHeight, required this.minHeight, required this.isVoiceActive,
-    required this.pulseAnimation, required this.onVoiceTap, required this.onPhotoTap,
-    this.fotoPerfilBase64, required this.nombreUsuario, required this.sw, required this.mBold,
+class _HeaderDelegate extends SliverPersistentHeaderDelegate {
+  final bool isVoiceActive;
+  final VoidCallback onVoiceTap;
+  final String? fotoPerfilBase64;
+  final VoidCallback onPhotoTap;
+
+  _HeaderDelegate({
+    required this.isVoiceActive,
+    required this.onVoiceTap,
+    this.fotoPerfilBase64,
+    required this.onPhotoTap,
   });
 
-  @override Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
-    final double percent = shrinkOffset / maxHeight;
-    final double opacity = (1.0 - percent * 2.5).clamp(0.0, 1.0);
-
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
     return Stack(
       clipBehavior: Clip.none,
       children: [
-        Container(height: maxHeight, width: double.infinity, decoration: const BoxDecoration(color: Color(0xFFB3D4FF))),
-        Positioned(left: 10, bottom: 35, child: IconButton(icon: const Icon(Icons.arrow_back_ios_new, color: Color(0xFF1559B2), size: 20), onPressed: () => Navigator.of(context).pop())),
-        
-        Positioned(
-          left: sw * (135 / 375), top: sw * (100 / 375) - shrinkOffset, 
-          child: Opacity(
-            opacity: opacity, 
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start, 
-              children: [
-                Text(nombreUsuario, style: mBold(sw, size: 20)), 
-                Row(
-                  children: [
-                    ...List.generate(5, (i) => Icon(Icons.star, color: Colors.orange, size: sw * (16/375))), 
-                    Text(' 5.00', style: mBold(sw, size: 12, color: const Color(0xFF1559B2)))
-                  ]
-                )
-              ]
-            )
-          )
-        ),
-        
-        // FOTO DE PERFIL CLICKABLE
-        Positioned(
-          top: sw * (50 / 375) - shrinkOffset, left: sw * (20 / 375), 
-          child: Opacity(
-            opacity: opacity, 
-            child: GestureDetector(
-              onTap: onPhotoTap,
-              child: Stack(
-                alignment: Alignment.bottomRight,
-                children: [
-                  CircleAvatar(
-                    radius: sw * (50 / 375), 
-                    backgroundColor: Colors.white,
-                    backgroundImage: fotoPerfilBase64 != null && fotoPerfilBase64!.isNotEmpty
-                        ? MemoryImage(base64Decode(fotoPerfilBase64!)) as ImageProvider
-                        : const AssetImage('assets/conductor.png'),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: const BoxDecoration(color: Color(0xFF1559B2), shape: BoxShape.circle),
-                    child: const Icon(Icons.camera_alt, color: Colors.white, size: 14),
-                  )
-                ],
+        Container(
+          height: maxExtent,
+          width: double.infinity,
+          decoration: const BoxDecoration(color: AppColors.primaryLight),
+          child: Row(
+            children: [
+              const SizedBox(width: 60),
+              Expanded(
+                child: Center(
+                  child: Text('Completar Perfil',
+                    style: GoogleFonts.montserrat(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+                ),
               ),
-            ),
-          )
+              const SizedBox(width: 60),
+            ],
+          ),
         ),
-
+        // Botón Atrás
         Positioned(
-          top: sw * (75 / 375) - (shrinkOffset * 0.4), right: sw * (25 / 375), 
-          child: GestureDetector(onTap: onVoiceTap, child: ScaleTransition(scale: pulseAnimation, child: Image.asset(isVoiceActive ? 'assets/escuchando.png' : 'assets/controlvoz.png', width: 65, height: 65)))
+          left: 10,
+          bottom: 15,
+          child: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.primary, size: 20),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+        ),
+        // Foto de Perfil (Tu Lógica)
+        Positioned(
+          left: 20,
+          top: 10,
+          child: GestureDetector(
+            onTap: onPhotoTap,
+            child: CircleAvatar(
+              radius: 22,
+              backgroundColor: AppColors.white,
+              backgroundImage: fotoPerfilBase64 != null
+                  ? MemoryImage(base64Decode(fotoPerfilBase64!)) as ImageProvider
+                  : const AssetImage('assets/conductor.png'),
+            ),
+          ),
+        ),
+        // Micrófono (Estética Repo)
+        Positioned(
+          right: 15,
+          bottom: 10,
+          child: GestureDetector(
+            onTap: onVoiceTap,
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: isVoiceActive ? AppColors.error : AppColors.primary,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(isVoiceActive ? Icons.mic : Icons.mic_none, color: AppColors.white, size: 24),
+            ),
+          ),
         ),
       ],
     );
   }
-  @override double get maxExtent => maxHeight;
-  @override double get minExtent => minHeight;
-  @override bool shouldRebuild(covariant _ConductorHeaderDelegate oldDelegate) => true;
-}
-
-// -------------------------------------------------------------------
-// COMPONENTE EXTRAÍDO: MODAL DEL VEHÍCULO
-// -------------------------------------------------------------------
-class ModalInfoVehiculo extends StatelessWidget {
-  final double sw;
-  const ModalInfoVehiculo({super.key, required this.sw});
-
-  double sp(double size, double sw) => sw * (size / 375);
-
-  TextStyle mBold(double sw, {Color color = Colors.black, double size = 14}) {
-    return GoogleFonts.montserrat(color: color, fontSize: sp(size, sw), fontWeight: FontWeight.bold);
-  }
-
-  Widget _buildReadOnlyField(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 15),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: mBold(sw, size: 12, color: Colors.grey[700]!)),
-          const SizedBox(height: 5),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(color: Colors.grey[200], borderRadius: BorderRadius.circular(10), border: Border.all(color: Colors.grey[300]!)),
-            child: Text(value, style: mBold(sw, size: 14)),
-          ),
-        ],
-      ),
-    );
-  }
 
   @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(left: 20, right: 20, top: 20, bottom: MediaQuery.of(context).viewInsets.bottom + 20),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Center(child: Container(width: 50, height: 5, decoration: BoxDecoration(color: Colors.grey[400], borderRadius: BorderRadius.circular(10)))),
-          const SizedBox(height: 20),
-          Text('Datos de mi Vehículo', style: mBold(sw, size: 18, color: const Color(0xFF1559B2))),
-          const SizedBox(height: 15),
-          _buildReadOnlyField('Marca', 'Nissan'),
-          _buildReadOnlyField('Modelo', 'Versa 2021'),
-          _buildReadOnlyField('Color', 'Plata'),
-          _buildReadOnlyField('Placas', 'XYZ-987-A'),
-          const SizedBox(height: 20),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () => Navigator.pop(context),
-              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1559B2)),
-              child: Text('Cerrar', style: mBold(sw, color: Colors.white)),
-            ),
-          )
-        ],
-      ),
-    );
-  }
+  double get maxExtent => 85;
+  @override
+  double get minExtent => 85;
+  @override
+  bool shouldRebuild(covariant _HeaderDelegate oldDelegate) => true;
 }

@@ -7,6 +7,8 @@ import 'package:image_picker/image_picker.dart';
 
 import '../services/acompanante/acompanante_service.dart';
 import '../core/utils/auth_helper.dart';
+import '../app_theme.dart';
+import 'widgets/mic_button.dart';
 
 class RegistrarAcompanante extends StatefulWidget {
   const RegistrarAcompanante({super.key});
@@ -15,20 +17,11 @@ class RegistrarAcompanante extends StatefulWidget {
   State<RegistrarAcompanante> createState() => _RegistrarAcompananteState();
 }
 
-class _RegistrarAcompananteState extends State<RegistrarAcompanante>
-    with TickerProviderStateMixin {
-  // --- COLORES Y ESTILO ---
-  static const Color primaryBlue = Color(0xFF1559B2);
-  static const Color lightBlueBg = Color(0xFFB3D4FF);
-  static const Color containerBlue = Color(0xFFD6E8FF);
-  static const Color accentBlue = Color(0xFF64A1F4);
-  static const Color textFieldBlue = Color(0xFFB3D4FF);
-
+class _RegistrarAcompananteState extends State<RegistrarAcompanante> {
   // --- CONTROLADORES Y ESTADO ---
   final TextEditingController _nombreController = TextEditingController();
   final TextEditingController _otroController = TextEditingController();
   String? selectedParentesco;
-  int _selectedIndex = 3;
   bool _isLoading = false;
   bool _isVoiceActive = false;
 
@@ -36,10 +29,6 @@ class _RegistrarAcompananteState extends State<RegistrarAcompanante>
   XFile? _imageFrente;
   XFile? _imageReverso;
   final ImagePicker _picker = ImagePicker();
-
-  // --- ANIMACIONES ---
-  late AnimationController _pulseController;
-  late Animation<double> _pulseAnimation;
 
   final List<String> parentescos = [
     'Mamá',
@@ -52,27 +41,14 @@ class _RegistrarAcompananteState extends State<RegistrarAcompanante>
   ];
 
   @override
-  void initState() {
-    super.initState();
-    _pulseController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 800),
-    );
-    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.15).animate(
-      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
-    );
-  }
-
-  @override
   void dispose() {
     _nombreController.dispose();
     _otroController.dispose();
-    _pulseController.dispose();
     super.dispose();
   }
 
   // --- ESTILOS DE TEXTO ---
-  TextStyle mBold({Color color = primaryBlue, double size = 14}) {
+  TextStyle mBold({Color color = AppColors.primary, double size = 14}) {
     return GoogleFonts.montserrat(
       color: color,
       fontSize: size,
@@ -80,7 +56,7 @@ class _RegistrarAcompananteState extends State<RegistrarAcompanante>
     );
   }
 
-  TextStyle mSemibold({Color color = primaryBlue, double size = 13}) {
+  TextStyle mSemibold({Color color = AppColors.primary, double size = 13}) {
     return GoogleFonts.montserrat(
       color: color,
       fontSize: size,
@@ -160,7 +136,7 @@ class _RegistrarAcompananteState extends State<RegistrarAcompanante>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.white,
       body: SafeArea(
         child: Column(
           children: [
@@ -186,7 +162,7 @@ class _RegistrarAcompananteState extends State<RegistrarAcompanante>
           ],
         ),
       ),
-      bottomNavigationBar: _buildCustomBottomNav(),
+      bottomNavigationBar: const PassengerBottomNav(selectedIndex: 3),
     );
   }
 
@@ -194,17 +170,17 @@ class _RegistrarAcompananteState extends State<RegistrarAcompanante>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
       decoration: BoxDecoration(
-        color: accentBlue,
-        borderRadius: BorderRadius.circular(30),
+        color: AppColors.primary,
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.info_outline, color: Colors.white, size: 18),
+          const Icon(Icons.info_outline, color: AppColors.white, size: 18),
           const SizedBox(width: 8),
           Text(
             'Ingrese los datos para registrar',
-            style: mBold(color: Colors.white, size: 13),
+            style: mBold(color: AppColors.white, size: 13),
           ),
         ],
       ),
@@ -215,21 +191,15 @@ class _RegistrarAcompananteState extends State<RegistrarAcompanante>
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: containerBlue,
-        borderRadius: BorderRadius.circular(30),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 5),
-          ),
-        ],
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border, width: 1),
       ),
       child: Column(
         children: [
           _buildTextField(
             'Nombre completo',
-            circleColor: Colors.white,
+            icon: Icons.person,
             controller: _nombreController,
           ),
           const SizedBox(height: 15),
@@ -238,14 +208,14 @@ class _RegistrarAcompananteState extends State<RegistrarAcompanante>
             const SizedBox(height: 10),
             _buildTextField(
               'Especifique parentesco',
-              circleColor: primaryBlue,
+              icon: Icons.people,
               controller: _otroController,
             ),
           ],
           const SizedBox(height: 25),
           Text(
             'Foto de INE / Identificación oficial',
-            style: mBold(size: 13, color: Colors.black),
+            style: mBold(size: 13, color: AppColors.textPrimary),
           ),
           const SizedBox(height: 15),
           Row(
@@ -285,15 +255,15 @@ class _RegistrarAcompananteState extends State<RegistrarAcompanante>
       child: ElevatedButton(
         onPressed: _isLoading ? null : _registrar,
         style: ElevatedButton.styleFrom(
-          backgroundColor: accentBlue,
+          backgroundColor: AppColors.primary,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(25),
+            borderRadius: BorderRadius.circular(14),
           ),
-          elevation: 5,
+          elevation: 0,
         ),
         child: _isLoading
-            ? const CircularProgressIndicator(color: Colors.white)
-            : Text('Registrar', style: mBold(color: Colors.white, size: 16)),
+            ? const CircularProgressIndicator(color: AppColors.white)
+            : Text('Registrar', style: mBold(color: AppColors.white, size: 16)),
       ),
     );
   }
@@ -301,18 +271,18 @@ class _RegistrarAcompananteState extends State<RegistrarAcompanante>
   Widget _buildHeader() {
     return Container(
       width: double.infinity,
-      height: 110,
-      decoration: const BoxDecoration(color: lightBlueBg),
+      height: 80,
+      decoration: const BoxDecoration(color: AppColors.primaryLight),
       child: Stack(
         clipBehavior: Clip.none,
         children: [
           Positioned(
             left: 15,
-            bottom: 30,
+            bottom: 10,
             child: IconButton(
               icon: const Icon(
                 Icons.arrow_back_ios_new,
-                color: primaryBlue,
+                color: AppColors.primary,
                 size: 20,
               ),
               onPressed: () => Navigator.pop(context),
@@ -321,40 +291,16 @@ class _RegistrarAcompananteState extends State<RegistrarAcompanante>
           Center(
             child: Text(
               'Registrar acompañante',
-              style: mBold(size: 19, color: Colors.black),
+              style: mBold(size: 19, color: AppColors.textPrimary),
             ),
           ),
           Positioned(
             right: 20,
-            bottom: -32,
-            child: GestureDetector(
-              onTap: () {
-                setState(() {
-                  _isVoiceActive = !_isVoiceActive;
-                  _isVoiceActive
-                      ? _pulseController.repeat(reverse: true)
-                      : _pulseController.reset();
-                });
-              },
-              child: ScaleTransition(
-                scale: _pulseAnimation,
-                child: Image.asset(
-                  _isVoiceActive
-                      ? 'assets/escuchando.png'
-                      : 'assets/controlvoz.png',
-                  height: 65,
-                  width: 65,
-                  errorBuilder: (c, e, s) => CircleAvatar(
-                    backgroundColor: _isVoiceActive ? Colors.red : primaryBlue,
-                    radius: 32,
-                    child: Icon(
-                      _isVoiceActive ? Icons.graphic_eq : Icons.mic,
-                      color: Colors.white,
-                      size: 30,
-                    ),
-                  ),
-                ),
-              ),
+            bottom: -26,
+            child: MicButton(
+              isActive: _isVoiceActive,
+              onTap: () => setState(() => _isVoiceActive = !_isVoiceActive),
+              size: 52,
             ),
           ),
         ],
@@ -364,30 +310,34 @@ class _RegistrarAcompananteState extends State<RegistrarAcompanante>
 
   Widget _buildTextField(
     String hint, {
-    required Color circleColor,
+    required IconData icon,
     TextEditingController? controller,
   }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: textFieldBlue,
-        borderRadius: BorderRadius.circular(25),
-      ),
-      child: TextField(
-        controller: controller,
-        style: mBold(size: 14),
-        decoration: InputDecoration(
-          hintText: hint,
-          hintStyle: mSemibold(color: primaryBlue.withOpacity(0.6)),
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 20,
-            vertical: 15,
-          ),
-          border: InputBorder.none,
-          prefixIcon: Padding(
-            padding: const EdgeInsets.all(12),
-            child: CircleAvatar(backgroundColor: circleColor, radius: 10),
-          ),
+    return TextField(
+      controller: controller,
+      style: mBold(size: 14),
+      decoration: InputDecoration(
+        hintText: hint,
+        hintStyle: mSemibold(color: AppColors.textSecondary),
+        filled: true,
+        fillColor: AppColors.surface,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 20,
+          vertical: 15,
         ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.border),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.border),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.primary, width: 2),
+        ),
+        prefixIcon: Icon(icon, color: AppColors.textSecondary),
       ),
     );
   }
@@ -396,14 +346,15 @@ class _RegistrarAcompananteState extends State<RegistrarAcompanante>
     return Container(
       padding: const EdgeInsets.only(right: 15),
       decoration: BoxDecoration(
-        color: textFieldBlue,
-        borderRadius: BorderRadius.circular(25),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.border),
       ),
       child: Row(
         children: [
           const Padding(
             padding: EdgeInsets.all(12),
-            child: CircleAvatar(backgroundColor: primaryBlue, radius: 10),
+            child: Icon(Icons.people, color: AppColors.textSecondary),
           ),
           Expanded(
             child: DropdownButtonHideUnderline(
@@ -411,9 +362,9 @@ class _RegistrarAcompananteState extends State<RegistrarAcompanante>
                 value: selectedParentesco,
                 hint: Text(
                   'Parentesco',
-                  style: mSemibold(color: primaryBlue.withOpacity(0.6)),
+                  style: mSemibold(color: AppColors.textSecondary),
                 ),
-                icon: const Icon(Icons.keyboard_arrow_down, color: primaryBlue),
+                icon: const Icon(Icons.keyboard_arrow_down, color: AppColors.primary),
                 isExpanded: true,
                 items: parentescos
                     .map(
@@ -439,23 +390,17 @@ class _RegistrarAcompananteState extends State<RegistrarAcompanante>
           height: 110,
           width: double.infinity,
           decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(15),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 5,
-                offset: const Offset(0, 3),
-              ),
-            ],
+            color: AppColors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.border, width: 1),
           ),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(15),
+            borderRadius: BorderRadius.circular(16),
             child: _getImageWidget(imageFile, assetPath),
           ),
         ),
         const SizedBox(height: 5),
-        Text(label, style: mBold(size: 12, color: primaryBlue)),
+        Text(label, style: mBold(size: 12, color: AppColors.primary)),
       ],
     );
   }
@@ -466,36 +411,4 @@ class _RegistrarAcompananteState extends State<RegistrarAcompanante>
     return Image.file(File(file.path), fit: BoxFit.cover);
   }
 
-  Widget _buildCustomBottomNav() {
-    return Container(
-      height: 75,
-      decoration: const BoxDecoration(color: containerBlue),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          _navIcon(0, Icons.home, '/principal_pasajero'),
-          _navIcon(1, Icons.location_on, '/agendar_viaje'),
-          _navIcon(2, Icons.history, '/historial_viajes_pasajero'),
-          _navIcon(3, Icons.person, '/perfil_pasajero'),
-        ],
-      ),
-    );
-  }
-
-  Widget _navIcon(int index, IconData icon, String routeName) {
-    bool active = _selectedIndex == index;
-    return GestureDetector(
-      onTap: () => _selectedIndex != index
-          ? Navigator.pushReplacementNamed(context, routeName)
-          : null,
-      child: Container(
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          color: active ? primaryBlue : Colors.white,
-          shape: BoxShape.circle,
-        ),
-        child: Icon(icon, color: active ? Colors.white : primaryBlue, size: 28),
-      ),
-    );
-  }
 }

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import './providers/user_provider.dart';
+import 'app_theme.dart';
 
 // Screens Generales y Auth
 import 'screens/splash_screen.dart'; 
@@ -27,7 +27,6 @@ import 'screens/registro_acompanante.dart';
 import 'screens/historial_viajes_pasajero.dart';
 import 'screens/viaje_confirmado.dart';
 import 'screens/estimacion_costo.dart';
-import 'screens/metodos_pago_vista.dart';
 
 // Screens Conductor
 import 'screens/registro_conductor.dart';
@@ -36,9 +35,9 @@ import 'screens/principal_conductor.dart';
 import 'screens/mi_perfil_conductor.dart';
 import 'screens/viaje_actual.dart';
 import 'screens/solicitud_viaje.dart';
+import 'screens/solicitudes_viaje_conductor.dart';
 import 'screens/historial_viajes_conductor.dart';  
 import 'screens/completar_perfil_conductor.dart';
-import 'screens/solicitudes_viaje_conductor.dart';
 import 'screens/agregar_ine.dart';
 import 'screens/agregar_licencia.dart';
 
@@ -67,12 +66,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'MoveCare App',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        primaryColor: primaryColor,
-        colorScheme: ColorScheme.fromSeed(seedColor: primaryColor),
-        useMaterial3: true,
-        textTheme: GoogleFonts.montserratTextTheme(),
-      ),
+      theme: AppTheme.light(),
 
       // Mantenemos la lógica del Splash como entrada
       home: const SplashScreen(), 
@@ -80,27 +74,28 @@ class MyApp extends StatelessWidget {
       routes: {
         // Rutas de Autenticación y Sistema
         '/bienvenido': (context) => const Bienvenido(),
-        '/iniciar_sesion': (context) => const IniciarSesion(),
-        '/olvide_contrasena': (context) => const OlvideContrasena(), //PENDIENTE
-        '/nueva_contrasena': (context) => const NuevaContrasena(),//PENDIENTE
-        '/confirmar-correo': (context) => const ConfirmarCorreoScreen(),
         '/menu_vistas': (context) => const MenuVistas(),
+        '/iniciar_sesion': (context) => const IniciarSesion(),
+        '/olvide_contrasena': (context) => const OlvideContrasena(),
+        '/nueva_contrasena': (context) => const NuevaContrasena(),
+        '/confirmar-correo': (context) => const ConfirmarCorreoScreen(), 
+        //'/menu_vistas': (context) => const MenuVistas(),
         '/registro': (context) => const Registro(),
 
         // Módulo Pasajero
-        '/registro_pasajero': (context) => const RegistroPasajero(), 
-        '/principal_pasajero': (context) => const PrincipalPasajero(), 
-        '/completar_perfil_pasajero': (context) => const CompletarPerfilPasajero(), 
-        '/perfil_pasajero': (context) => const PerfilPasajero(), 
+        '/registro_pasajero': (context) => const RegistroPasajero(),
+        '/principal_pasajero': (context) => const PrincipalPasajero(),
+        '/completar_perfil_pasajero': (context) => const CompletarPerfilPasajero(),
+        '/perfil_pasajero': (context) => const PerfilPasajero(),
+        '/mi_perfil_pasajero': (context) => const MiPerfilPasajero(),
         '/agendar_viaje': (context) => const AgendarViaje(), 
-        '/agendar_varios_destinos': (context) => const AgendarVariosDestinos(), 
-        '/pago_tarjeta': (context) => const PagoTarjetaScreen(), //ESTO AL FINAL
-        '/registro_tarjeta': (context) => const RegistroTarjetaScreen(), 
-        '/registro_acompanante': (context) => const RegistrarAcompanante(), 
-        '/historial_viajes_pasajero': (context) => const HistorialViajesPasajero(), 
-        '/viaje_confirmado': (context) => const ViajeConfirmado(), //ESTO AL FINAL
-        '/estimacion_costo': (context) => const EstimacionViaje(), //PENDIENTE A LA IA
-        '/metodos_pago_lista': (context) => MetodosPagoVista(), 
+        '/agendar_varios_destinos': (context) => const AgendarVariosDestinos(),
+        '/pago_tarjeta': (context) => const PagoTarjetaScreen(),
+        '/registro_tarjeta': (context) => const RegistroTarjetaScreen(),
+        '/registro_acompanante': (context) => const RegistrarAcompanante(),
+        '/historial_viajes_pasajero': (context) => const HistorialViajesPasajero(),
+        '/viaje_confirmado': (context) => const ViajeConfirmado(), // ESTA ME QUEDA POR CONECTAR
+        '/estimacion_costo': (context) => const EstimacionViaje(),
 
         // Módulo Conductor
         '/registro_conductor': (context) => const RegistroConductor(), 
@@ -114,9 +109,9 @@ class MyApp extends StatelessWidget {
         '/completar_perfil_conductor': (context) => const CompletarPerfilConductor(), 
 
         // Módulo Administrativo
-        '/reporte_incidencia': (context) => const ReporteIncidencia(), //Pendiente
-        '/gestion_usuarios': (context) => const GestionUsuarios(), //Pendiente
-        '/historial_auditorias': (context) => const HistorialAuditoria(), //Pendiente
+        '/reporte_incidencia': (context) => const ReporteIncidencia(),
+        '/gestion_usuarios': (context) => const GestionUsuarios(),
+        '/historial_auditorias': (context) => const HistorialAuditoria(),
       },
     );
   }
