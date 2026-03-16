@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../app_theme.dart';
-import 'widgets/mic_button.dart';
 import 'chat_viaje.dart';
 
 class ViajeActualMapa extends StatefulWidget {
@@ -12,7 +11,8 @@ class ViajeActualMapa extends StatefulWidget {
 }
 
 class _ViajeActualMapaState extends State<ViajeActualMapa> {
-  bool _isVoiceActive = false;
+  bool _panelExpanded = false;
+  final DraggableScrollableController _sheetController = DraggableScrollableController();
 
   // 0 = En camino al pasajero | 1 = Pasajero a bordo | 2 = Llegando al destino
   int _tripPhase = 1;
@@ -31,9 +31,35 @@ class _ViajeActualMapaState extends State<ViajeActualMapa> {
     );
   }
 
+  @override
+  void dispose() {
+    _sheetController.dispose();
+    super.dispose();
+  }
+
+  void _togglePanel() {
+    final target = _panelExpanded ? 0.42 : 0.12;
+    _sheetController.animateTo(
+      target,
+      duration: const Duration(milliseconds: 320),
+      curve: Curves.easeInOut,
+    );
+    setState(() => _panelExpanded = !_panelExpanded);
+  }
+
+  void _colapsarPanel() {
+    _sheetController.animateTo(
+      0.12,
+      duration: const Duration(milliseconds: 320),
+      curve: Curves.easeInOut,
+    );
+    setState(() => _panelExpanded = true);
+  }
+
   void _avanzarFase() {
     if (_tripPhase < 2) {
       setState(() => _tripPhase++);
+      _colapsarPanel();
     } else {
       _mostrarFinViaje();
     }
@@ -174,10 +200,15 @@ class _ViajeActualMapaState extends State<ViajeActualMapa> {
             child: _buildPhaseIndicator(),
           ),
 
-          // ── Panel inferior (bottom sheet fijo) ────────────────────────────
-          Positioned(
-            bottom: 0, left: 0, right: 0,
-            child: _buildBottomPanel(),
+          // ── Panel inferior deslizable ─────────────────────────────────────
+          DraggableScrollableSheet(
+            controller: _sheetController,
+            initialChildSize: 0.42,
+            minChildSize: 0.12,
+            maxChildSize: 0.42,
+            snap: true,
+            snapSizes: const [0.12, 0.42],
+            builder: (context, scrollController) => _buildBottomPanel(scrollController),
           ),
         ],
       ),
@@ -235,23 +266,33 @@ class _ViajeActualMapaState extends State<ViajeActualMapa> {
 
   // ── PANEL INFERIOR ────────────────────────────────────────────────────────
 
-  Widget _buildBottomPanel() {
+  Widget _buildBottomPanel(ScrollController scrollController) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
       decoration: BoxDecoration(
         color: AppColors.white,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
         boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.12), blurRadius: 20, offset: const Offset(0, -4))],
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
+      child: SingleChildScrollView(
+        controller: scrollController,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 14, 20, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
           // Pill
-          Container(
-            width: 36, height: 4,
-            decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(2)),
+          GestureDetector(
+            onTap: _togglePanel,
+            behavior: HitTestBehavior.opaque,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              child: Container(
+                width: 36, height: 4,
+                decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(2)),
+              ),
+            ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 10),
 
           // ETA + distancia
           Row(
@@ -358,7 +399,9 @@ class _ViajeActualMapaState extends State<ViajeActualMapa> {
               ),
             ),
           ),
-        ],
+            ],
+          ),
+        ),
       ),
     );
   }
