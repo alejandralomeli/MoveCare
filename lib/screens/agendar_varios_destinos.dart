@@ -299,6 +299,10 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
     return days[d.weekday - 1];
   }
 
+  DateTime _inicioSemana(DateTime date) {
+    return date.subtract(Duration(days: date.weekday - 1));
+  }
+
   List<DateTime> get _diasSemana =>
       List.generate(7, (i) => _weekStart.add(Duration(days: i)));
 
@@ -349,11 +353,12 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
                         children: [
                           IconButton(
                             icon: const Icon(Icons.chevron_left),
-                            onPressed: () => setState(
-                              () => _weekStart = _weekStart.subtract(
-                                const Duration(days: 7),
-                              ),
-                            ),
+                            onPressed: () {
+                              final prev = _weekStart.subtract(const Duration(days: 7));
+                              if (!prev.isBefore(_inicioSemana(DateTime.now()))) {
+                                setState(() => _weekStart = prev);
+                              }
+                            },
                           ),
                           IconButton(
                             icon: const Icon(Icons.chevron_right),
@@ -787,49 +792,71 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
 
   Widget _buildAcompananteDropdown(double sw) {
     if (cargandoAcompanantes)
-      return const Center(child: CircularProgressIndicator());
-    return _buildSimpleDropdown(
-      acompanantes.isEmpty ? 'Sin acompañantes' : 'Selecciona acompañante',
-      Icons.person,
-      acompanantes.map((a) => a["nombre"]!).toList(),
-      acompanantes.firstWhere(
-                (element) => element["id"] == selectedAcompananteId,
-                orElse: () => {"nombre": ""},
-              )["nombre"] ==
-              ""
-          ? null
-          : acompanantes.firstWhere(
-              (element) => element["id"] == selectedAcompananteId,
-            )["nombre"],
-      (nombre) {
-        final id = acompanantes.firstWhere((a) => a["nombre"] == nombre)["id"];
-        setState(() => selectedAcompananteId = id);
-      },
-      sw,
+      return const Center(child: LinearProgressIndicator());
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 15),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: selectedAcompananteId,
+          hint: Text(
+            acompanantes.isEmpty ? 'Sin acompañantes' : 'Selecciona acompañante',
+            style: mSemibold(sw, color: AppColors.textSecondary, size: 13),
+          ),
+          isExpanded: true,
+          items: acompanantes.map((a) {
+            return DropdownMenuItem(
+              value: a["id"],
+              child: Text(a["nombre"]!, style: mSemibold(sw, color: AppColors.primary)),
+            );
+          }).toList(),
+          onChanged: acompanantes.isEmpty
+              ? null
+              : (v) => setState(() => selectedAcompananteId = v),
+        ),
+      ),
     );
   }
 
   Widget _buildTarjetaDropdown(double sw) {
     if (cargandoTarjetas)
-      return const Center(child: CircularProgressIndicator());
-    return _buildSimpleDropdown(
-      tarjetas.isEmpty ? 'Registrar Tarjeta' : 'Selecciona tu tarjeta',
-      Icons.credit_card,
-      tarjetas.map((t) => t["texto"]!).toList(),
-      tarjetas.firstWhere(
-                (element) => element["id"] == selectedTarjetaId,
-                orElse: () => {"texto": ""},
-              )["texto"] ==
-              ""
-          ? null
-          : tarjetas.firstWhere(
-              (element) => element["id"] == selectedTarjetaId,
-            )["texto"],
-      (texto) {
-        final id = tarjetas.firstWhere((t) => t["texto"] == texto)["id"];
-        setState(() => selectedTarjetaId = id);
-      },
-      sw,
+      return const Center(child: LinearProgressIndicator());
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 15),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: selectedTarjetaId,
+          hint: Row(
+            children: [
+              const Icon(Icons.credit_card, color: AppColors.primary, size: 20),
+              const SizedBox(width: 10),
+              Text(
+                tarjetas.isEmpty ? 'Registrar Tarjeta' : 'Selecciona tu tarjeta',
+                style: mSemibold(sw, color: AppColors.textSecondary, size: 13),
+              ),
+            ],
+          ),
+          isExpanded: true,
+          items: tarjetas.map((t) {
+            return DropdownMenuItem(
+              value: t["id"],
+              child: Text(t["texto"]!, style: mSemibold(sw, color: AppColors.primary)),
+            );
+          }).toList(),
+          onChanged: tarjetas.isEmpty
+              ? null
+              : (v) => setState(() => selectedTarjetaId = v),
+        ),
+      ),
     );
   }
 
@@ -892,6 +919,9 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
           'Registrar acompañante',
           style: mSemibold(sw, color: AppColors.primary, size: 13),
         ),
+        const Spacer(),
+        if (hasCompanion)
+          Text('* Requerido', style: mSemibold(sw, color: AppColors.error, size: 9)),
       ],
     );
   }
