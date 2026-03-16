@@ -129,7 +129,7 @@ class _AgregarIneState extends State<AgregarIne> {
           ),
         ],
       ),
-      bottomNavigationBar: const DriverBottomNav(selectedIndex: 3),
+      bottomNavigationBar: const DriverBottomNav(selectedIndex: 4),
     );
   }
 

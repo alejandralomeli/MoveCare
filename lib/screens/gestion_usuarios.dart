@@ -25,30 +25,90 @@ class _GestionUsuariosState extends State<GestionUsuarios> {
   }
 
   void _mostrarDialogoRechazo(String usuario) {
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text('Rechazar a $usuario', style: mExtrabold(size: 18, context: context, color: AppColors.primary)),
-        content: TextField(
-          maxLines: 3,
-          decoration: InputDecoration(
-            hintText: 'Motivo del rechazo...',
-            filled: true,
-            fillColor: AppColors.surface,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: AppColors.border)),
-            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: AppColors.border)),
-            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: AppColors.primary, width: 2)),
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 32),
+          decoration: const BoxDecoration(
+            color: AppColors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.border,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Text(
+                'Rechazar solicitud',
+                style: GoogleFonts.montserrat(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                usuario,
+                style: GoogleFonts.montserrat(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textSecondary),
+              ),
+              const SizedBox(height: 20),
+              TextField(
+                maxLines: 3,
+                decoration: InputDecoration(
+                  hintText: 'Motivo del rechazo...',
+                  hintStyle: GoogleFonts.montserrat(fontSize: 14, color: const Color.fromARGB(255, 0, 0, 0)),
+                  filled: true,
+                  fillColor: AppColors.surface,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
+                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
+                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.primary, width: 1.5)),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.textSecondary,
+                        side: const BorderSide(color: AppColors.border),
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: Text('Cancelar', style: GoogleFonts.montserrat(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.error,
+                        foregroundColor: AppColors.white,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: Text('Confirmar', style: GoogleFonts.montserrat(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.white)),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+            ],
           ),
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
-            onPressed: () => Navigator.pop(context),
-            child: Text('Confirmar', style: mExtrabold(color: AppColors.white, size: 12, context: context)),
-          ),
-        ],
       ),
     );
   }
@@ -61,41 +121,41 @@ class _GestionUsuariosState extends State<GestionUsuarios> {
       length: 2,
       child: Scaffold(
         backgroundColor: AppColors.white,
+        bottomNavigationBar: const AdminBottomNav(selectedIndex: 1),
         body: Column(
           children: [
             Container(
-              height: 80,
               width: double.infinity,
               color: AppColors.primaryLight,
-              child: Stack(
+              child: Column(
                 children: [
-                  Positioned(
-                    top: 35,
-                    left: 10,
-                    child: IconButton(
-                      icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.primary, size: 20),
-                      onPressed: () => Navigator.pop(context),
+                  SizedBox(
+                    height: 80,
+                    child: Stack(
+                      children: [
+                        Center(
+                          child: Text(
+                            'Gestión de Usuarios',
+                            style: GoogleFonts.montserrat(fontSize: 20, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+                          ),
+                        ),
+                        Positioned(
+                          left: 10,
+                          bottom: 20,
+                          child: IconButton(
+                            icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.primary, size: 20),
+                            onPressed: () => Navigator.pop(context),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  Align(
-                    alignment: Alignment.center,
-                    child: Padding(
-                      padding: const EdgeInsets.only(top: 0),
-                      child: Text(
-                        'Gestión de Usuarios',
-                        style: GoogleFonts.montserrat(fontSize: sp(20, context), fontWeight: FontWeight.w900, color: AppColors.textPrimary),
-                      ),
-                    ),
-                  ),
-                  Align(
-                    alignment: Alignment.bottomCenter,
-                    child: TabBar(
-                      indicatorColor: AppColors.primary,
-                      labelColor: AppColors.primary,
-                      unselectedLabelColor: Colors.black54,
-                      labelStyle: mExtrabold(size: 13, context: context),
-                      tabs: const [Tab(text: 'Conductores'), Tab(text: 'Pasajeros')],
-                    ),
+                  TabBar(
+                    indicatorColor: AppColors.primary,
+                    labelColor: AppColors.primary,
+                    unselectedLabelColor: Colors.black54,
+                    labelStyle: mExtrabold(size: 13, context: context),
+                    tabs: const [Tab(text: 'Conductores'), Tab(text: 'Pasajeros')],
                   ),
                 ],
               ),
@@ -149,7 +209,7 @@ class _GestionUsuariosState extends State<GestionUsuarios> {
               children: [
                 _btn('Rechazar', AppColors.white, AppColors.error, context, () => _mostrarDialogoRechazo('$tipo #${index + 1}')),
                 const SizedBox(width: 10),
-                _btn('Aceptar', AppColors.primary, AppColors.white, context, () {}),
+                _btn('Aceptar', const Color(0xFF16A34A), AppColors.white, context, () {}),
               ],
             )
           ],

@@ -18,13 +18,14 @@ import 'screens/registro_pasajero.dart';
 import 'screens/principal_pasajero.dart';
 import 'screens/completar_perfil_pasajero.dart';
 import 'screens/perfil_pasajero.dart';
-import 'screens/mi_perfil_pasajero.dart';
 import 'screens/agendar_viaje.dart';
 import 'screens/agendar_varios_destinos.dart';
 import 'screens/pago_tarjeta.dart';
 import 'screens/registro_tarjeta.dart';
 import 'screens/registro_acompanante.dart';
 import 'screens/historial_viajes_pasajero.dart';
+import 'screens/reporte_incidencia_pasajero.dart';
+import 'screens/reporte_incidencia_conductor.dart';
 import 'screens/viaje_confirmado.dart';
 import 'screens/estimacion_costo.dart';
 
@@ -40,11 +41,13 @@ import 'screens/historial_viajes_conductor.dart';
 import 'screens/completar_perfil_conductor.dart';
 import 'screens/agregar_ine.dart';
 import 'screens/agregar_licencia.dart';
+import 'screens/metricas_conductor.dart';
 
 // Screens Administrativo
+import 'screens/principal_administrador.dart';
 import 'screens/reporte_incidencia.dart';
 import 'screens/gestion_usuarios.dart';
-import 'screens/historial_auditoria.dart';  
+import 'screens/historial_auditoria.dart';
 
 const Color primaryColor = Color(0xFF2E6FFC);
 const Color cardBackgroundColor = Color(0xFFE3F2FD);
@@ -87,28 +90,33 @@ class MyApp extends StatelessWidget {
         '/principal_pasajero': (context) => const PrincipalPasajero(),
         '/completar_perfil_pasajero': (context) => const CompletarPerfilPasajero(),
         '/perfil_pasajero': (context) => const PerfilPasajero(),
-        '/mi_perfil_pasajero': (context) => const MiPerfilPasajero(),
         '/agendar_viaje': (context) => const AgendarViaje(), 
         '/agendar_varios_destinos': (context) => const AgendarVariosDestinos(),
         '/pago_tarjeta': (context) => const PagoTarjetaScreen(),
         '/registro_tarjeta': (context) => const RegistroTarjetaScreen(),
         '/registro_acompanante': (context) => const RegistrarAcompanante(),
         '/historial_viajes_pasajero': (context) => const HistorialViajesPasajero(),
+        '/reporte_incidencia_pasajero': (context) => const ReporteIncidenciaPasajero(),
         '/viaje_confirmado': (context) => const ViajeConfirmado(), // ESTA ME QUEDA POR CONECTAR
         '/estimacion_costo': (context) => const EstimacionViaje(),
 
         // Módulo Conductor
-        '/registro_conductor': (context) => const RegistroConductor(), 
-        '/continue_driver_register_screen': (context) => const ContinuarRegistroConductor(), 
-        '/principal_conductor': (context) => const PrincipalConductor() ,
-        '/mi_perfil_conductor': (context) => const MiPerfilConductor(), 
-        '/historial_viajes_conductor': (context) => const HistorialViajesConductor(), 
+        '/registro_conductor': (context) => const RegistroConductor(),
+        '/continue_driver_register_screen': (context) => const ContinuarRegistroConductor(),
+        '/principal_conductor': (context) => const PrincipalConductor(),
+        '/mi_perfil_conductor': (context) => const MiPerfilConductor(),
+        '/viaje_actual': (context) => const ViajeActualMapa(),
+        '/solicitud_viaje': (context) => const SolicitudViaje(),
         '/viajes_conductor': (context) => const SolicitudesViajesConductor(),
-        //'/solicitud_viaje': (context) => const SolicitudViaje(), Listo, pero la ruta ya no es necesaria
-        '/viaje_actual': (context) => const ViajeActualMapa(), //Pendeinte IA para calcular tiempo y distancia
-        '/completar_perfil_conductor': (context) => const CompletarPerfilConductor(), 
+        '/historial_viajes_conductor': (context) => const HistorialViajesConductor(),
+        '/completar_perfil_conductor': (context) => const CompletarPerfilConductor(),
+        '/agregar_ine': (context) => const AgregarIne(),
+        '/agregar_licencia': (context) => const AgregarLicencia(),
+        '/reporte_incidencia_conductor': (context) => const ReporteIncidenciaConductor(),
+        '/metricas_conductor': (context) => const MetricasConductor(),
 
         // Módulo Administrativo
+        '/principal_administrador': (context) => const PrincipalAdministrador(),
         '/reporte_incidencia': (context) => const ReporteIncidencia(),
         '/gestion_usuarios': (context) => const GestionUsuarios(),
         '/historial_auditorias': (context) => const HistorialAuditoria(),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
+import 'chat_viaje.dart';
 import 'widgets/map_widget.dart';
 import 'widgets/mic_button.dart';
 import '../providers/user_provider.dart';
@@ -187,6 +188,10 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
                       const SizedBox(height: 10),
                       _buildTripHistory(),
                       const SizedBox(height: 30),
+                      if (_viajeProximo != null) ...[
+                        _buildContactarConductorButton(),
+                        const SizedBox(height: 12),
+                      ],
                       _buildReportButton(),
                       const SizedBox(height: 30),
                     ],
@@ -227,7 +232,7 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Bienvenido!',
+                'Bienvenido',
                 style: GoogleFonts.montserrat(
                   fontSize: 20,
                   fontWeight: FontWeight.w700,
@@ -323,6 +328,28 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
               _actionBtn('Ver detalles'),
               const SizedBox(width: 10),
               _actionBtn('Cancelar'),
+              const SizedBox(width: 10),
+              GestureDetector(
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ChatViaje(
+                      nombreContacto: _viajeProximo!['nombre_conductor'] ?? 'Conductor',
+                      esConductor: false,
+                    ),
+                  ),
+                ),
+                child: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryLight,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+                  ),
+                  child: const Icon(Icons.message_rounded, color: AppColors.primary, size: 20),
+                ),
+              ),
             ],
           ),
         ],
@@ -454,11 +481,39 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
     );
   }
 
+  Widget _buildContactarConductorButton() {
+    final nombreConductor = _viajeProximo?['nombre_conductor'] ?? 'Conductor';
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton.icon(
+        onPressed: () => Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ChatViaje(
+              nombreContacto: nombreConductor,
+              esConductor: false,
+            ),
+          ),
+        ),
+        icon: const Icon(Icons.message_rounded, color: AppColors.white),
+        label: Text(
+          'Contactar conductor',
+          style: mExtrabold(color: AppColors.white, size: 15),
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.primary,
+          elevation: 0,
+          padding: const EdgeInsets.symmetric(vertical: 12),
+        ),
+      ),
+    );
+  }
+
   Widget _buildReportButton() {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton.icon(
-        onPressed: () {},
+        onPressed: () => Navigator.pushNamed(context, '/reporte_incidencia_pasajero'),
         icon: const Icon(Icons.error, color: AppColors.white),
         label: Text(
           'Reportar incidencia',

@@ -1,26 +1,8 @@
-import 'dart:async';
-import 'dart:convert';
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:flutter_map/flutter_map.dart';
-import 'package:latlong2/latlong.dart';
-import 'package:http/http.dart' as http;
-import 'package:geolocator/geolocator.dart';
-
-// Importaciones de tu proyecto
-import '../services/viaje/viaje_service.dart';
-import 'widgets/bottom_sheet_finalizar_viaje.dart';
 import '../app_theme.dart';
 import 'widgets/mic_button.dart';
-
-enum EstadoViaje {
-  enCaminoAlOrigen,
-  esperandoPasajero,
-  viajeEnCurso,
-  cobroYCalificacion,
-  finalizado,
-}
+import 'chat_viaje.dart';
 
 class ViajeActualMapa extends StatefulWidget {
   const ViajeActualMapa({super.key});
@@ -30,523 +12,377 @@ class ViajeActualMapa extends StatefulWidget {
 }
 
 class _ViajeActualMapaState extends State<ViajeActualMapa> {
-  // --- ESTADO VISUAL ---
   bool _isVoiceActive = false;
 
-  // --- CONTROL DEL MAPA Y ESTADO LÓGICO ---
-  final MapController _mapController = MapController();
-  EstadoViaje _estadoActual = EstadoViaje.enCaminoAlOrigen;
-  bool _isLoading = true;
-  bool _isRecalculating = false;
-  Map<String, dynamic>? _datosViaje;
-  String? _idViaje;
+  // 0 = En camino al pasajero | 1 = Pasajero a bordo | 2 = Llegando al destino
+  int _tripPhase = 1;
 
-  // --- COORDENADAS ---
-  LatLng? _ubicacionActual;
-  LatLng? _origenViaje;
-  LatLng? _destinoViaje;
-  List<LatLng> _routePoints = [];
+  final List<Map<String, String>> _phases = [
+    {'label': 'En camino', 'sub': 'Dirígete al punto de recogida'},
+    {'label': 'En ruta', 'sub': 'Pasajero a bordo'},
+    {'label': 'Llegando', 'sub': 'Próximo al destino'},
+  ];
 
-  StreamSubscription<Position>? _positionStream;
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
-    if (args != null && args.containsKey('id_viaje')) {
-      _idViaje = args['id_viaje'].toString();
-    }
-    _inicializarPantalla();
-  }
-
-  @override
-  void dispose() {
-    _positionStream?.cancel();
-    super.dispose();
-  }
-
-  // --- LÓGICA DE INICIO Y GPS ---
-  Future<void> _inicializarPantalla() async {
-    await _iniciarRastreoUbicacion();
-    await _cargarDatosViaje();
-  }
-
-  Future<void> _iniciarRastreoUbicacion() async {
-    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) return;
-
-    LocationPermission permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
-        return;
-      }
-    }
-
-    Position initialPos = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
-    _ubicacionActual = LatLng(initialPos.latitude, initialPos.longitude);
-
-    _positionStream = Geolocator.getPositionStream(
-      locationSettings: const LocationSettings(accuracy: LocationAccuracy.high, distanceFilter: 10),
-    ).listen((Position position) {
-      if (mounted) {
-        setState(() {
-          _ubicacionActual = LatLng(position.latitude, position.longitude);
-        });
-
-        if (!_isLoading) {
-          try {
-            _mapController.move(_ubicacionActual!, _mapController.camera.zoom);
-          } catch (e) {
-            debugPrint("Esperando a que el mapa esté listo...");
-          }
-        }
-        _verificarDesvioDeRuta();
-      }
-    });
-  }
-
-  Future<void> _cargarDatosViaje() async {
-    if (_idViaje == null) {
-      if (mounted) setState(() => _isLoading = false);
-      return;
-    }
-
-    try {
-      final data = await ViajeService.obtenerViajeActual(_idViaje!);
-      if (mounted) {
-        setState(() {
-          _datosViaje = data;
-          final rutaData = data['ruta_data'] ?? data['ruta'];
-          if (rutaData != null) {
-            _origenViaje = LatLng(
-              double.parse(rutaData['origen']['lat'].toString()),
-              double.parse(rutaData['origen']['lng'].toString()),
-            );
-            _destinoViaje = LatLng(
-              double.parse(rutaData['destino']['lat'].toString()),
-              double.parse(rutaData['destino']['lng'].toString()),
-            );
-          }
-        });
-        await _actualizarRutaSegunEstado();
-        setState(() => _isLoading = false);
-      }
-    } catch (e) {
-      if (mounted) setState(() => _isLoading = false);
-      debugPrint("Error: $e");
-    }
-  }
-
-  // --- LÓGICA DE RUTAS ---
-  Future<void> _actualizarRutaSegunEstado() async {
-    if (_ubicacionActual == null || _origenViaje == null || _destinoViaje == null) return;
-
-    List<LatLng> nuevosPuntos = [];
-    if (_estadoActual == EstadoViaje.enCaminoAlOrigen) {
-      nuevosPuntos = await _obtenerRutaDesdeOSRM(_ubicacionActual!, _origenViaje!);
-    } else if (_estadoActual == EstadoViaje.esperandoPasajero) {
-      nuevosPuntos = [];
-    } else if (_estadoActual == EstadoViaje.viajeEnCurso) {
-      nuevosPuntos = await _obtenerRutaDesdeOSRM(_ubicacionActual!, _destinoViaje!);
-    }
-
-    if (mounted) {
-      setState(() {
-        _routePoints = nuevosPuntos;
-      });
-    }
-  }
-
-  Future<List<LatLng>> _obtenerRutaDesdeOSRM(LatLng start, LatLng end) async {
-    try {
-      final url = Uri.parse(
-        'https://router.project-osrm.org/route/v1/driving/${start.longitude},${start.latitude};${end.longitude},${end.latitude}?overview=full&geometries=geojson',
-      );
-      final response = await http.get(url).timeout(const Duration(seconds: 10));
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        if (data['routes'] != null && data['routes'].isNotEmpty) {
-          final coordinates = data['routes'][0]['geometry']['coordinates'] as List;
-          return coordinates.map((coord) => LatLng(double.parse(coord[1].toString()), double.parse(coord[0].toString()))).toList();
-        }
-      }
-    } catch (e) {
-      debugPrint("❌ Error OSRM: $e");
-    }
-    return [];
-  }
-
-  void _verificarDesvioDeRuta() async {
-    if (_routePoints.isEmpty || _ubicacionActual == null || _isRecalculating) return;
-    if (_estadoActual == EstadoViaje.esperandoPasajero || _estadoActual == EstadoViaje.finalizado) return;
-
-    double distanciaMinima = double.infinity;
-    const distanceTool = Distance();
-
-    for (LatLng punto in _routePoints) {
-      double dist = distanceTool.as(LengthUnit.Meter, _ubicacionActual!, punto);
-      if (dist < distanciaMinima) {
-        distanciaMinima = dist;
-      }
-    }
-
-    if (distanciaMinima > 70.0) {
-      _isRecalculating = true;
-      await _actualizarRutaSegunEstado();
-      _isRecalculating = false;
-    }
-  }
-
-  void _avanzarEstadoViaje() async {
-    setState(() {
-      switch (_estadoActual) {
-        case EstadoViaje.enCaminoAlOrigen:
-          _estadoActual = EstadoViaje.esperandoPasajero;
-          break;
-        case EstadoViaje.esperandoPasajero:
-          _estadoActual = EstadoViaje.viajeEnCurso;
-          break;
-        case EstadoViaje.viajeEnCurso:
-          _estadoActual = EstadoViaje.finalizado;
-          showModalBottomSheet(
-            context: context,
-            isScrollControlled: true,
-            backgroundColor: Colors.white,
-            shape: const RoundedRectangleBorder(
-              borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
-            ),
-            builder: (context) => const FinalizarViajeBottomSheet(),
-          );
-          break;
-        case EstadoViaje.finalizado:
-        case EstadoViaje.cobroYCalificacion:
-          break;
-      }
-    });
-
-    if (_estadoActual != EstadoViaje.finalizado) {
-      await _actualizarRutaSegunEstado();
-    }
-  }
-
-  // --- UTILS ---
-  double sp(double size, double sw) => sw * (size / 375);
-
-  TextStyle mBold({Color color = Colors.black, double size = 14, required double sw}) {
+  TextStyle mBold({Color color = AppColors.textPrimary, double size = 14}) {
     return GoogleFonts.montserrat(
       color: color,
-      fontSize: sp(size, sw),
-      fontWeight: FontWeight.bold,
+      fontSize: size,
+      fontWeight: FontWeight.w600,
     );
   }
 
-  Widget _renderAvatar(String? base64String) {
-    if (base64String == null || base64String.isEmpty) {
-      return const CircleAvatar(
-        radius: 15,
-        backgroundColor: AppColors.primaryLight,
-        child: Icon(Icons.person, color: AppColors.primary, size: 20),
-      );
-    }
-    try {
-      final String cleanBase64 = base64String.contains(',') ? base64String.split(',').last : base64String;
-      Uint8List imageBytes = base64Decode(cleanBase64);
-      return CircleAvatar(radius: 15, backgroundImage: MemoryImage(imageBytes));
-    } catch (e) {
-      return const CircleAvatar(
-        radius: 15,
-        backgroundColor: AppColors.primaryLight,
-        child: Icon(Icons.person, color: AppColors.primary, size: 20),
-      );
+  void _avanzarFase() {
+    if (_tripPhase < 2) {
+      setState(() => _tripPhase++);
+    } else {
+      _mostrarFinViaje();
     }
   }
 
-  Map<String, dynamic> _getConfiguracionTarjeta() {
-    switch (_estadoActual) {
-      case EstadoViaje.enCaminoAlOrigen:
-        return {'colorBoton': Colors.orange, 'textoBoton': 'LLEGUÉ', 'mostrarRuta': true};
-      case EstadoViaje.esperandoPasajero:
-        return {'colorBoton': Colors.green, 'textoBoton': 'INICIAR VIAJE', 'mostrarRuta': false};
-      case EstadoViaje.viajeEnCurso:
-        return {'colorBoton': AppColors.error, 'textoBoton': 'DETENER', 'mostrarRuta': true};
-      default:
-        return {'colorBoton': Colors.grey, 'textoBoton': '...', 'mostrarRuta': false};
-    }
-  }
-
-  // --- BUILD ---
-  @override
-  Widget build(BuildContext context) {
-    final sw = MediaQuery.of(context).size.width;
-
-    return Scaffold(
-      backgroundColor: AppColors.primaryLight,
-      body: SafeArea(
+  void _mostrarFinViaje() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 32),
+        decoration: const BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: sp(10, sw), vertical: sp(5, sw)),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.primary, size: 20),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                  Text(
-                    _estadoActual == EstadoViaje.viajeEnCurso ? 'En Camino al Destino' : 'Recogiendo Pasajero',
-                    style: mBold(size: 20, sw: sw),
-                  ),
-                  const SizedBox(width: 40),
-                ],
-              ),
+            Container(
+              width: 40, height: 4,
+              decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(2)),
             ),
-
-            Expanded(
-              child: Container(
-                margin: EdgeInsets.symmetric(horizontal: sp(15, sw)),
-                decoration: BoxDecoration(
-                  color: AppColors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(color: Colors.black.withValues(alpha: 0.07), blurRadius: 8)
-                  ],
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(20),
-                  child: _isLoading
-                      ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
-                      : Stack(
-                          children: [
-                            Positioned.fill(
-                              child: FlutterMap(
-                                mapController: _mapController,
-                                options: MapOptions(
-                                  initialCenter: _ubicacionActual ?? const LatLng(20.676667, -103.3475),
-                                  initialZoom: 16.0,
-                                ),
-                                children: [
-                                  TileLayer(
-                                    urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                                    userAgentPackageName: 'com.tuempresa.movecare',
-                                  ),
-                                  if (_routePoints.isNotEmpty)
-                                    PolylineLayer(
-                                      polylines: [
-                                        Polyline(
-                                          points: _routePoints,
-                                          color: AppColors.primary,
-                                          strokeWidth: 5.0,
-                                        ),
-                                      ],
-                                    ),
-                                  MarkerLayer(
-                                    markers: [
-                                      if (_ubicacionActual != null)
-                                        Marker(
-                                          point: _ubicacionActual!,
-                                          width: 40,
-                                          height: 40,
-                                          child: const Icon(Icons.directions_car, color: AppColors.primary, size: 40),
-                                        ),
-                                      if (_estadoActual == EstadoViaje.enCaminoAlOrigen && _origenViaje != null)
-                                        Marker(
-                                          point: _origenViaje!,
-                                          width: 40,
-                                          height: 40,
-                                          child: const Icon(Icons.location_on, color: Colors.green, size: 40),
-                                        ),
-                                      if (_estadoActual == EstadoViaje.viajeEnCurso && _destinoViaje != null)
-                                        Marker(
-                                          point: _destinoViaje!,
-                                          width: 40,
-                                          height: 40,
-                                          child: const Icon(Icons.location_on, color: Colors.red, size: 40),
-                                        ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-
-                            if (_routePoints.isNotEmpty && _estadoActual != EstadoViaje.esperandoPasajero)
-                              Positioned(
-                                top: 20,
-                                left: 20,
-                                right: 20,
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 15),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.primary.withValues(alpha: 0.95),
-                                    borderRadius: BorderRadius.circular(15),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      const Icon(Icons.turn_right, color: AppColors.white, size: 30),
-                                      const SizedBox(width: 10),
-                                      Expanded(
-                                        child: Text(
-                                          'Sigue la ruta en el mapa', 
-                                          style: mBold(color: AppColors.white, size: 13, sw: sw),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-
-                            Positioned(
-                              top: 100,
-                              right: 15,
-                              child: MicButton(
-                                isActive: _isVoiceActive,
-                                onTap: () => setState(() => _isVoiceActive = !_isVoiceActive),
-                                size: 52,
-                              ),
-                            ),
-
-                            Positioned(
-                              bottom: 15,
-                              left: 15,
-                              right: 15,
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  _buildRouteCard(sw),
-                                  if (_datosViaje != null && _datosViaje!['check_acompanante'] == true && _datosViaje!['acompanante'] != null) ...[
-                                    const SizedBox(height: 10),
-                                    _buildAcompananteCard(sw),
-                                  ],
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                ),
-              ),
+            const SizedBox(height: 24),
+            Container(
+              width: 64, height: 64,
+              decoration: BoxDecoration(color: AppColors.success.withValues(alpha: 0.1), shape: BoxShape.circle),
+              child: const Icon(Icons.check_circle_rounded, color: AppColors.success, size: 36),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
+            Text('¿Finalizar viaje?', style: GoogleFonts.montserrat(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+            const SizedBox(height: 6),
+            Text('Confirma que el pasajero llegó a su destino.', textAlign: TextAlign.center, style: mBold(color: AppColors.textSecondary, size: 13)),
+            const SizedBox(height: 28),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: AppColors.border),
+                      padding: const EdgeInsets.symmetric(vertical: 13),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: Text('Cancelar', style: mBold(color: AppColors.textSecondary)),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.pop(ctx);
+                      Navigator.pop(context);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.success,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(vertical: 13),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: Text('Finalizar', style: mBold(color: AppColors.white)),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildRouteCard(double sw) {
-    if (_datosViaje == null) return const SizedBox.shrink();
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Stack(
+        children: [
+          // ── Mapa full-screen ──────────────────────────────────────────────
+          Positioned.fill(
+            child: Image.asset('assets/mapa.png', fit: BoxFit.cover),
+          ),
 
-    final config = _getConfiguracionTarjeta();
-    
-    final pasajeroData = _datosViaje!['pasajero'] ?? {};
-    final pasajero = pasajeroData['nombre'] ?? 'Juan Pérez';
-    final fotoBase64 = pasajeroData['foto_perfil'];
+          // ── Barra de navegación (instrucción) ─────────────────────────────
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                child: Row(
+                  children: [
+                    GestureDetector(
+                      onTap: () => Navigator.pop(context),
+                      child: Container(
+                        width: 40, height: 40,
+                        decoration: BoxDecoration(
+                          color: AppColors.white,
+                          shape: BoxShape.circle,
+                          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.12), blurRadius: 8)],
+                        ),
+                        child: const Icon(Icons.arrow_back_ios_new, color: AppColors.primary, size: 18),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary,
+                          borderRadius: BorderRadius.circular(14),
+                          boxShadow: [BoxShadow(color: AppColors.primary.withValues(alpha: 0.3), blurRadius: 10, offset: const Offset(0, 4))],
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.turn_right_rounded, color: AppColors.white, size: 24),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                'En 300m gire a la derecha por Av. Central',
+                                style: mBold(color: AppColors.white, size: 12),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
 
-    final rutaData = _datosViaje!['ruta_data'] ?? _datosViaje!['ruta'] ?? {};
-    final String distancia = rutaData['distancia_km'] != null ? "${rutaData['distancia_km']} km" : "4.2 km";
-    final String tiempo = rutaData['duracion_min'] != null ? "${rutaData['duracion_min']} min" : "15 min";
+          // ── Indicador de fase ─────────────────────────────────────────────
+          Positioned(
+            top: 100,
+            left: 16,
+            right: 16,
+            child: _buildPhaseIndicator(),
+          ),
 
+          // ── Panel inferior (bottom sheet fijo) ────────────────────────────
+          Positioned(
+            bottom: 0, left: 0, right: 0,
+            child: _buildBottomPanel(),
+          ),
+        ],
+      ),
+      bottomNavigationBar: const DriverBottomNav(selectedIndex: 1),
+    );
+  }
+
+  // ── FASE INDICATOR ────────────────────────────────────────────────────────
+
+  Widget _buildPhaseIndicator() {
     return Container(
-      padding: EdgeInsets.all(sp(15, sw)),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
         color: AppColors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(color: Colors.black12, blurRadius: 10, offset: const Offset(0, -2))
-        ],
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 10)],
+      ),
+      child: Row(
+        children: List.generate(3, (i) {
+          final active = i == _tripPhase;
+          final done = i < _tripPhase;
+          return Expanded(
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    children: [
+                      Container(
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: done || active ? AppColors.primary : AppColors.border,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        _phases[i]['label']!,
+                        textAlign: TextAlign.center,
+                        style: mBold(
+                          size: 9,
+                          color: active ? AppColors.primary : done ? AppColors.textSecondary : AppColors.border,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (i < 2) const SizedBox(width: 4),
+              ],
+            ),
+          );
+        }),
+      ),
+    );
+  }
+
+  // ── PANEL INFERIOR ────────────────────────────────────────────────────────
+
+  Widget _buildBottomPanel() {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.12), blurRadius: 20, offset: const Offset(0, -4))],
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          // Pill
+          Container(
+            width: 36, height: 4,
+            decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(2)),
+          ),
+          const SizedBox(height: 16),
+
+          // ETA + distancia
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Expanded(
-                child: config['mostrarRuta'] == true
-                    ? Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(tiempo, style: mBold(size: 22, color: Colors.green, sw: sw)),
-                          Text('$distancia - Llegada estimada', style: mBold(size: 13, color: AppColors.textSecondary ?? Colors.grey, sw: sw)),
-                        ],
-                      )
-                    : Text(
-                        'Espera al pasajero en el punto de encuentro.',
-                        style: mBold(size: 14, color: Colors.black87, sw: sw),
-                      ),
-              ),
+              _etaChip(Icons.access_time_rounded, '15 min', AppColors.primary),
               const SizedBox(width: 10),
-              GestureDetector(
-                onTap: _avanzarEstadoViaje,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: config['colorBoton'],
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(config['textoBoton'], style: mBold(color: AppColors.white, size: 12, sw: sw)),
+              _etaChip(Icons.route_rounded, '4.2 km', AppColors.textSecondary),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: AppColors.success.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
                 ),
-              )
+                child: Text('Llegada 10:45', style: mBold(color: AppColors.success, size: 11)),
+              ),
             ],
           ),
-          const Divider(height: 25),
+          const SizedBox(height: 16),
+          const Divider(height: 1),
+          const SizedBox(height: 14),
+
+          // Info pasajero
           Row(
             children: [
-              _renderAvatar(fotoBase64),
-              const SizedBox(width: 10),
-              Text(
-                pasajero,
-                style: mBold(size: 14, sw: sw),
+              const CircleAvatar(
+                radius: 26,
+                backgroundImage: AssetImage('assets/pasajero.png'),
               ),
-              const Spacer(),
-              const Icon(Icons.message, color: AppColors.primary),
-              const SizedBox(width: 15),
-              const Icon(Icons.phone, color: AppColors.primary),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('María González', style: mBold(size: 15)),
+                    const SizedBox(height: 2),
+                    Row(
+                      children: [
+                        const Icon(Icons.star_rounded, color: Colors.orange, size: 14),
+                        const SizedBox(width: 3),
+                        Text('4.9', style: mBold(color: AppColors.textSecondary, size: 12)),
+                        const SizedBox(width: 10),
+                        const Icon(Icons.accessible_forward_rounded, color: AppColors.primary, size: 14),
+                        const SizedBox(width: 3),
+                        Text('Silla de ruedas', style: mBold(color: AppColors.textSecondary, size: 12)),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              // Botones contacto
+              _circleBtn(Icons.phone_rounded, AppColors.primary, () {}),
+              const SizedBox(width: 10),
+              _circleBtn(Icons.message_rounded, AppColors.primary, () {
+                Navigator.push(context, MaterialPageRoute(
+                  builder: (_) => const ChatViaje(nombreContacto: 'María González', esConductor: true),
+                ));
+              }),
             ],
-          )
+          ),
+          const SizedBox(height: 14),
+
+          // Destino
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.flag_rounded, color: AppColors.error, size: 18),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Hospital General, Av. Insurgentes 3241',
+                    style: mBold(size: 13),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Botón de acción principal
+          SizedBox(
+            width: double.infinity,
+            height: 50,
+            child: ElevatedButton(
+              onPressed: _avanzarFase,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _tripPhase == 2 ? AppColors.success : AppColors.primary,
+                elevation: 0,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+              child: Text(
+                _tripPhase == 0
+                    ? 'Confirmar recogida'
+                    : _tripPhase == 1
+                        ? 'Iniciar ruta'
+                        : 'Finalizar viaje',
+                style: mBold(color: AppColors.white, size: 15),
+              ),
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildAcompananteCard(double sw) {
-    if (_datosViaje == null) return const SizedBox.shrink();
+  Widget _etaChip(IconData icon, String label, Color color) {
+    return Row(
+      children: [
+        Icon(icon, color: color, size: 16),
+        const SizedBox(width: 4),
+        Text(label, style: mBold(color: color, size: 13)),
+      ],
+    );
+  }
 
-    final acompanante = _datosViaje!['acompanante'];
-    if (acompanante == null) return const SizedBox.shrink();
-
-    final nombre = acompanante['nombre'] ?? 'Acompañante';
-    final parentesco = acompanante['parentesco'] ?? '';
-    final fotoBase64 = acompanante['foto']; 
-
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: sp(15, sw), vertical: sp(10, sw)),
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: AppColors.primaryLight ?? Colors.blue.shade100, width: 2),
-      ),
-      child: Row(
-        children: [
-          _renderAvatar(fotoBase64),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  parentesco.isNotEmpty ? "Acompañante ($parentesco)" : "Acompañante",
-                  style: mBold(size: 10, color: Colors.grey, sw: sw),
-                ),
-                Text(
-                  nombre,
-                  style: mBold(size: 13, sw: sw),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-        ],
+  Widget _circleBtn(IconData icon, Color color, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 40, height: 40,
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.1),
+          shape: BoxShape.circle,
+        ),
+        child: Icon(icon, color: color, size: 20),
       ),
     );
   }

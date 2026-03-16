@@ -219,7 +219,7 @@ class _SolicitudesViajesConductorState
             ),
           ],
         ),
-        bottomNavigationBar: const DriverBottomNav(selectedIndex: 2),
+        bottomNavigationBar: const DriverBottomNav(selectedIndex: 1),
       ),
     );
   }

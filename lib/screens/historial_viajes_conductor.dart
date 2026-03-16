@@ -85,7 +85,7 @@ class _HistorialViajesConductorState extends State<HistorialViajesConductor> {
           ),
         ],
       ),
-      bottomNavigationBar: const DriverBottomNav(selectedIndex: 2),
+      bottomNavigationBar: const DriverBottomNav(selectedIndex: 3),
     );
   }
 

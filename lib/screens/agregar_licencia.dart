@@ -129,7 +129,7 @@ class _AgregarLicenciaState extends State<AgregarLicencia> {
           ),
         ],
       ),
-      bottomNavigationBar: const DriverBottomNav(selectedIndex: 3),
+      bottomNavigationBar: const DriverBottomNav(selectedIndex: 4),
     );
   }
 

@@ -21,6 +21,7 @@ class HistorialAuditoria extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: AppColors.white,
+      bottomNavigationBar: const AdminBottomNav(selectedIndex: 3),
       body: Column(
         children: [
           Container(
@@ -29,26 +30,22 @@ class HistorialAuditoria extends StatelessWidget {
             color: AppColors.primaryLight,
             child: Stack(
               children: [
+                Center(
+                  child: Text(
+                    'Historial de Auditoría',
+                    style: GoogleFonts.montserrat(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                ),
                 Positioned(
-                  top: 35,
                   left: 10,
+                  bottom: 20,
                   child: IconButton(
                     icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.primary, size: 20),
                     onPressed: () => Navigator.pop(context),
-                  ),
-                ),
-                Align(
-                  alignment: Alignment.bottomCenter,
-                  child: Padding(
-                    padding: const EdgeInsets.only(bottom: 30),
-                    child: Text(
-                      'Historial de Movimientos',
-                      style: GoogleFonts.montserrat(
-                        fontSize: sp(18, context),
-                        fontWeight: FontWeight.w900,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
                   ),
                 ),
               ],

@@ -33,6 +33,7 @@ class _ReporteIncidenciaState extends State<ReporteIncidencia> {
 
     return Scaffold(
       backgroundColor: AppColors.white,
+      bottomNavigationBar: const AdminBottomNav(selectedIndex: 2),
       body: CustomScrollView(
         physics: const BouncingScrollPhysics(),
         slivers: [

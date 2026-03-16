@@ -305,7 +305,7 @@ class _CompletarPerfilConductorState extends State<CompletarPerfilConductor> wit
             Container(color: Colors.black12, child: const Center(child: CircularProgressIndicator(color: AppColors.primary))),
         ],
       ),
-      bottomNavigationBar: const DriverBottomNav(selectedIndex: 3),
+      bottomNavigationBar: const DriverBottomNav(selectedIndex: 4),
     );
   }
 

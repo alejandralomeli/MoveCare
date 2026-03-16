@@ -220,7 +220,7 @@ class PassengerBottomNav extends StatelessWidget {
     '/principal_pasajero',
     '/agendar_viaje',
     '/historial_viajes_pasajero',
-    '/mi_perfil_pasajero',
+    '/perfil_pasajero',
   ];
 
   static const _icons = [
@@ -302,10 +302,19 @@ class DriverBottomNav extends StatelessWidget {
     Icons.home_rounded,
     Icons.near_me_rounded,
     Icons.bar_chart_rounded,
+    Icons.history_rounded,
     Icons.person_rounded,
   ];
 
-  static const _labels = ['Inicio', 'Viaje', 'Stats', 'Perfil'];
+  static const _labels = ['Inicio', 'Viaje', 'Métricas', 'Historial', 'Perfil'];
+
+  static const _routes = [
+    '/principal_conductor',
+    '/viaje_actual',
+    '/metricas_conductor',
+    '/historial_viajes_conductor',
+    '/mi_perfil_conductor',
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -317,11 +326,15 @@ class DriverBottomNav extends StatelessWidget {
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: List.generate(4, (i) {
+        children: List.generate(5, (i) {
           final active = selectedIndex == i;
           return GestureDetector(
             behavior: HitTestBehavior.opaque,
-            onTap: () {},
+            onTap: () {
+              if (selectedIndex != i) {
+                Navigator.pushReplacementNamed(context, _routes[i]);
+              }
+            },
             child: SizedBox(
               width: 60,
               child: Column(
@@ -349,6 +362,83 @@ class DriverBottomNav extends StatelessWidget {
                       color: active
                           ? AppColors.primary
                           : AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }),
+      ),
+    );
+  }
+}
+
+/// Standard bottom navigation bar for admin screens
+class AdminBottomNav extends StatelessWidget {
+  final int selectedIndex;
+
+  const AdminBottomNav({super.key, required this.selectedIndex});
+
+  static const _routes = [
+    '/principal_administrador',
+    '/gestion_usuarios',
+    '/reporte_incidencia',
+    '/historial_auditorias',
+  ];
+
+  static const _icons = [
+    Icons.home_rounded,
+    Icons.people_rounded,
+    Icons.flag_rounded,
+    Icons.history_rounded,
+  ];
+
+  static const _labels = ['Inicio', 'Usuarios', 'Reportes', 'Auditoría'];
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 70,
+      decoration: const BoxDecoration(
+        color: AppColors.white,
+        border: Border(top: BorderSide(color: AppColors.border, width: 1)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: List.generate(4, (i) {
+          final active = selectedIndex == i;
+          return GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () {
+              if (selectedIndex != i) {
+                Navigator.pushReplacementNamed(context, _routes[i]);
+              }
+            },
+            child: SizedBox(
+              width: 60,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: active ? AppColors.primary : Colors.transparent,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      _icons[i],
+                      color: active ? AppColors.white : AppColors.textSecondary,
+                      size: 22,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    _labels[i],
+                    style: GoogleFonts.montserrat(
+                      fontSize: 10,
+                      fontWeight: active ? FontWeight.w600 : FontWeight.w400,
+                      color: active ? AppColors.primary : AppColors.textSecondary,
                     ),
                   ),
                 ],
