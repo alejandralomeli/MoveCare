@@ -28,6 +28,7 @@ import 'screens/reporte_incidencia_pasajero.dart';
 import 'screens/reporte_incidencia_conductor.dart';
 import 'screens/viaje_confirmado.dart';
 import 'screens/estimacion_costo.dart';
+import 'screens/metodos_pago_vista.dart';
 
 // Screens Conductor
 import 'screens/registro_conductor.dart';
@@ -90,15 +91,16 @@ class MyApp extends StatelessWidget {
         '/principal_pasajero': (context) => const PrincipalPasajero(),
         '/completar_perfil_pasajero': (context) => const CompletarPerfilPasajero(),
         '/perfil_pasajero': (context) => const PerfilPasajero(),
-        '/agendar_viaje': (context) => const AgendarViaje(), 
-        '/agendar_varios_destinos': (context) => const AgendarVariosDestinos(),
-        '/pago_tarjeta': (context) => const PagoTarjetaScreen(),
+        '/agendar_viaje': (context) => const AgendarViaje(), //FALTA LA IA
+        '/agendar_varios_destinos': (context) => const AgendarVariosDestinos(), //FALTA LA IA
+        '/pago_tarjeta': (context) => const PagoTarjetaScreen(), //FALTA STRIPE
         '/registro_tarjeta': (context) => const RegistroTarjetaScreen(),
         '/registro_acompanante': (context) => const RegistrarAcompanante(),
         '/historial_viajes_pasajero': (context) => const HistorialViajesPasajero(),
-        '/reporte_incidencia_pasajero': (context) => const ReporteIncidenciaPasajero(),
+        '/reporte_incidencia_pasajero': (context) => const ReporteIncidenciaPasajero(), // ESTA ME QUEDA POR CONECTAR
         '/viaje_confirmado': (context) => const ViajeConfirmado(), // ESTA ME QUEDA POR CONECTAR
-        '/estimacion_costo': (context) => const EstimacionViaje(),
+        '/estimacion_costo': (context) => const EstimacionViaje(), // ESTA ME QUEDA POR CONECTAR
+        '/metodos_pago_lista': (context) => const MetodosPagoVista(),
 
         // Módulo Conductor
         '/registro_conductor': (context) => const RegistroConductor(),

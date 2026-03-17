@@ -4,7 +4,7 @@ import 'dart:typed_data'; // Necesario para Uint8List
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:provider/provider.dart'; // Añadido para context.read
+import 'package:provider/provider.dart'; // Añadido para context.read/watch
 
 // Importaciones de tu proyecto
 import '../app_theme.dart';
@@ -22,7 +22,8 @@ class CompletarPerfilPasajero extends StatefulWidget {
       _CompletarPerfilPasajeroState();
 }
 
-class _CompletarPerfilPasajeroState extends State<CompletarPerfilPasajero> with SingleTickerProviderStateMixin {
+class _CompletarPerfilPasajeroState extends State<CompletarPerfilPasajero>
+    with SingleTickerProviderStateMixin {
   // --- ESTADO LÓGICO Y VISUAL ---
   final Set<String> _selectedNeeds = {};
   bool _isListening = false;
@@ -35,7 +36,7 @@ class _CompletarPerfilPasajeroState extends State<CompletarPerfilPasajero> with 
   bool _isSavingIne = false;
   bool _isSavingProfile = false;
 
-  // Variables para la lógica de Provider/Guardado que faltaban declarar
+  // Variables para la lógica de Provider/Guardado
   Uint8List? _fotoPerfilBytes;
   Uint8List? _ineAnversoBytes;
   Uint8List? _ineReversoBytes;
@@ -50,29 +51,29 @@ class _CompletarPerfilPasajeroState extends State<CompletarPerfilPasajero> with 
   @override
   void initState() {
     super.initState();
-    _pulseController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 600),
-      lowerBound: 1.0,
-      upperBound: 1.15,
-    )..addStatusListener((status) {
-        if (status == AnimationStatus.completed) {
-          _pulseController.reverse();
-        } else if (status == AnimationStatus.dismissed && _isListening) {
-          _pulseController.forward();
-        }
-      });
+    _pulseController =
+        AnimationController(
+          vsync: this,
+          duration: const Duration(milliseconds: 600),
+          lowerBound: 1.0,
+          upperBound: 1.15,
+        )..addStatusListener((status) {
+          if (status == AnimationStatus.completed) {
+            _pulseController.reverse();
+          } else if (status == AnimationStatus.dismissed && _isListening) {
+            _pulseController.forward();
+          }
+        });
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (!_isInit) {
-      // Nota: Asegúrate de tener importado UserProvider
       final user = context.read<UserProvider>().user;
       if (user != null) {
         _nombreController.text = user.nombre;
-        _telefonoController.text = user.telefono; 
+        _telefonoController.text = user.telefono;
         _direccionController.text = user.direccion;
 
         if (user.fechaNacimiento.isNotEmpty) {
@@ -92,7 +93,9 @@ class _CompletarPerfilPasajeroState extends State<CompletarPerfilPasajero> with 
         }
 
         if (user.discapacidad.isNotEmpty) {
-          final listaDiscapacidades = user.discapacidad.split(',').map((e) => e.trim());
+          final listaDiscapacidades = user.discapacidad
+              .split(',')
+              .map((e) => e.trim());
           _selectedNeeds.addAll(listaDiscapacidades);
         }
       }
@@ -132,7 +135,7 @@ class _CompletarPerfilPasajeroState extends State<CompletarPerfilPasajero> with 
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: const ColorScheme.light(
-              primary: AppColors.primary, // Ajustado para usar el color de AppTheme
+              primary: AppColors.primary,
               onPrimary: Colors.white,
               onSurface: Colors.black,
             ),
@@ -159,7 +162,8 @@ class _CompletarPerfilPasajeroState extends State<CompletarPerfilPasajero> with 
 
       String? fechaNacStr;
       if (_fechaNacimiento != null) {
-        fechaNacStr = "${_fechaNacimiento!.year}-${_fechaNacimiento!.month.toString().padLeft(2, '0')}-${_fechaNacimiento!.day.toString().padLeft(2, '0')}";
+        fechaNacStr =
+            "${_fechaNacimiento!.year}-${_fechaNacimiento!.month.toString().padLeft(2, '0')}-${_fechaNacimiento!.day.toString().padLeft(2, '0')}";
       }
 
       String? discapacidadesStr;
@@ -171,9 +175,15 @@ class _CompletarPerfilPasajeroState extends State<CompletarPerfilPasajero> with 
 
       // Llama a tu servicio
       final res = await AuthService.updateProfile(
-        nombreCompleto: _nombreController.text.isNotEmpty ? _nombreController.text : null,
-        telefono: _telefonoController.text.isNotEmpty ? _telefonoController.text : null,
-        direccion: _direccionController.text.isNotEmpty ? _direccionController.text : null,
+        nombreCompleto: _nombreController.text.isNotEmpty
+            ? _nombreController.text
+            : null,
+        telefono: _telefonoController.text.isNotEmpty
+            ? _telefonoController.text
+            : null,
+        direccion: _direccionController.text.isNotEmpty
+            ? _direccionController.text
+            : null,
         fechaNacimiento: fechaNacStr,
         fotoPerfil: base64Foto,
         discapacidad: discapacidadesStr,
@@ -183,21 +193,24 @@ class _CompletarPerfilPasajeroState extends State<CompletarPerfilPasajero> with 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(res['mensaje'] ?? 'Perfil guardado con éxito'),
-            backgroundColor: Colors.green, // statusGreen
+            backgroundColor: Colors.green,
           ),
         );
       } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(res['error'] ?? 'Error al guardar el perfil'),
-            backgroundColor: AppColors.error, // statusRed
+            backgroundColor: AppColors.error,
           ),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.error),
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: AppColors.error,
+          ),
         );
       }
     } finally {
@@ -240,7 +253,10 @@ class _CompletarPerfilPasajeroState extends State<CompletarPerfilPasajero> with 
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString()), backgroundColor: AppColors.error),
+          SnackBar(
+            content: Text(e.toString()),
+            backgroundColor: AppColors.error,
+          ),
         );
       }
     } finally {
@@ -253,14 +269,16 @@ class _CompletarPerfilPasajeroState extends State<CompletarPerfilPasajero> with 
   Future<void> _pickImage(String type) async {
     final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
     if (image != null) {
-      final bytes = await image.readAsBytes(); // Se guardan en bytes para la validación de envío
+      final bytes = await image.readAsBytes();
       setState(() {
         if (type == 'anverso') {
           _ineAnverso = File(image.path);
           _ineAnversoBytes = bytes;
-        } else {
+        } else if (type == 'reverso') {
           _ineReverso = File(image.path);
           _ineReversoBytes = bytes;
+        } else if (type == 'perfil') {
+          _fotoPerfilBytes = bytes;
         }
       });
     }
@@ -269,6 +287,10 @@ class _CompletarPerfilPasajeroState extends State<CompletarPerfilPasajero> with 
   // --- BUILD ---
   @override
   Widget build(BuildContext context) {
+    // 🔥 Variable de estado leída desde tu UserProvider
+    final user = context.watch<UserProvider>().user;
+    final bool isActivo = user?.activo ?? false;
+
     return Scaffold(
       backgroundColor: AppColors.white,
       body: CustomScrollView(
@@ -291,64 +313,198 @@ class _CompletarPerfilPasajeroState extends State<CompletarPerfilPasajero> with 
 
                   // Badge de estado
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 8,
+                    ),
                     decoration: BoxDecoration(
-                      color: AppColors.error,
+                      color: isActivo ? Colors.green : AppColors.error,
                       borderRadius: BorderRadius.circular(25),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.error_outline, color: AppColors.white, size: 17),
+                        Icon(
+                          isActivo
+                              ? Icons.check_circle_outline
+                              : Icons.error_outline,
+                          color: AppColors.white,
+                          size: 17,
+                        ),
                         const SizedBox(width: 7),
-                        Text('Completar perfil',
-                            style: GoogleFonts.montserrat(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.white,
-                            )),
+                        Text(
+                          isActivo ? 'Perfil verificado' : 'Completar perfil',
+                          style: GoogleFonts.montserrat(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.white,
+                          ),
+                        ),
                       ],
                     ),
                   ),
 
-                  const SizedBox(height: 28),
+                  const SizedBox(height: 32),
 
-                  // Sección INE
-                  Row(
-                    children: [
-                      Text('Foto de ',
-                          style: GoogleFonts.montserrat(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.textPrimary,
-                          )),
-                      Text('INE',
-                          style: GoogleFonts.montserrat(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.primary,
-                          )),
-                    ],
+                  // --- FORMULARIO DE DATOS PERSONALES RESTAURADO ---
+
+                  // Foto de perfil circular
+                  Center(
+                    child: GestureDetector(
+                      onTap: () => _pickImage('perfil'),
+                      child: Stack(
+                        children: [
+                          Container(
+                            height: 110,
+                            width: 110,
+                            decoration: BoxDecoration(
+                              color: AppColors.surface,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: AppColors.border,
+                                width: 1.5,
+                              ),
+                              image: _fotoPerfilBytes != null
+                                  ? DecorationImage(
+                                      image: MemoryImage(_fotoPerfilBytes!),
+                                      fit: BoxFit.cover,
+                                    )
+                                  : null,
+                            ),
+                            child: _fotoPerfilBytes == null
+                                ? const Icon(
+                                    Icons.person_outline,
+                                    size: 45,
+                                    color: AppColors.textSecondary,
+                                  )
+                                : null,
+                          ),
+                          Positioned(
+                            bottom: 0,
+                            right: 0,
+                            child: Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: AppColors.white,
+                                  width: 2,
+                                ),
+                              ),
+                              child: const Icon(
+                                Icons.camera_alt_outlined,
+                                size: 18,
+                                color: AppColors.white,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                  const SizedBox(height: 4),
-                  Text('Sube una foto clara del anverso y reverso',
-                      style: GoogleFonts.montserrat(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: AppColors.textSecondary,
-                      )),
-                  const SizedBox(height: 14),
-                  Row(
-                    children: [
-                      Expanded(child: _buildDocCard('Anverso', _ineAnverso, 'assets/ine_anverso.png', 'anverso')),
-                      const SizedBox(width: 15),
-                      Expanded(child: _buildDocCard('Reverso', _ineReverso, 'assets/ine_reverso.png', 'reverso')),
-                    ],
+
+                  const SizedBox(height: 32),
+
+                  Text(
+                    'Datos personales',
+                    style: GoogleFonts.montserrat(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary,
+                    ),
                   ),
+                  const SizedBox(height: 15),
+
+                  _buildTextField(
+                    label: 'Nombre completo',
+                    controller: _nombreController,
+                    icon: Icons.person_outline,
+                  ),
+                  const SizedBox(height: 16),
+
+                  _buildTextField(
+                    label: 'Teléfono',
+                    controller: _telefonoController,
+                    keyboardType: TextInputType.phone,
+                    icon: Icons.phone_outlined,
+                  ),
+                  const SizedBox(height: 16),
+
+                  _buildTextField(
+                    label: 'Dirección',
+                    controller: _direccionController,
+                    icon: Icons.location_on_outlined,
+                  ),
+                  const SizedBox(height: 16),
+
+                  _buildDateField(),
 
                   const SizedBox(height: 32),
                   const Divider(color: AppColors.border, height: 1),
                   const SizedBox(height: 28),
+
+                  // --- FIN FORMULARIO DE DATOS PERSONALES ---
+
+                  // 🔥 CONDICIONAL DE LA INE (Solo se muestra si el usuario no es activo)
+                  if (!isActivo) ...[
+                    // Sección INE
+                    Row(
+                      children: [
+                        Text(
+                          'Foto de ',
+                          style: GoogleFonts.montserrat(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                        Text(
+                          'INE',
+                          style: GoogleFonts.montserrat(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Sube una foto clara del anverso y reverso',
+                      style: GoogleFonts.montserrat(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildDocCard(
+                            'Anverso',
+                            _ineAnverso,
+                            'assets/ine_anverso.png',
+                            'anverso',
+                          ),
+                        ),
+                        const SizedBox(width: 15),
+                        Expanded(
+                          child: _buildDocCard(
+                            'Reverso',
+                            _ineReverso,
+                            'assets/ine_reverso.png',
+                            'reverso',
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 32),
+                    const Divider(color: AppColors.border, height: 1),
+                    const SizedBox(height: 28),
+                  ],
 
                   // Sección necesidades
                   RichText(
@@ -398,7 +554,10 @@ class _CompletarPerfilPasajeroState extends State<CompletarPerfilPasajero> with 
                   SizedBox(
                     width: double.infinity,
                     child: OutlinedButton.icon(
-                      onPressed: () {},
+                      // 👇 Aquí agregamos la navegación a la ruta
+                      onPressed: () {
+                        Navigator.pushNamed(context, '/registro_acompanante');
+                      },
                       icon: const Icon(Icons.person_add_outlined, size: 18),
                       label: Text(
                         'Registrar un acompañante',
@@ -412,7 +571,8 @@ class _CompletarPerfilPasajeroState extends State<CompletarPerfilPasajero> with 
                         side: const BorderSide(color: AppColors.primary),
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12)),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                     ),
                   ),
@@ -422,8 +582,8 @@ class _CompletarPerfilPasajeroState extends State<CompletarPerfilPasajero> with 
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: (_isSavingProfile || _isSavingIne) 
-                          ? null 
+                      onPressed: (_isSavingProfile || _isSavingIne)
+                          ? null
                           : () async {
                               // Se ejecutan ambas lógicas al presionar el botón guardar
                               if (_ineAnverso != null && _ineReverso != null) {
@@ -436,13 +596,18 @@ class _CompletarPerfilPasajeroState extends State<CompletarPerfilPasajero> with 
                         elevation: 0,
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12)),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                       child: (_isSavingProfile || _isSavingIne)
                           ? const SizedBox(
                               height: 20,
                               width: 20,
-                              child: CircularProgressIndicator(color: AppColors.white, strokeWidth: 2))
+                              child: CircularProgressIndicator(
+                                color: AppColors.white,
+                                strokeWidth: 2,
+                              ),
+                            )
                           : Text(
                               'Guardar',
                               style: GoogleFonts.montserrat(
@@ -465,7 +630,93 @@ class _CompletarPerfilPasajeroState extends State<CompletarPerfilPasajero> with 
     );
   }
 
-  Widget _buildDocCard(String label, File? file, String placeholder, String type) {
+  // --- WIDGETS AUXILIARES PARA EL FORMULARIO RESTAURADO ---
+  Widget _buildTextField({
+    required String label,
+    required TextEditingController controller,
+    TextInputType keyboardType = TextInputType.text,
+    IconData? icon,
+  }) {
+    return TextFormField(
+      controller: controller,
+      keyboardType: keyboardType,
+      style: GoogleFonts.montserrat(
+        fontSize: 14,
+        fontWeight: FontWeight.w500,
+        color: AppColors.textPrimary,
+      ),
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: GoogleFonts.montserrat(
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+          color: AppColors.textSecondary,
+        ),
+        prefixIcon: icon != null
+            ? Icon(icon, color: AppColors.textSecondary, size: 22)
+            : null,
+        filled: true,
+        fillColor: AppColors.surface,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 16,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.border, width: 1),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDateField() {
+    return InkWell(
+      onTap: () => _seleccionarFecha(context),
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.border, width: 1),
+        ),
+        child: Row(
+          children: [
+            const Icon(
+              Icons.calendar_today_outlined,
+              color: AppColors.textSecondary,
+              size: 22,
+            ),
+            const SizedBox(width: 12),
+            Text(
+              _fechaNacimiento != null
+                  ? "${_fechaNacimiento!.day.toString().padLeft(2, '0')}/${_fechaNacimiento!.month.toString().padLeft(2, '0')}/${_fechaNacimiento!.year}"
+                  : "Fecha de nacimiento",
+              style: GoogleFonts.montserrat(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: _fechaNacimiento != null
+                    ? AppColors.textPrimary
+                    : AppColors.textSecondary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // --- WIDGETS AUXILIARES ORIGINALES ---
+  Widget _buildDocCard(
+    String label,
+    File? file,
+    String placeholder,
+    String type,
+  ) {
     return GestureDetector(
       onTap: () => _pickImage(type),
       child: Column(
@@ -493,18 +744,26 @@ class _CompletarPerfilPasajeroState extends State<CompletarPerfilPasajero> with 
               borderRadius: BorderRadius.circular(16),
               child: file != null
                   ? Image.file(file, fit: BoxFit.cover)
-                  : Image.asset(placeholder, fit: BoxFit.contain,
+                  : Image.asset(
+                      placeholder,
+                      fit: BoxFit.contain,
                       errorBuilder: (c, e, s) => const Icon(
-                        Icons.add_a_photo_outlined, size: 32, color: AppColors.primary)),
+                        Icons.add_a_photo_outlined,
+                        size: 32,
+                        color: AppColors.primary,
+                      ),
+                    ),
             ),
           ),
           const SizedBox(height: 7),
-          Text(label,
-              style: GoogleFonts.montserrat(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: AppColors.primary,
-              )),
+          Text(
+            label,
+            style: GoogleFonts.montserrat(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: AppColors.primary,
+            ),
+          ),
         ],
       ),
     );
@@ -522,7 +781,9 @@ class _CompletarPerfilPasajeroState extends State<CompletarPerfilPasajero> with 
     return Wrap(
       spacing: 12,
       runSpacing: 14,
-      children: needs.map((n) => _buildNeedItem(n['label']!, n['icon']!)).toList(),
+      children: needs
+          .map((n) => _buildNeedItem(n['label']!, n['icon']!))
+          .toList(),
     );
   }
 
@@ -531,8 +792,11 @@ class _CompletarPerfilPasajeroState extends State<CompletarPerfilPasajero> with 
     final itemWidth = (MediaQuery.of(context).size.width - 44 - 12 * 2) / 3;
 
     return GestureDetector(
-      onTap: () => setState(() =>
-          isSelected ? _selectedNeeds.remove(label) : _selectedNeeds.add(label)),
+      onTap: () => setState(
+        () => isSelected
+            ? _selectedNeeds.remove(label)
+            : _selectedNeeds.add(label),
+      ),
       child: SizedBox(
         width: itemWidth,
         child: AnimatedContainer(
@@ -551,11 +815,16 @@ class _CompletarPerfilPasajeroState extends State<CompletarPerfilPasajero> with 
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Image.asset(iconPath,
-                  height: 52,
-                  fit: BoxFit.contain,
-                  errorBuilder: (c, e, s) =>
-                      const Icon(Icons.accessible, size: 52, color: AppColors.primary)),
+              Image.asset(
+                iconPath,
+                height: 52,
+                fit: BoxFit.contain,
+                errorBuilder: (c, e, s) => const Icon(
+                  Icons.accessible,
+                  size: 52,
+                  color: AppColors.primary,
+                ),
+              ),
               const SizedBox(height: 10),
               Text(
                 label,
@@ -582,7 +851,11 @@ class _HeaderDelegate extends SliverPersistentHeaderDelegate {
   _HeaderDelegate({required this.isVoiceActive, required this.onVoiceTap});
 
   @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
     return Stack(
       clipBehavior: Clip.none,
       children: [
@@ -605,21 +878,31 @@ class _HeaderDelegate extends SliverPersistentHeaderDelegate {
           left: 10,
           bottom: 20,
           child: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new,
-                color: AppColors.primary, size: 20),
+            icon: const Icon(
+              Icons.arrow_back_ios_new,
+              color: AppColors.primary,
+              size: 20,
+            ),
             onPressed: () => Navigator.of(context).pop(),
           ),
         ),
         Positioned(
           right: 15,
           bottom: -20,
-          child: MicButton(isActive: isVoiceActive, onTap: onVoiceTap, size: 42),
+          child: MicButton(
+            isActive: isVoiceActive,
+            onTap: onVoiceTap,
+            size: 42,
+          ),
         ),
       ],
     );
   }
 
-  @override double get maxExtent => 80;
-  @override double get minExtent => 80;
-  @override bool shouldRebuild(covariant _HeaderDelegate oldDelegate) => true;
+  @override
+  double get maxExtent => 80;
+  @override
+  double get minExtent => 80;
+  @override
+  bool shouldRebuild(covariant _HeaderDelegate oldDelegate) => true;
 }

@@ -1,12 +1,17 @@
+import 'dart:convert'; // Restaurado para Base64
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:latlong2/latlong.dart'; // Restaurado para las rutas
 
 import 'chat_viaje.dart';
 import 'widgets/map_widget.dart';
+import 'widgets/route_map_widget.dart'; // Restaurado
+import 'widgets/modals/viaje_detalles_modal.dart'; // Restaurado
 import 'widgets/mic_button.dart';
 import '../providers/user_provider.dart';
 import '../services/home/home_service.dart';
+import '../services/viaje/viaje_service.dart'; // Restaurado
 import '../core/utils/auth_helper.dart';
 import '../app_theme.dart';
 
@@ -26,6 +31,11 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
   DateTime _weekStart = DateTime.now();
   Map<String, dynamic>? _viajeProximo;
   List<dynamic> _historialViajes = [];
+
+  // Variables restauradas para la ruta
+  LatLng? _startCoord;
+  LatLng? _endCoord;
+  List<LatLng> _routePoints = [];
 
   @override
   void initState() {
@@ -47,6 +57,31 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
         );
         _viajeProximo = homeData['viaje_proximo'];
         _buildCalendarDates(fechaViaje);
+
+        // Restaurada lógica de decodificación de ruta
+        if (_viajeProximo!['ruta'] != null) {
+          try {
+            List<dynamic> rutaJson = _viajeProximo!['ruta'];
+            _routePoints = rutaJson.map((punto) {
+              if (punto is Map) {
+                return LatLng(
+                  (punto['lat'] ?? punto[1]) * 1.0,
+                  (punto['lng'] ?? punto['lon'] ?? punto[0]) * 1.0,
+                );
+              } else if (punto is List) {
+                return LatLng(punto[0] * 1.0, punto[1] * 1.0);
+              }
+              return const LatLng(0, 0);
+            }).toList();
+
+            if (_routePoints.isNotEmpty) {
+              _startCoord = _routePoints.first;
+              _endCoord = _routePoints.last;
+            }
+          } catch (e) {
+            debugPrint("Error al decodificar la ruta del viaje próximo: $e");
+          }
+        }
       } else {
         _buildCalendarDates(DateTime.now());
       }
@@ -55,6 +90,71 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
       setState(() => _loadingHome = false);
     } catch (e) {
       if (!mounted) return;
+      AuthHelper.manejarError(context, e);
+    }
+  }
+
+  // Restaurada lógica de Cancelación (Adaptada a la nueva estética)
+  void _mostrarDialogoCancelacion(String idViaje) {
+    showDialog(
+      context: context,
+      builder: (BuildContext ctx) {
+        return AlertDialog(
+          backgroundColor: AppColors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Text(
+            "Cancelar viaje",
+            style: mExtrabold(size: 18, color: AppColors.textPrimary),
+          ),
+          content: Text(
+            "¿Desea cancelar el viaje? Esta acción no se puede deshacer.",
+            style: GoogleFonts.montserrat(fontWeight: FontWeight.w500, color: AppColors.textSecondary),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: Text("Volver", style: mExtrabold(color: AppColors.textSecondary)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.error ?? const Color.fromARGB(255, 219, 26, 26),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                elevation: 0,
+              ),
+              onPressed: () {
+                Navigator.of(ctx).pop();
+                _procesarCancelacion(idViaje);
+              },
+              child: Text(
+                "Sí, cancelar",
+                style: mExtrabold(color: AppColors.white),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _procesarCancelacion(String idViaje) async {
+    setState(() => _loadingHome = true);
+    try {
+      await ViajeService.cancelarViaje(idViaje);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Viaje cancelado exitosamente'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+      await _loadHome();
+    } catch (e) {
+      setState(() => _loadingHome = false);
       AuthHelper.manejarError(context, e);
     }
   }
@@ -102,6 +202,21 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
 
     final user = context.watch<UserProvider>().user;
 
+    // Restaurada la decodificación de la foto de perfil en Base64
+    ImageProvider imagenPerfil = const AssetImage('assets/pasajero.png'); 
+    
+    if (user != null && user.fotoPerfil.isNotEmpty) {
+      try {
+        String base64String = user.fotoPerfil;
+        if (base64String.contains(',')) {
+          base64String = base64String.split(',').last;
+        }
+        imagenPerfil = MemoryImage(base64Decode(base64String));
+      } catch (e) {
+        debugPrint("Error decodificando foto de perfil: $e");
+      }
+    }
+
     return Scaffold(
       backgroundColor: AppColors.white,
       body: Stack(
@@ -111,15 +226,13 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildHeader(user?.nombre ?? 'Usuario'),
+                _buildHeader(user?.nombre ?? 'Usuario', imagenPerfil),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const SizedBox(
-                        height: 60,
-                      ), // Espacio para el header flotante
+                      const SizedBox(height: 60),
                       Text('Ubicación actual', style: mExtrabold(size: 18)),
                       const SizedBox(height: 10),
                       _buildMapSection(),
@@ -208,7 +321,8 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
 
   // --- WIDGETS COMPONENTES ---
 
-  Widget _buildHeader(String name) {
+  // Modificado para aceptar el ImageProvider
+  Widget _buildHeader(String name, ImageProvider imagenPerfil) {
     return Stack(
       clipBehavior: Clip.none,
       children: [
@@ -221,7 +335,7 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
             backgroundColor: AppColors.white,
             child: CircleAvatar(
               radius: 46,
-              backgroundImage: AssetImage('assets/pasajero.png'),
+              backgroundImage: imagenPerfil, // Restaurado
             ),
           ),
         ),
@@ -263,7 +377,15 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
       decoration: BoxDecoration(borderRadius: BorderRadius.circular(16)),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(16),
-        child: const MapWidget(),
+        // Restaurada lógica de RouteMapWidget
+        child: (_viajeProximo != null && _routePoints.isNotEmpty)
+            ? RouteMapWidget(
+                startCoord: _startCoord,
+                endCoord: _endCoord,
+                routePoints: _routePoints,
+                isLoading: false,
+              )
+            : const MapWidget(),
       ),
     );
   }
@@ -325,9 +447,20 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
           const SizedBox(height: 10),
           Row(
             children: [
-              _actionBtn('Ver detalles'),
+              // Restaurada la acción Ver Detalles
+              _actionBtn('Ver detalles', onPressed: () {
+                showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  backgroundColor: Colors.transparent,
+                  builder: (context) => ViajeDetallesModal(viaje: _viajeProximo!, esConductor: false),
+                );
+              }),
               const SizedBox(width: 10),
-              _actionBtn('Cancelar'),
+              // Restaurada la acción Cancelar y añadida opción de color
+              _actionBtn('Cancelar', color: AppColors.error ?? const Color.fromARGB(255, 219, 26, 26), onPressed: () {
+                _mostrarDialogoCancelacion(_viajeProximo!['id_viaje'].toString());
+              }),
               const SizedBox(width: 10),
               GestureDetector(
                 onTap: () => Navigator.push(
@@ -435,7 +568,7 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
           Text(
             "Oct 28",
             style: mExtrabold(size: 12),
-          ), // Deberías parsear viaje['fecha']
+          ),
           const SizedBox(width: 15),
           Expanded(
             child: Text(
@@ -445,19 +578,20 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
           ),
           Text(
             viaje['estado'] ?? 'Finalizado',
-            style: mExtrabold(color: AppColors.error, size: 10),
+            style: mExtrabold(color: AppColors.error ?? const Color.fromARGB(255, 219, 26, 26), size: 10),
           ),
         ],
       ),
     );
   }
 
-  Widget _actionBtn(String label) {
+  // Modificado para aceptar onPressed y color opcional
+  Widget _actionBtn(String label, {required VoidCallback onPressed, Color? color}) {
     return Expanded(
       child: ElevatedButton(
-        onPressed: () {},
+        onPressed: onPressed, // Restaurado
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primary,
+          backgroundColor: color ?? AppColors.primary,
           elevation: 0,
         ),
         child: Text(label, style: mExtrabold(color: AppColors.white, size: 11)),
@@ -537,7 +671,6 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Pill indicador
           Container(
             width: 40,
             height: 4,
@@ -567,7 +700,6 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
           ),
           const SizedBox(height: 28),
 
-          // BOTÓN 1: Un destino
           SizedBox(
             width: double.infinity,
             height: 50,
@@ -591,7 +723,6 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
 
           const SizedBox(height: 12),
 
-          // BOTÓN 2: Varios destinos
           SizedBox(
             width: double.infinity,
             height: 50,
@@ -616,5 +747,4 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
       ),
     );
   }
-
 }

@@ -1,7 +1,13 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+
 import '../app_theme.dart';
 import '../core/utils/auth_helper.dart';
+import '../services/auth/auth_service.dart';
+import '../providers/user_provider.dart';
+import 'widgets/modals/terminos_modal.dart';
 import 'widgets/mic_button.dart';
 
 class PerfilPasajero extends StatefulWidget {
@@ -18,6 +24,26 @@ class _PerfilPasajeroState extends State<PerfilPasajero> {
 
   @override
   Widget build(BuildContext context) {
+    // 1. LEEMOS AL USUARIO DESDE EL PROVIDER
+    final user = context.watch<UserProvider>().user;
+    final String nombreUsuario = user?.nombre ?? "Mi Perfil";
+    final bool isActivo = user?.activo ?? false;
+
+    // 2. PREPARAMOS LA FOTO DE PERFIL (Manejo de Base64)
+    ImageProvider imagenPerfil = const AssetImage('assets/pasajero.png');
+
+    if (user != null && user.fotoPerfil.isNotEmpty) {
+      try {
+        String base64String = user.fotoPerfil;
+        if (base64String.contains(',')) {
+          base64String = base64String.split(',').last;
+        }
+        imagenPerfil = MemoryImage(base64Decode(base64String));
+      } catch (e) {
+        debugPrint("Error decodificando foto de perfil: $e");
+      }
+    }
+
     return Scaffold(
       backgroundColor: AppColors.white,
       body: CustomScrollView(
@@ -38,35 +64,17 @@ class _PerfilPasajeroState extends State<PerfilPasajero> {
                   const SizedBox(height: 40),
 
                   // Avatar
-                  Stack(
-                    children: [
-                      CircleAvatar(
-                        radius: 52,
-                        backgroundColor: AppColors.primaryLight,
-                        backgroundImage:
-                            const AssetImage('assets/pasajero.png'),
-                      ),
-                      Positioned(
-                        bottom: 2,
-                        right: 2,
-                        child: Container(
-                          padding: const EdgeInsets.all(5),
-                          decoration: const BoxDecoration(
-                            color: AppColors.primary,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(Icons.edit,
-                              color: AppColors.white, size: 14),
-                        ),
-                      ),
-                    ],
+                  CircleAvatar(
+                    radius: 52,
+                    backgroundColor: AppColors.primaryLight,
+                    backgroundImage: imagenPerfil,
                   ),
 
                   const SizedBox(height: 14),
 
-                  // Nombre
+                  // Nombre (DInámico)
                   Text(
-                    'Mi Perfil',
+                    nombreUsuario,
                     style: GoogleFonts.montserrat(
                       fontSize: 20,
                       fontWeight: FontWeight.w700,
@@ -81,9 +89,13 @@ class _PerfilPasajeroState extends State<PerfilPasajero> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       ...List.generate(
-                          5,
-                          (i) => const Icon(Icons.star,
-                              color: Colors.orange, size: 16)),
+                        5,
+                        (i) => const Icon(
+                          Icons.star,
+                          color: Colors.orange,
+                          size: 16,
+                        ),
+                      ),
                       const SizedBox(width: 5),
                       Text(
                         '5.00',
@@ -98,22 +110,29 @@ class _PerfilPasajeroState extends State<PerfilPasajero> {
 
                   const SizedBox(height: 10),
 
-                  // Badge verificado
+                  // Badge verificado (Dinámico)
                   Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 4),
+                      horizontal: 12,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
-                      color: AppColors.primary,
+                      color: isActivo
+                          ? const Color(0xFF4CAF50)
+                          : AppColors.error,
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.check_circle,
-                            color: AppColors.white, size: 14),
+                        Icon(
+                          isActivo ? Icons.check_circle : Icons.error_outline,
+                          color: AppColors.white,
+                          size: 14,
+                        ),
                         const SizedBox(width: 5),
                         Text(
-                          'Verificado',
+                          isActivo ? 'Verificado' : 'Pendiente',
                           style: GoogleFonts.montserrat(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
@@ -145,14 +164,19 @@ class _PerfilPasajeroState extends State<PerfilPasajero> {
                         _buildMenuItem(
                           icon: Icons.person_outline,
                           label: 'Información personal',
-                          onTap: () {},
+                          onTap: () {
+                            Navigator.pushNamed(
+                              context,
+                              '/completar_perfil_pasajero',
+                            );
+                          },
                         ),
-                         _buildDivider(),
-                        _buildMenuItem(
-                          icon: Icons.person_outline,
-                          label: 'Configuración de Perfil',
-                          onTap: () {},
-                        ),
+                        _buildDivider(),
+                        // _buildMenuItem(
+                        //   icon: Icons.person_outline,
+                        //   label: 'Configuración de Perfil',
+                        //   onTap: () {},
+                        // ),
                         _buildDivider(),
                         _buildMenuItem(
                           icon: Icons.notifications_outlined,
@@ -163,13 +187,28 @@ class _PerfilPasajeroState extends State<PerfilPasajero> {
                         _buildMenuItem(
                           icon: Icons.credit_card_outlined,
                           label: 'Métodos de pago',
-                          onTap: () {},
+                          onTap: () {
+                            Navigator.pushNamed(context, '/metodos_pago_lista');
+                          },
                         ),
                         _buildDivider(),
+                        // _buildMenuItem(
+                        //   icon: Icons.lock_outline,
+                        //   label: 'Seguridad',
+                        //   onTap: () {},
+                        // ),
+                        _buildDivider(),
                         _buildMenuItem(
-                          icon: Icons.lock_outline,
-                          label: 'Seguridad',
-                          onTap: () {},
+                          icon: Icons.policy_outlined,
+                          label: 'Términos y Privacidad',
+                          onTap: () {
+                            showModalBottomSheet(
+                              context: context,
+                              backgroundColor: Colors.transparent,
+                              isScrollControlled: true,
+                              builder: (context) => const TerminosModal(),
+                            );
+                          },
                         ),
                       ],
                     ),
@@ -183,15 +222,29 @@ class _PerfilPasajeroState extends State<PerfilPasajero> {
                       color: AppColors.white,
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(
-                          color: AppColors.error.withValues(alpha: 0.4)),
+                        color: AppColors.error.withValues(alpha: 0.4),
+                      ),
                     ),
                     child: ListTile(
-                      onTap: () => AuthHelper.expulsarUsuario(context),
+                      onTap: () async {
+                        await AuthService.logout();
+                        if (context.mounted) {
+                          Navigator.pushNamedAndRemoveUntil(
+                            context,
+                            '/bienvenido',
+                            (route) => false,
+                          );
+                        }
+                      },
                       splashColor: AppColors.error.withValues(alpha: 0.08),
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14)),
-                      leading: const Icon(Icons.logout,
-                          color: AppColors.error, size: 20),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      leading: const Icon(
+                        Icons.logout,
+                        color: AppColors.error,
+                        size: 20,
+                      ),
                       title: Text(
                         'Cerrar sesión',
                         style: GoogleFonts.montserrat(
@@ -214,10 +267,11 @@ class _PerfilPasajeroState extends State<PerfilPasajero> {
     );
   }
 
-  Widget _buildMenuItem(
-      {required IconData icon,
-      required String label,
-      required VoidCallback onTap}) {
+  Widget _buildMenuItem({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
     return ListTile(
       onTap: onTap,
       splashColor: AppColors.primary.withValues(alpha: 0.08),
@@ -231,18 +285,22 @@ class _PerfilPasajeroState extends State<PerfilPasajero> {
           color: AppColors.textPrimary,
         ),
       ),
-      trailing: const Icon(Icons.chevron_right,
-          color: AppColors.textSecondary, size: 20),
+      trailing: const Icon(
+        Icons.chevron_right,
+        color: AppColors.textSecondary,
+        size: 20,
+      ),
     );
   }
 
   Widget _buildDivider() {
     return const Divider(
-        height: 1,
-        thickness: 1,
-        indent: 20,
-        endIndent: 20,
-        color: AppColors.border);
+      height: 1,
+      thickness: 1,
+      indent: 20,
+      endIndent: 20,
+      color: AppColors.border,
+    );
   }
 }
 
@@ -253,7 +311,11 @@ class _HeaderDelegate extends SliverPersistentHeaderDelegate {
   _HeaderDelegate({required this.isVoiceActive, required this.onVoiceTap});
 
   @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
     return Stack(
       clipBehavior: Clip.none,
       children: [
@@ -276,15 +338,22 @@ class _HeaderDelegate extends SliverPersistentHeaderDelegate {
           left: 10,
           bottom: 20,
           child: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new,
-                color: AppColors.primary, size: 20),
+            icon: const Icon(
+              Icons.arrow_back_ios_new,
+              color: AppColors.primary,
+              size: 20,
+            ),
             onPressed: () => Navigator.of(context).pop(),
           ),
         ),
         Positioned(
           right: 15,
           bottom: -20,
-          child: MicButton(isActive: isVoiceActive, onTap: onVoiceTap, size: 42),
+          child: MicButton(
+            isActive: isVoiceActive,
+            onTap: onVoiceTap,
+            size: 42,
+          ),
         ),
       ],
     );

@@ -8,6 +8,11 @@ import '../services/viaje/viaje_service.dart';
 import '../services/pagos/pagos_service.dart';
 import '../core/utils/auth_helper.dart';
 
+// --- IMPORTS DEL MAPA (De viejo.txt) ---
+import 'package:latlong2/latlong.dart';
+import '../services/map/osm_service.dart';
+import '../screens/widgets/route_map_widget.dart';
+
 class AgendarVariosDestinos extends StatefulWidget {
   const AgendarVariosDestinos({super.key});
 
@@ -16,7 +21,7 @@ class AgendarVariosDestinos extends StatefulWidget {
 }
 
 class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
-  // --- VARIABLES DE ESTADO (LÓGICA) ---
+  // --- VARIABLES DE ESTADO (LÓGICA ACTUAL) ---
   bool _isCreatingTrip = false;
   bool _isVoiceActive = false; // Estado para el header dinámico
 
@@ -24,8 +29,20 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
   final List<TextEditingController> _destinoControllers = [];
   final TextEditingController origenController = TextEditingController();
 
+  // --- VARIABLES DEL MAPA (De viejo.txt) ---
+  LatLng? startCoord;
+  LatLng? endCoord;
+  List<LatLng> routePoints = [];
+  List<LatLng> paradasCoords = [];
+  double? distanciaTotalKm;
+  int? duracionMin;
+  String? polylineRuta;
+  bool calculandoRuta = false;
+
   // Fechas y Horas
-  DateTime _weekStart = DateTime.now().subtract(Duration(days: DateTime.now().weekday - 1));
+  DateTime _weekStart = DateTime.now().subtract(
+    Duration(days: DateTime.now().weekday - 1),
+  );
   DateTime? _selectedDateTime;
   String? selectedHour;
   String? selectedMinute;
@@ -81,7 +98,7 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
   List<Map<String, String>> tarjetas = [];
   bool cargandoTarjetas = false;
 
-  // --- ESTILOS DE TEXTO ---
+  // --- ESTILOS DE TEXTO (De actual.txt) ---
   TextStyle mSemibold(
     double sw, {
     Color color = Colors.black,
@@ -173,7 +190,7 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
       }).toList();
     } catch (e) {
       tarjetas = [];
-      print("Error cargando tarjetas: $e");
+      debugPrint("Error cargando tarjetas: $e");
     }
     if (mounted) setState(() => cargandoTarjetas = false);
   }
@@ -196,7 +213,54 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
     });
   }
 
-  // --- LÓGICA DE CREACIÓN DE VIAJE ---
+  // --- LÓGICA DEL MAPA Y TEMPORIZADOR ANTI-BLOQUEOS (De viejo.txt) ---
+  Future<void> _calcularRutaMultiDestino() async {
+    final originText = origenController.text.trim();
+    final destTexts = _destinoControllers.map((c) => c.text.trim()).toList();
+
+    if (originText.isEmpty || destTexts.any((t) => t.isEmpty)) return;
+
+    setState(() => calculandoRuta = true);
+    try {
+      // 1. Obtenemos el origen
+      LatLng? start = await OsmService.obtenerCoordenadas(originText);
+      if (start == null) return;
+
+      List<LatLng> coordenadasRuta = [start];
+      List<LatLng> paradasTemp = [];
+
+      // 2. Procesamos cada destino con PAUSA OBLIGATORIA para no bloquear la API (1.5s)
+      for (String destText in destTexts) {
+        await Future.delayed(const Duration(milliseconds: 1500));
+        LatLng? dest = await OsmService.obtenerCoordenadas(destText);
+        if (dest != null) {
+          coordenadasRuta.add(dest);
+          paradasTemp.add(dest); // Guardamos la parada para su pin
+        }
+      }
+
+      // 3. Calculamos la ruta
+      if (coordenadasRuta.length >= 2) {
+        final routeData = await OsmService.obtenerRutaMultiple(coordenadasRuta);
+        if (routeData != null && mounted) {
+          setState(() {
+            startCoord = start;
+            endCoord = coordenadasRuta.last;
+            routePoints = routeData['puntos'];
+            distanciaTotalKm = routeData['distancia'];
+            duracionMin = routeData['duracion'];
+            paradasCoords = paradasTemp;
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint("Error calculando ruta multidestino: $e");
+    } finally {
+      if (mounted) setState(() => calculandoRuta = false);
+    }
+  }
+
+  // --- LÓGICA DE CREACIÓN DE VIAJE (De viejo.txt) ---
   DateTime _buildFechaHoraInicio() {
     if (_selectedDateTime == null) throw Exception('Selecciona una fecha');
     if (selectedHour == null || selectedMinute == null)
@@ -210,12 +274,22 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
     );
   }
 
-  List<Map<String, dynamic>> _buildDestinosPayload() {
+  // Método asíncrono para obtener lat/lng reales de cada destino
+  Future<List<Map<String, dynamic>>> _buildDestinosPayload() async {
     final List<Map<String, dynamic>> destinos = [];
     for (int i = 0; i < _destinoControllers.length; i++) {
       final text = _destinoControllers[i].text.trim();
       if (text.isEmpty) throw Exception('Completa todos los destinos');
-      destinos.add({"direccion": text, "orden": i + 1});
+
+      // Busca la coordenada real antes de armar el payload
+      LatLng? coords = await OsmService.obtenerCoordenadas(text);
+
+      destinos.add({
+        "direccion": text,
+        "lat": coords?.latitude,
+        "lng": coords?.longitude,
+        "orden": i + 1,
+      });
     }
     return destinos;
   }
@@ -223,11 +297,11 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
   Future<void> _crearViaje() async {
     if (_isCreatingTrip) return;
 
-    // Validaciones
     bool esPagoConTarjeta =
         (selectedPayment == 'Tarjeta de crédito' ||
         selectedPayment == 'Tarjeta de débito');
 
+    // Validaciones
     if (esPagoConTarjeta && selectedTarjetaId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -259,16 +333,42 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
       );
       return;
     }
+    if (startCoord == null || endCoord == null || distanciaTotalKm == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Por favor espera a que se calcule la ruta en el mapa'),
+        ),
+      );
+      return;
+    }
 
     setState(() => _isCreatingTrip = true);
 
     try {
       final fechaHoraInicio = _buildFechaHoraInicio();
-      final destinos = _buildDestinosPayload();
+      final destinos = await _buildDestinosPayload();
+
+      // ARMAMOS EL JSON DE LA RUTA COMPLETA PARA EL BACKEND
+      Map<String, dynamic> rutaPayload = {
+        "origen": {
+          "lat": startCoord!.latitude,
+          "lng": startCoord!.longitude,
+          "direccion": origenController.text.trim(),
+        },
+        "destino": {
+          "lat": endCoord!.latitude,
+          "lng": endCoord!.longitude,
+          "direccion": _destinoControllers.last.text.trim(),
+        },
+        "distancia_km": double.parse(distanciaTotalKm!.toStringAsFixed(2)),
+        "duracion_min": duracionMin ?? 0,
+        "polyline": "ruta_multidestino",
+      };
 
       final viajeId = await ViajeService.crearViaje(
+        ruta: rutaPayload,
         puntoInicio: origenController.text.trim(),
-        destino: null, // Es null porque usamos 'destinos' (lista)
+        destino: null,
         destinos: destinos,
         checkVariosDestinos: true,
         fechaHoraInicio: fechaHoraInicio.toIso8601String(),
@@ -277,6 +377,8 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
         especificaciones: especificaciones,
         checkAcompanante: hasCompanion,
         idAcompanante: hasCompanion ? selectedAcompananteId : null,
+        costo: null,
+        duracionEstimada: duracionMin,
       );
 
       if (!mounted) return;
@@ -343,7 +445,11 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
                     children: [
                       Text(
                         'Seleccionar fecha',
-                        style: mSemibold(sw, color: AppColors.textPrimary, size: 18),
+                        style: mSemibold(
+                          sw,
+                          color: AppColors.textPrimary,
+                          size: 18,
+                        ),
                       ),
                       Row(
                         children: [
@@ -378,15 +484,23 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
                           context: context,
                           initialDate: DateTime.now(),
                           firstDate: DateTime.now(),
-                          lastDate: DateTime.now().add(const Duration(days: 365)),
+                          lastDate: DateTime.now().add(
+                            const Duration(days: 365),
+                          ),
                         );
                         if (picked != null) {
-                          setState(() => _weekStart = picked.subtract(Duration(days: picked.weekday - 1)));
+                          setState(
+                            () => _weekStart = picked.subtract(
+                              Duration(days: picked.weekday - 1),
+                            ),
+                          );
                         }
                       },
                       icon: const Icon(Icons.calendar_month_outlined, size: 16),
                       label: const Text('Ver más'),
-                      style: TextButton.styleFrom(foregroundColor: AppColors.primary),
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppColors.primary,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 10),
@@ -465,6 +579,18 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
                           );
                         }),
 
+                        const SizedBox(height: 15),
+
+                        // 🔥 MAPA INTEGRADO (De viejo.txt) 🔥
+                        RouteMapWidget(
+                          startCoord: startCoord,
+                          endCoord: endCoord,
+                          routePoints: routePoints,
+                          paradas: paradasCoords,
+                          distanciaTotalKm: distanciaTotalKm,
+                          isLoading: calculandoRuta,
+                        ),
+
                         const SizedBox(height: 10),
                         _buildOneDestinationButton(),
                         const SizedBox(height: 15),
@@ -484,7 +610,11 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
                         Center(
                           child: Text(
                             'Seleccionar forma de pago',
-                            style: mSemibold(sw, color: AppColors.primary, size: 13),
+                            style: mSemibold(
+                              sw,
+                              color: AppColors.primary,
+                              size: 13,
+                            ),
                           ),
                         ),
                         const SizedBox(height: 8),
@@ -522,7 +652,9 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
           ),
         ],
       ),
-      bottomNavigationBar: const PassengerBottomNav(selectedIndex: 1),
+      bottomNavigationBar: const PassengerBottomNav(
+        selectedIndex: 1,
+      ), // Asegúrate de tener esto importado si lo usas
     );
   }
 
@@ -587,7 +719,9 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
                       padding: const EdgeInsets.symmetric(vertical: 2),
                       decoration: const BoxDecoration(
                         color: AppColors.primary,
-                        borderRadius: BorderRadius.vertical(top: Radius.circular(10)),
+                        borderRadius: BorderRadius.vertical(
+                          top: Radius.circular(10),
+                        ),
                       ),
                       child: Text(
                         _dayLetter(date),
@@ -599,7 +733,11 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
                       child: Center(
                         child: Text(
                           date.day.toString(),
-                          style: mExtrabold(sw, color: AppColors.primary, size: 16),
+                          style: mExtrabold(
+                            sw,
+                            color: AppColors.primary,
+                            size: 16,
+                          ),
                         ),
                       ),
                     ),
@@ -626,7 +764,11 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
               });
             }
           },
-          icon: const Icon(Icons.remove_circle, color: AppColors.primary, size: 28),
+          icon: const Icon(
+            Icons.remove_circle,
+            color: AppColors.primary,
+            size: 28,
+          ),
         ),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 5),
@@ -648,12 +790,17 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
               });
             }
           },
-          icon: const Icon(Icons.add_circle, color: AppColors.primary, size: 28),
+          icon: const Icon(
+            Icons.add_circle,
+            color: AppColors.primary,
+            size: 28,
+          ),
         ),
       ],
     );
   }
 
+  // 🔥 RESTAURADO: Autocompletado con el botón de "Lupa" (búsqueda manual) y acción de teclado
   Widget _buildZMGAutocomplete(
     String hint,
     TextEditingController controller,
@@ -665,7 +812,10 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
           : zmgLocations.where(
               (l) => l.toLowerCase().contains(v.text.toLowerCase()),
             ),
-      onSelected: (v) => controller.text = v,
+      onSelected: (v) {
+        controller.text = v;
+        _calcularRutaMultiDestino();
+      },
       fieldViewBuilder: (c, ct, f, o) {
         if (ct.text.isEmpty && controller.text.isNotEmpty)
           ct.text = controller.text;
@@ -673,10 +823,28 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
           controller: ct,
           focusNode: f,
           onChanged: (text) => controller.text = text,
+          textInputAction: TextInputAction.search, // Botón de buscar en teclado
+          onSubmitted: (_) {
+            // Al dar enter o buscar en teclado
+            controller.text = ct.text;
+            _calcularRutaMultiDestino();
+          },
           decoration: InputDecoration(
             hintText: hint,
             hintStyle: mSemibold(sw, color: AppColors.textSecondary, size: 13),
-            prefixIcon: const Icon(Icons.location_on_outlined, color: AppColors.primary, size: 20),
+            prefixIcon: const Icon(
+              Icons.location_on_outlined,
+              color: AppColors.primary,
+              size: 20,
+            ),
+            // La famosa Lupa para forzar búsqueda manual
+            suffixIcon: IconButton(
+              icon: const Icon(Icons.search, color: AppColors.primary),
+              onPressed: () {
+                controller.text = ct.text;
+                _calcularRutaMultiDestino();
+              },
+            ),
             filled: true,
             fillColor: AppColors.surface,
             border: OutlineInputBorder(
@@ -921,7 +1089,7 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
     return Column(
       children: [
         ElevatedButton(
-          onPressed: () {},
+          onPressed: _calcularRutaMultiDestino, // Actualiza el mapa manualmente
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.primary,
             elevation: 0,
@@ -990,7 +1158,6 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
       ),
     );
   }
-
 }
 
 // --- CLASES AUXILIARES DEL HEADER DINÁMICO ---
@@ -1036,7 +1203,7 @@ class _DynamicHeaderDelegate extends SliverPersistentHeaderDelegate {
         ),
         Positioned(
           left: 10,
-          bottom:20,
+          bottom: 20,
           child: IconButton(
             icon: const Icon(
               Icons.arrow_back_ios_new,
@@ -1049,7 +1216,11 @@ class _DynamicHeaderDelegate extends SliverPersistentHeaderDelegate {
         Positioned(
           right: 20,
           bottom: -20,
-          child: MicButton(isActive: isVoiceActive, onTap: onVoiceTap, size: 42),
+          child: MicButton(
+            isActive: isVoiceActive,
+            onTap: onVoiceTap,
+            size: 42,
+          ),
         ),
       ],
     );
