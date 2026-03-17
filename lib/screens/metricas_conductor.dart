@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../app_theme.dart';
 import 'widgets/mic_button.dart';
+import '../services/reportes/reportes_service.dart';
 
 class MetricasConductor extends StatefulWidget {
   const MetricasConductor({super.key});
@@ -16,18 +17,36 @@ class _MetricasConductorState extends State<MetricasConductor>
   bool _isListening = false;
   late TabController _tabController;
 
-  // ── Datos de ejemplo ──────────────────────────────────────────────────────
+  // ── Estado de carga ───────────────────────────────────────────────────────
+  bool _cargando = true;
+  String? _error;
 
-  final List<double> _viajesSemana = [3, 5, 4, 7, 6, 2, 4];
-  final List<double> _gananciasMes = [1200, 1800, 1500, 2200, 1900, 2500, 2100, 2800];
-  final List<String> _diasSemana = ['L', 'M', 'Mi', 'J', 'V', 'S', 'D'];
-  final List<String> _semanasMes = ['S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7', 'S8'];
-
-  final Map<String, double> _estadosViajes = {
-    'Completados': 78,
-    'Cancelados': 12,
-    'En curso': 10,
+  // ── Datos reales de la API ────────────────────────────────────────────────
+  List<double> _viajesSemana = [0, 0, 0, 0, 0, 0, 0];
+  List<double> _gananciasMes = [0, 0, 0, 0, 0];
+  Map<String, double> _estadosViajes = {
+    'Completados': 0,
+    'Cancelados': 0,
+    'En curso': 0,
   };
+  Map<String, dynamic> _kpis = {
+    'total_viajes': 0,
+    'km_totales': 0.0,
+    'calificacion': null,
+    'ganancias_total': 0.0,
+  };
+  Map<String, dynamic> _resumen = {
+    'viajes_completados': 0,
+    'viajes_cancelados': 0,
+    'km_promedio': 0.0,
+    'tiempo_promedio_min': 0,
+    'ganancia_promedio': 0.0,
+    'mejor_dia': 'N/A',
+  };
+
+  // ── Estáticos ─────────────────────────────────────────────────────────────
+  final List<String> _diasSemana = ['L', 'M', 'Mi', 'J', 'V', 'S', 'D'];
+  final List<String> _semanasMes = ['S1', 'S2', 'S3', 'S4', 'S5'];
 
   final List<Color> _pieColors = [
     AppColors.primary,
@@ -47,6 +66,33 @@ class _MetricasConductorState extends State<MetricasConductor>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _cargarMetricas();
+  }
+
+  Future<void> _cargarMetricas() async {
+    setState(() { _cargando = true; _error = null; });
+    try {
+      final data = await ReportesService.obtenerMetricasConductor();
+      setState(() {
+        _kpis = data['kpis'] as Map<String, dynamic>;
+        _viajesSemana = (data['viajes_semana'] as List)
+            .map((v) => (v as num).toDouble())
+            .toList();
+        _gananciasMes = (data['ganancias_semanas'] as List)
+            .map((v) => (v as num).toDouble())
+            .toList();
+        final estados = data['estados'] as Map<String, dynamic>;
+        _estadosViajes = {
+          'Completados': (estados['completados'] as num).toDouble(),
+          'Cancelados': (estados['cancelados'] as num).toDouble(),
+          'En curso': (estados['en_curso'] as num).toDouble(),
+        };
+        _resumen = data['resumen'] as Map<String, dynamic>;
+        _cargando = false;
+      });
+    } catch (e) {
+      if (mounted) setState(() { _error = e.toString(); _cargando = false; });
+    }
   }
 
   @override
@@ -71,41 +117,58 @@ class _MetricasConductorState extends State<MetricasConductor>
             ),
           ),
           SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // KPI Cards
-                  _buildKpiRow(),
-                  const SizedBox(height: 28),
-
-                  // Viajes por día (bar chart)
-                  _buildSectionTitle('Viajes por día', Icons.bar_chart_rounded),
-                  const SizedBox(height: 14),
-                  _buildBarChart(),
-                  const SizedBox(height: 28),
-
-                  // Ganancias (line chart)
-                  _buildSectionTitle('Ganancias por semana', Icons.trending_up_rounded),
-                  const SizedBox(height: 14),
-                  _buildLineChart(),
-                  const SizedBox(height: 28),
-
-                  // Estado de viajes (pie chart)
-                  _buildSectionTitle('Estado de viajes', Icons.pie_chart_rounded),
-                  const SizedBox(height: 14),
-                  _buildPieSection(),
-                  const SizedBox(height: 28),
-
-                  // Tabla resumen
-                  _buildSectionTitle('Resumen del mes', Icons.table_chart_rounded),
-                  const SizedBox(height: 14),
-                  _buildResumenTable(),
-                  const SizedBox(height: 30),
-                ],
-              ),
-            ),
+            child: _cargando
+                ? const SizedBox(
+                    height: 400,
+                    child: Center(child: CircularProgressIndicator()),
+                  )
+                : _error != null
+                    ? SizedBox(
+                        height: 300,
+                        child: Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.error_outline, color: AppColors.error, size: 40),
+                              const SizedBox(height: 12),
+                              Text('Error al cargar métricas', style: mBold(color: AppColors.error)),
+                              const SizedBox(height: 12),
+                              ElevatedButton.icon(
+                                onPressed: _cargarMetricas,
+                                icon: const Icon(Icons.refresh),
+                                label: const Text('Reintentar'),
+                                style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    : Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildKpiRow(),
+                            const SizedBox(height: 28),
+                            _buildSectionTitle('Viajes por día', Icons.bar_chart_rounded),
+                            const SizedBox(height: 14),
+                            _buildBarChart(),
+                            const SizedBox(height: 28),
+                            _buildSectionTitle('Ganancias por semana', Icons.trending_up_rounded),
+                            const SizedBox(height: 14),
+                            _buildLineChart(),
+                            const SizedBox(height: 28),
+                            _buildSectionTitle('Estado de viajes', Icons.pie_chart_rounded),
+                            const SizedBox(height: 14),
+                            _buildPieSection(),
+                            const SizedBox(height: 28),
+                            _buildSectionTitle('Resumen del mes', Icons.table_chart_rounded),
+                            const SizedBox(height: 14),
+                            _buildResumenTable(),
+                            const SizedBox(height: 30),
+                          ],
+                        ),
+                      ),
           ),
         ],
       ),
@@ -115,11 +178,12 @@ class _MetricasConductorState extends State<MetricasConductor>
   // ── KPI ───────────────────────────────────────────────────────────────────
 
   Widget _buildKpiRow() {
+    final calificacion = _kpis['calificacion'];
     final kpis = [
-      {'label': 'Total viajes', 'value': '124', 'icon': Icons.directions_car_rounded, 'color': AppColors.primary},
-      {'label': 'Km recorridos', 'value': '2,341', 'icon': Icons.route_rounded, 'color': AppColors.success},
-      {'label': 'Calificación', 'value': '4.8 ★', 'icon': Icons.star_rounded, 'color': const Color(0xFFF59E0B)},
-      {'label': 'Ganancias', 'value': '\$14,200', 'icon': Icons.payments_rounded, 'color': AppColors.primary},
+      {'label': 'Total viajes', 'value': '${_kpis['total_viajes']}', 'icon': Icons.directions_car_rounded, 'color': AppColors.primary},
+      {'label': 'Km recorridos', 'value': '${_kpis['km_totales']} km', 'icon': Icons.route_rounded, 'color': AppColors.success},
+      {'label': 'Calificación', 'value': calificacion != null ? '$calificacion ★' : 'N/A', 'icon': Icons.star_rounded, 'color': const Color(0xFFF59E0B)},
+      {'label': 'Ganancias', 'value': '\$${_kpis['ganancias_total']}', 'icon': Icons.payments_rounded, 'color': AppColors.primary},
     ];
 
     return GridView.builder(
@@ -392,12 +456,12 @@ class _MetricasConductorState extends State<MetricasConductor>
 
   Widget _buildResumenTable() {
     final rows = [
-      ['Viajes completados', '97'],
-      ['Viajes cancelados', '15'],
-      ['Km promedio por viaje', '18.9 km'],
-      ['Tiempo promedio', '32 min'],
-      ['Ganancia promedio', '\$114.5'],
-      ['Mejor día', 'Jueves'],
+      ['Viajes completados', '${_resumen['viajes_completados']}'],
+      ['Viajes cancelados', '${_resumen['viajes_cancelados']}'],
+      ['Km promedio por viaje', '${_resumen['km_promedio']} km'],
+      ['Tiempo promedio', '${_resumen['tiempo_promedio_min']} min'],
+      ['Ganancia promedio', '\$${_resumen['ganancia_promedio']}'],
+      ['Mejor día', '${_resumen['mejor_dia']}'],
     ];
 
     return Container(

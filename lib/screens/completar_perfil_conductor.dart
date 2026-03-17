@@ -7,7 +7,6 @@ import 'package:provider/provider.dart';
 
 // Estética y componentes del repositorio
 import '../app_theme.dart';
-import 'widgets/mic_button.dart';
 
 // Servicios y lógica de usuario
 import '../providers/user_provider.dart';
@@ -353,7 +352,7 @@ class _CompletarPerfilConductorState extends State<CompletarPerfilConductor> wit
         decoration: InputDecoration(
           labelText: label,
           filled: readOnly,
-          fillColor: readOnly ? AppColors.border.withOpacity(0.2) : AppColors.white,
+          fillColor: readOnly ? AppColors.border.withValues(alpha: 0.2) : AppColors.white,
           labelStyle: GoogleFonts.montserrat(fontSize: 12, color: AppColors.textSecondary),
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
           enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
@@ -373,7 +372,7 @@ class _CompletarPerfilConductorState extends State<CompletarPerfilConductor> wit
             height: 110,
             width: double.infinity,
             decoration: BoxDecoration(
-              color: isLoaded ? AppColors.primaryLight.withOpacity(0.3) : AppColors.white,
+              color: isLoaded ? AppColors.primaryLight.withValues(alpha: 0.3) : AppColors.white,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: isLoaded ? AppColors.primary : AppColors.border, width: isLoaded ? 1.5 : 1),
               boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 6, offset: const Offset(0, 2))],
