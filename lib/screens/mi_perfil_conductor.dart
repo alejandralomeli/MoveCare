@@ -1,8 +1,15 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+
+// --- SERVICIOS Y MODALES RECUPERADOS ---
+import '../providers/user_provider.dart';
+import 'widgets/modals/terminos_modal.dart';
+
+// --- DEPENDENCIAS ACTUALES ---
 import '../app_theme.dart';
 import '../core/utils/auth_helper.dart';
-import 'widgets/mic_button.dart';
 
 class MiPerfilConductor extends StatefulWidget {
   const MiPerfilConductor({super.key});
@@ -18,6 +25,25 @@ class MiPerfilConductorState extends State<MiPerfilConductor> {
 
   @override
   Widget build(BuildContext context) {
+    // 1. OBTENCIÓN DE DATOS DEL PROVIDER (Lógica del código viejo)
+    final user = context.watch<UserProvider>().user;
+    final String nombreUsuario = user?.nombre ?? "Conductor";
+    final bool isActivo = user?.activo ?? false;
+
+    // 2. MANEJO DE IMAGEN DE PERFIL (Lógica del código viejo)
+    ImageProvider imagenPerfil = const AssetImage('assets/conductor.png');
+    if (user != null && user.fotoPerfil.isNotEmpty) {
+      try {
+        String base64String = user.fotoPerfil;
+        if (base64String.contains(',')) {
+          base64String = base64String.split(',').last;
+        }
+        imagenPerfil = MemoryImage(base64Decode(base64String));
+      } catch (e) {
+        debugPrint("Error decodificando foto de conductor: $e");
+      }
+    }
+
     return Scaffold(
       backgroundColor: AppColors.white,
       body: CustomScrollView(
@@ -37,34 +63,34 @@ class MiPerfilConductorState extends State<MiPerfilConductor> {
                 children: [
                   const SizedBox(height: 40),
 
-                  // Avatar
+                  // Avatar (UI nueva con imagen de base de datos)
                   Stack(
                     children: [
                       CircleAvatar(
                         radius: 52,
                         backgroundColor: AppColors.primaryLight,
-                        backgroundImage: const AssetImage('assets/conductor.png'),
+                        backgroundImage: imagenPerfil, // <-- Imagen inyectada
                       ),
-                      Positioned(
-                        bottom: 2,
-                        right: 2,
-                        child: Container(
-                          padding: const EdgeInsets.all(5),
-                          decoration: const BoxDecoration(
-                            color: AppColors.primary,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(Icons.edit, color: AppColors.white, size: 14),
-                        ),
-                      ),
+                      // Positioned(
+                      //   bottom: 2,
+                      //   right: 2,
+                      //   // child: Container(
+                      //   //   padding: const EdgeInsets.all(5),
+                      //   //   decoration: const BoxDecoration(
+                      //   //     color: AppColors.primary,
+                      //   //     shape: BoxShape.circle,
+                      //   //   ),
+                      //   //   // child: const Icon(Icons.edit, color: AppColors.white, size: 14),
+                      //   // ),
+                      // ),
                     ],
                   ),
 
                   const SizedBox(height: 14),
 
-                  // Nombre
+                  // Nombre (UI nueva con nombre real de BD)
                   Text(
-                    'Username',
+                    nombreUsuario, // <-- Nombre inyectado
                     style: GoogleFonts.montserrat(
                       fontSize: 20,
                       fontWeight: FontWeight.w700,
@@ -74,11 +100,18 @@ class MiPerfilConductorState extends State<MiPerfilConductor> {
 
                   const SizedBox(height: 6),
 
-                  // Estrellas + rating
+                  // Estrellas + rating (UI nueva respetada)
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      ...List.generate(5, (i) => const Icon(Icons.star, color: Colors.orange, size: 16)),
+                      ...List.generate(
+                        5,
+                        (i) => const Icon(
+                          Icons.star,
+                          color: Colors.orange,
+                          size: 16,
+                        ),
+                      ),
                       const SizedBox(width: 5),
                       Text(
                         '5.00',
@@ -93,20 +126,29 @@ class MiPerfilConductorState extends State<MiPerfilConductor> {
 
                   const SizedBox(height: 10),
 
-                  // Badge verificado
+                  // Badge verificado / pendiente (Lógica inyectada respetando UI nueva)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
-                      color: AppColors.primary,
+                      color: isActivo
+                          ? Colors.green
+                          : AppColors.error, // Color según estado
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.check_circle, color: AppColors.white, size: 14),
+                        Icon(
+                          isActivo ? Icons.check_circle : Icons.error_outline,
+                          color: AppColors.white,
+                          size: 14,
+                        ),
                         const SizedBox(width: 5),
                         Text(
-                          'Verificado',
+                          isActivo ? 'Verificado' : 'Pendiente',
                           style: GoogleFonts.montserrat(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
@@ -135,10 +177,22 @@ class MiPerfilConductorState extends State<MiPerfilConductor> {
                     ),
                     child: Column(
                       children: [
+                        // NUEVO APARTADO: Mis Viajes
+                        _buildMenuItem(
+                          icon: Icons
+                              .map_outlined, // Puedes cambiarlo a Icons.directions_car_outlined si prefieres
+                          label: 'Mis Viajes',
+                          onTap: () =>
+                              Navigator.pushNamed(context, '/viajes_conductor'),
+                        ),
+                        _buildDivider(),
                         _buildMenuItem(
                           icon: Icons.history,
                           label: 'Mi Historial',
-                          onTap: () => Navigator.pushNamed(context, 'Historial_Viajes_Conductor'),
+                          onTap: () => Navigator.pushNamed(
+                            context,
+                            '/historial_viajes_conductor',
+                          ),
                         ),
                         _buildDivider(),
                         _buildMenuItem(
@@ -150,19 +204,23 @@ class MiPerfilConductorState extends State<MiPerfilConductor> {
                         _buildMenuItem(
                           icon: Icons.person_outline,
                           label: 'Configuración de Perfil',
-                          onTap: () {},
-                        ),
-                        _buildDivider(),
-                        _buildMenuItem(
-                          icon: Icons.bar_chart_outlined,
-                          label: 'Mis Métricas',
-                          onTap: () {},
+                          onTap: () => Navigator.pushNamed(
+                            context,
+                            '/completar_perfil_conductor',
+                          ),
                         ),
                         _buildDivider(),
                         _buildMenuItem(
                           icon: Icons.lock_outline,
                           label: 'Privacidad',
-                          onTap: () {},
+                          onTap: () {
+                            showModalBottomSheet(
+                              context: context,
+                              backgroundColor: Colors.transparent,
+                              isScrollControlled: true,
+                              builder: (context) => const TerminosModal(),
+                            );
+                          },
                         ),
                       ],
                     ),
@@ -175,13 +233,21 @@ class MiPerfilConductorState extends State<MiPerfilConductor> {
                     decoration: BoxDecoration(
                       color: AppColors.white,
                       borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: AppColors.error.withValues(alpha: 0.4)),
+                      border: Border.all(
+                        color: AppColors.error.withValues(alpha: 0.4),
+                      ),
                     ),
                     child: ListTile(
                       onTap: () => AuthHelper.expulsarUsuario(context),
                       splashColor: AppColors.error.withValues(alpha: 0.08),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                      leading: const Icon(Icons.logout, color: AppColors.error, size: 20),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      leading: const Icon(
+                        Icons.logout,
+                        color: AppColors.error,
+                        size: 20,
+                      ),
                       title: Text(
                         'Cerrar sesión',
                         style: GoogleFonts.montserrat(
@@ -200,11 +266,16 @@ class MiPerfilConductorState extends State<MiPerfilConductor> {
           ),
         ],
       ),
+      // AQUÍ ESTÁ EL MENÚ DE NAVEGACIÓN INFERIOR AL QUE HACES REFERENCIA
       bottomNavigationBar: const DriverBottomNav(selectedIndex: 4),
     );
   }
 
-  Widget _buildMenuItem({required IconData icon, required String label, required VoidCallback onTap}) {
+  Widget _buildMenuItem({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
     return ListTile(
       onTap: onTap,
       splashColor: AppColors.primary.withValues(alpha: 0.08),
@@ -218,12 +289,22 @@ class MiPerfilConductorState extends State<MiPerfilConductor> {
           color: AppColors.textPrimary,
         ),
       ),
-      trailing: const Icon(Icons.chevron_right, color: AppColors.textSecondary, size: 20),
+      trailing: const Icon(
+        Icons.chevron_right,
+        color: AppColors.textSecondary,
+        size: 20,
+      ),
     );
   }
 
   Widget _buildDivider() {
-    return const Divider(height: 1, thickness: 1, indent: 20, endIndent: 20, color: AppColors.border);
+    return const Divider(
+      height: 1,
+      thickness: 1,
+      indent: 20,
+      endIndent: 20,
+      color: AppColors.border,
+    );
   }
 }
 
@@ -234,7 +315,11 @@ class _HeaderDelegate extends SliverPersistentHeaderDelegate {
   _HeaderDelegate({required this.isVoiceActive, required this.onVoiceTap});
 
   @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
     return Stack(
       clipBehavior: Clip.none,
       children: [
@@ -257,7 +342,11 @@ class _HeaderDelegate extends SliverPersistentHeaderDelegate {
           left: 10,
           bottom: 20,
           child: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.primary, size: 20),
+            icon: const Icon(
+              Icons.arrow_back_ios_new,
+              color: AppColors.primary,
+              size: 20,
+            ),
             onPressed: () => Navigator.of(context).pop(),
           ),
         ),

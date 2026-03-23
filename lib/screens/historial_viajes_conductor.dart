@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../app_theme.dart';
+import '../core/utils/auth_helper.dart'; // Ajusta según tu estructura
+import '../services/viaje/viaje_service.dart'; // Ajusta según tu estructura
+
 class HistorialViajesConductor extends StatefulWidget {
   const HistorialViajesConductor({super.key});
 
@@ -11,13 +14,60 @@ class HistorialViajesConductor extends StatefulWidget {
 
 class _HistorialViajesConductorState extends State<HistorialViajesConductor> {
   String _filterSelected = 'Todos';
+  bool _isLoading = true;
 
+  List<dynamic> _viajesCompletos = [];
+  List<dynamic> _viajesFiltrados = [];
+
+  // Filtros originales restaurados
   final List<String> filters = [
     'Todos',
-    'En proceso',
-    'Aceptados',
-    'Rechazados',
+    'En curso',
+    'Pendiente',
+    'Finalizado',
+    'Cancelado',
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _cargarDatos();
+  }
+
+  // --- CARGA DE DATOS DESDE EL BACKEND ---
+  Future<void> _cargarDatos() async {
+    try {
+      final data = await ViajeService.obtenerHistorialConductor();
+      if (mounted) {
+        setState(() {
+          _viajesCompletos = data;
+          _viajesFiltrados = data;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        AuthHelper.manejarError(context, e);
+      }
+    }
+  }
+
+  // --- LÓGICA DE FILTRADO ---
+  void _aplicarFiltro(String label) {
+    setState(() {
+      _filterSelected = label;
+      if (label == 'Todos') {
+        _viajesFiltrados = _viajesCompletos;
+      } else {
+        // Convierte "En curso" -> "en_curso" para comparar exactamente con el API
+        String busca = label.toLowerCase().replaceAll(" ", "_");
+        _viajesFiltrados = _viajesCompletos.where((v) {
+          return v['estado'].toString().toLowerCase() == busca;
+        }).toList();
+      }
+    });
+  }
 
   TextStyle mFont({
     Color color = AppColors.primary,
@@ -38,54 +88,39 @@ class _HistorialViajesConductorState extends State<HistorialViajesConductor> {
       body: CustomScrollView(
         physics: const BouncingScrollPhysics(),
         slivers: [
-          SliverPersistentHeader(
-            pinned: true,
-            delegate: _HeaderDelegate(),
-          ),
+          SliverPersistentHeader(pinned: true, delegate: _HeaderDelegate()),
           SliverToBoxAdapter(child: _buildFilterMenu()),
-          SliverList(
-            delegate: SliverChildListDelegate([
-              const SizedBox(height: 10),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Column(
-                  children: [
-                    _buildTripCard(
-                      'En Curso',
-                      AppColors.primary,
-                      'Origen ejemplo',
-                      'Destino ejemplo',
-                      'Nov 27, 2025',
-                      'Pasajero Uno',
-                      'auditiva.png',
-                    ),
-                    _buildTripCard(
-                      'Aceptado',
-                      const Color(0xFF16A34A),
-                      'Hospital General',
-                      'Col. Las Flores',
-                      'Nov 20, 2025',
-                      'Pasajero Dos',
-                      'silla_ruedas.png',
-                    ),
-                    _buildTripCard(
-                      'Rechazado',
-                      AppColors.error,
-                      'Centro Médico',
-                      'Av. Insurgentes 420',
-                      'Nov 15, 2025',
-                      'Pasajero Tres',
-                      'tercera_edad.png',
-                    ),
-                    const SizedBox(height: 20),
-                  ],
+
+          // --- RENDERIZADO CONDICIONAL DE LA LISTA ---
+          if (_isLoading)
+            const SliverFillRemaining(
+              child: Center(
+                child: CircularProgressIndicator(color: AppColors.primary),
+              ),
+            )
+          else if (_viajesFiltrados.isEmpty)
+            SliverFillRemaining(
+              child: Center(
+                child: Text(
+                  'No hay registros',
+                  style: mFont(color: AppColors.textSecondary, size: 16),
                 ),
               ),
-            ]),
-          ),
+            )
+          else
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              sliver: SliverList(
+                delegate: SliverChildBuilderDelegate((context, index) {
+                  return _buildTripCard(_viajesFiltrados[index]);
+                }, childCount: _viajesFiltrados.length),
+              ),
+            ),
         ],
       ),
-      bottomNavigationBar: const DriverBottomNav(selectedIndex: 3),
+      bottomNavigationBar: const DriverBottomNav(
+        selectedIndex: 3,
+      ), // Asegúrate de tener este widget en tu proyecto
     );
   }
 
@@ -97,11 +132,10 @@ class _HistorialViajesConductorState extends State<HistorialViajesConductor> {
         children: filters.map((filter) {
           bool isSelected = _filterSelected == filter;
           return GestureDetector(
-            onTap: () => setState(() => _filterSelected = filter),
+            onTap: () => _aplicarFiltro(filter),
             child: Container(
               margin: const EdgeInsets.symmetric(horizontal: 5),
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
               decoration: BoxDecoration(
                 color: isSelected ? AppColors.primary : AppColors.surface,
                 borderRadius: BorderRadius.circular(10),
@@ -125,15 +159,31 @@ class _HistorialViajesConductorState extends State<HistorialViajesConductor> {
     );
   }
 
-  Widget _buildTripCard(
-    String status,
-    Color statusColor,
-    String origen,
-    String destino,
-    String date,
-    String pasajero,
-    String iconAsset,
-  ) {
+  Widget _buildTripCard(dynamic viaje) {
+    String estado = viaje['estado'].toString().toLowerCase();
+    String statusText = 'Desconocido';
+    Color statusColor = AppColors.primary;
+
+    // Colores y textos adaptados a tu base de datos y nuevo diseño
+    if (estado == 'en_curso') {
+      statusText = 'En Curso';
+      statusColor = AppColors.primary;
+    } else if (estado == 'pendiente') {
+      statusText = 'Pendiente';
+      statusColor = Colors.orange;
+    } else if (estado == 'finalizado' || estado == 'aceptado') {
+      statusText = 'Finalizado';
+      statusColor = const Color(0xFF16A34A);
+    } else if (estado == 'cancelado' || estado == 'rechazado') {
+      statusText = 'Cancelado';
+      statusColor = AppColors.error;
+    }
+
+    String origen = viaje['punto_inicio'] ?? 'Origen desconocido';
+    String destino = viaje['destino'] ?? 'Destino desconocido';
+    String date = viaje['fecha_inicio'] ?? '---';
+    String pasajero = viaje['nombre_pasajero'] ?? 'Pasajero';
+
     return Container(
       margin: const EdgeInsets.only(bottom: 20),
       decoration: BoxDecoration(
@@ -154,14 +204,13 @@ class _HistorialViajesConductorState extends State<HistorialViajesConductor> {
             right: 20,
             top: 45,
             child: Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
               decoration: BoxDecoration(
                 color: statusColor,
                 borderRadius: BorderRadius.circular(15),
               ),
               child: Text(
-                status,
+                statusText,
                 style: mFont(
                   color: AppColors.white,
                   size: 11,
@@ -229,61 +278,75 @@ class _HistorialViajesConductorState extends State<HistorialViajesConductor> {
                     CircleAvatar(
                       radius: 25,
                       backgroundColor: AppColors.primaryLight,
-                      backgroundImage: AssetImage('assets/$iconAsset'),
+                      backgroundImage:
+                          (viaje['foto_pasajero'] != null &&
+                              viaje['foto_pasajero'].isNotEmpty)
+                          ? NetworkImage(viaje['foto_pasajero'])
+                                as ImageProvider
+                          : const AssetImage('assets/conductor.png'),
                     ),
                     const SizedBox(width: 15),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          pasajero,
-                          style: mFont(
-                            size: 14,
-                            color: AppColors.textPrimary,
-                            weight: FontWeight.w600,
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            pasajero,
+                            style: mFont(
+                              size: 14,
+                              color: AppColors.textPrimary,
+                              weight: FontWeight.w600,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            Row(
-                              children: List.generate(
-                                5,
-                                (index) => const Icon(
-                                  Icons.star,
-                                  color: Colors.orange,
-                                  size: 12,
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              Row(
+                                children: List.generate(
+                                  5,
+                                  (index) => const Icon(
+                                    Icons.star,
+                                    color: Colors.orange,
+                                    size: 12,
+                                  ),
                                 ),
                               ),
-                            ),
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: AppColors.primary,
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Row(
-                                children: [
-                                  const Icon(Icons.check_circle,
-                                      color: AppColors.white, size: 10),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    'Verificado',
-                                    style: mFont(
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primary,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.check_circle,
                                       color: AppColors.white,
-                                      size: 9,
-                                      weight: FontWeight.w600,
+                                      size: 10,
                                     ),
-                                  ),
-                                ],
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      'Verificado',
+                                      style: mFont(
+                                        color: AppColors.white,
+                                        size: 9,
+                                        weight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
-                            ),
-                          ],
-                        ),
-                      ],
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
+                    // Iconos dinámicos de necesidades especiales
+                    _buildDiscapacidadIcons(viaje['necesidad_especial']),
                   ],
                 ),
               ],
@@ -293,11 +356,71 @@ class _HistorialViajesConductorState extends State<HistorialViajesConductor> {
       ),
     );
   }
+
+  // --- PROCESAMIENTO DE TEXTO DE DISCAPACIDADES ---
+  Widget _buildDiscapacidadIcons(String? textoNecesidades) {
+    if (textoNecesidades == null ||
+        textoNecesidades.isEmpty ||
+        textoNecesidades.toLowerCase() == 'ninguna') {
+      return const SizedBox.shrink();
+    }
+
+    List<String> lista = textoNecesidades
+        .split(',')
+        .map((e) => e.trim().toLowerCase())
+        .toList();
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: lista.map((n) {
+        String path = 'assets/tercera_edad.png';
+
+        if (n.contains('tercera edad'))
+          path = 'assets/tercera_edad.png';
+        else if (n.contains('movilidad') || n.contains('silla'))
+          path = 'assets/silla_ruedas.png';
+        else if (n.contains('auditiva'))
+          path = 'assets/auditiva.png';
+        else if (n.contains('obesidad'))
+          path = 'assets/obesidad.png';
+        else if (n.contains('visual'))
+          path = 'assets/visual.png';
+
+        return Padding(
+          padding: const EdgeInsets.only(left: 6),
+          child: Container(
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              border: Border.all(
+                color: AppColors.primary.withValues(alpha: 0.3),
+              ),
+              borderRadius: BorderRadius.circular(8),
+              color: AppColors.surface,
+            ),
+            child: Image.asset(
+              path,
+              width: 24,
+              height: 24,
+              errorBuilder: (c, e, s) => const Icon(
+                Icons.accessibility_new,
+                color: AppColors.primary,
+                size: 20,
+              ),
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
 }
 
 class _HeaderDelegate extends SliverPersistentHeaderDelegate {
   @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
     return Stack(
       children: [
         Container(
@@ -319,7 +442,11 @@ class _HeaderDelegate extends SliverPersistentHeaderDelegate {
           left: 10,
           bottom: 20,
           child: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.primary, size: 20),
+            icon: const Icon(
+              Icons.arrow_back_ios_new,
+              color: AppColors.primary,
+              size: 20,
+            ),
             onPressed: () => Navigator.of(context).pop(),
           ),
         ),

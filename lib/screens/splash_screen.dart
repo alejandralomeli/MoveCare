@@ -44,21 +44,39 @@ class _SplashScreenState extends State<SplashScreen>
         final parts = token.split('.');
         if (parts.length == 3) {
           final normalized = base64Url.normalize(parts[1]);
-          final payloadMap =
-              jsonDecode(utf8.decode(base64Url.decode(normalized)));
+          final payloadMap = jsonDecode(
+            utf8.decode(base64Url.decode(normalized)),
+          );
           final rol = payloadMap['rol'];
-          if (rol == 'conductor') {
-            Navigator.of(context).pushReplacementNamed('/principal_conductor');
-            return;
+
+          // Evaluamos el rol y redirigimos a la pantalla correspondiente
+          switch (rol) {
+            case 'conductor':
+              Navigator.of(
+                context,
+              ).pushReplacementNamed('/principal_conductor');
+              return;
+            case 'pasajero':
+              Navigator.of(context).pushReplacementNamed('/principal_pasajero');
+              return;
+            case 'administrador':
+              Navigator.of(
+                context,
+              ).pushReplacementNamed('/principal_administrador');
+              return;
+            default:
+              // Si el rol no coincide con ninguno, marcamos en consola y seguimos
+              debugPrint('Rol desconocido: $rol. Redirigiendo a bienvenido.');
+              break;
           }
         }
       } catch (e) {
         debugPrint('Error decodificando token: $e');
       }
-      Navigator.of(context).pushReplacementNamed('/principal_pasajero');
-    } else {
-      Navigator.of(context).pushReplacementNamed('/bienvenido');
     }
+
+    // Si no hay token, falló la decodificación o el rol era inválido:
+    Navigator.of(context).pushReplacementNamed('/bienvenido');
   }
 
   @override

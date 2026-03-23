@@ -22,11 +22,8 @@ dependencies:
   image_picker: ^1.2.1
   url_launcher: ^6.3.2
   fl_chart: ^0.70.2
-<<<<<<< HEAD
   file_picker: ^10.3.10
-=======
-  file_picker: ^8.1.2
->>>>>>> 13aa4be4330ca33553d020bbc1411cd5ff21c8a9
+  syncfusion_flutter_pdfviewer: ^33.1.44
 
 dev_dependencies:
   flutter_test:

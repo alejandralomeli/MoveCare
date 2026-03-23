@@ -112,9 +112,7 @@ class MyApp extends StatelessWidget {
         '/viajes_conductor': (context) => const SolicitudesViajesConductor(),
         '/historial_viajes_conductor': (context) => const HistorialViajesConductor(),
         '/completar_perfil_conductor': (context) => const CompletarPerfilConductor(),
-        '/agregar_ine': (context) => const AgregarIne(),
-        '/agregar_licencia': (context) => const AgregarLicencia(),
-        '/reporte_incidencia_conductor': (context) => const ReporteIncidenciaConductor(),
+        '/reporte_incidencia_conductor': (context) => const ReporteIncidenciaConductor(), //ESTO ES NUEVO
         '/metricas_conductor': (context) => const MetricasConductor(),
 
         // Módulo Administrativo

@@ -557,69 +557,67 @@ class _AgendarViajeState extends State<AgendarViaje> {
     TextEditingController controller,
     double sw,
   ) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Autocomplete<String>(
-        optionsBuilder: (v) => v.text.isEmpty
-            ? const Iterable.empty()
-            : zmgLocations.where(
-                (s) => s.toLowerCase().contains(v.text.toLowerCase()),
-              ),
-        onSelected: (String selection) {
-          controller.text = selection;
-        },
-        fieldViewBuilder: (ctx, textController, focus, onFieldSubmitted) {
-          if (controller.text.isNotEmpty && textController.text.isEmpty) {
-            textController.text = controller.text;
-          }
-          return TextField(
-            controller: textController,
-            focusNode: focus,
-            onChanged: (val) {
-              controller.text = val;
-            },
-            onSubmitted: (val) {
-              controller.text = val;
-              _calcularRutaYDistancia();
-            },
-            decoration: InputDecoration(
-              hintText: hint,
-              hintStyle: mSemibold(
-                sw,
-                color: AppColors.textSecondary,
-                size: 13,
-              ),
-              // CORRECCIÓN VISUAL: Se usa prefixIcon en lugar de icon para que quede dentro del input.
-              prefixIcon: const Icon(
-                Icons.location_on,
+    return Autocomplete<String>(
+      optionsBuilder: (v) => v.text.isEmpty
+          ? const Iterable.empty()
+          : zmgLocations.where(
+              (l) => l.toLowerCase().contains(v.text.toLowerCase()),
+            ),
+      onSelected: (v) {
+        controller.text = v;
+        _calcularRutaYDistancia(); // Ya calcula al seleccionar de la lista
+      },
+      fieldViewBuilder: (c, ct, f, o) {
+        if (ct.text.isEmpty && controller.text.isNotEmpty) {
+          ct.text = controller.text;
+        }
+        return TextField(
+          controller: ct,
+          focusNode: f,
+          onChanged: (text) => controller.text = text,
+          textInputAction:
+              TextInputAction.search, // Botón de buscar en el teclado
+          onSubmitted: (_) {
+            controller.text = ct.text;
+            _calcularRutaYDistancia();
+          },
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: mSemibold(sw, color: AppColors.textSecondary, size: 13),
+            prefixIcon: const Icon(
+              Icons.location_on_outlined, // Mismo ícono
+              color: AppColors.primary,
+              size: 20,
+            ),
+            suffixIcon: IconButton(
+              icon: const Icon(
+                Icons.search,
                 color: AppColors.primary,
                 size: 20,
               ),
-              border: InputBorder.none,
-              // INYECCIÓN DE LA LUPA
-              suffixIcon: IconButton(
-                icon: const Icon(
-                  Icons.search,
-                  color: AppColors.primary,
-                  size: 20,
-                ),
-                onPressed: () {
-                  if (textController.text.isNotEmpty) {
-                    controller.text = textController.text;
-                    _calcularRutaYDistancia();
-                    FocusManager.instance.primaryFocus?.unfocus();
-                  }
-                },
-              ),
+              onPressed: () {
+                controller.text = ct.text;
+                _calcularRutaYDistancia();
+                FocusManager.instance.primaryFocus?.unfocus();
+              },
             ),
-          );
-        },
-      ),
+            filled: true,
+            fillColor: AppColors.surface,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: const BorderSide(color: AppColors.border),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: const BorderSide(color: AppColors.border),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: const BorderSide(color: AppColors.primary, width: 2),
+            ),
+          ),
+        );
+      },
     );
   }
 

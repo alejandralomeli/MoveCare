@@ -143,11 +143,12 @@ class _CompletarPerfilConductorState extends State<CompletarPerfilConductor> wit
     }
   }
 
-  // --- LLAMADAS AL BACKEND ---
+  // --- LLAMADAS AL BACKEND UNIFICADAS ---
 
-  Future<void> _actualizarPerfil() async {
+  Future<void> _guardarTodo(bool isActivo) async {
     setState(() => _isLoading = true);
     try {
+      // 1. Siempre guardamos/actualizamos la info del perfil
       final res = await AuthService.updateProfile(
         nombreCompleto: _nombreCtrl.text.isNotEmpty ? _nombreCtrl.text : null,
         telefono: _telefonoCtrl.text.isNotEmpty ? _telefonoCtrl.text : null,
@@ -155,38 +156,50 @@ class _CompletarPerfilConductorState extends State<CompletarPerfilConductor> wit
         fechaNacimiento: _fechaNacCtrl.text.isNotEmpty ? _fechaNacCtrl.text : null,
         fotoPerfil: fotoPerfilB64,
       );
-      if (res['ok'] && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Perfil actualizado con éxito'), backgroundColor: Colors.green));
-      }
-    } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.error));
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
 
-  Future<void> _enviarDocumentos() async {
-    if (ineFrenteB64 == null || ineReversoB64 == null || licenciaFrenteB64 == null || licenciaReversoB64 == null || polizaPdfB64 == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Por favor, sube todos los documentos'), backgroundColor: AppColors.error));
-      return;
-    }
-    setState(() => _isLoading = true);
-    try {
-      final exito = await ValidacionService.enviarValidacionDocumentos(
-        ineFrenteBase64: ineFrenteB64!,
-        ineReversoBase64: ineReversoB64!,
-        licenciaFrenteBase64: licenciaFrenteB64,
-        licenciaReversoBase64: licenciaReversoB64,
-        polizaBase64: polizaPdfB64,
-      );
-      if (exito && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Documentos enviados a revisión'), backgroundColor: Colors.green));
+      bool perfilActualizado = res['ok'] ?? false;
+
+      // 2. Si el usuario NO está activo, intentamos validar los documentos
+      if (!isActivo) {
+        if (ineFrenteB64 != null && ineReversoB64 != null && licenciaFrenteB64 != null && licenciaReversoB64 != null && polizaPdfB64 != null) {
+          final exito = await ValidacionService.enviarValidacionDocumentos(
+            ineFrenteBase64: ineFrenteB64!,
+            ineReversoBase64: ineReversoB64!,
+            licenciaFrenteBase64: licenciaFrenteB64,
+            licenciaReversoBase64: licenciaReversoB64,
+            polizaBase64: polizaPdfB64,
+          );
+          if (exito && mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Perfil y documentos enviados con éxito'), backgroundColor: Colors.green));
+          }
+        } else {
+          // Si faltan documentos, avisamos que solo se guardó la info personal
+          if (perfilActualizado && mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Datos guardados. Sube todos los documentos para revisión.'), backgroundColor: Colors.orange));
+          }
+        }
+      } else {
+        // Si el usuario ya estaba activo, solo mostramos éxito del perfil
+        if (perfilActualizado && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Perfil actualizado con éxito'), backgroundColor: Colors.green));
+        }
       }
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceAll('Exception: ', '')), backgroundColor: AppColors.error));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  // --- MÉTODOS DE NAVEGACIÓN ---
+  
+  void _mostrarModalVehiculo() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) => const ModalInfoVehiculo(), 
+    );
   }
 
   @override
@@ -218,7 +231,7 @@ class _CompletarPerfilConductorState extends State<CompletarPerfilConductor> wit
                     children: [
                       const SizedBox(height: 35),
 
-                      if (!isActivo) _buildErrorBadge(),
+                      _buildStatusBadge(isActivo),
 
                       const SizedBox(height: 28),
 
@@ -231,67 +244,60 @@ class _CompletarPerfilConductorState extends State<CompletarPerfilConductor> wit
                       _buildTextField('Dirección', _direccionCtrl),
                       _buildTextField('Fecha de Nacimiento (YYYY-MM-DD)', _fechaNacCtrl),
                       
-                      Center(
-                        child: TextButton(
-                          onPressed: _actualizarPerfil,
-                          child: Text('Actualizar Datos Personales', 
-                            style: GoogleFonts.montserrat(fontWeight: FontWeight.w700, color: AppColors.primary)),
+                      // SI NO ESTÁ ACTIVO, SE MUESTRAN LOS DOCUMENTOS
+                      if (!isActivo) ...[
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 20),
+                          child: Divider(color: AppColors.border, height: 1),
                         ),
-                      ),
 
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 20),
-                        child: Divider(color: AppColors.border, height: 1),
-                      ),
+                        // SECCIÓN INE
+                        _buildSectionTitle('Foto de ', 'INE'),
+                        _buildSubtitle('Sube una foto clara del anverso y reverso'),
+                        const SizedBox(height: 14),
+                        Row(
+                          children: [
+                            Expanded(child: _buildDocCard('Anverso', 'assets/ine_anverso.png', ineFrenteB64 != null, () => _pickImage('ineFrente'))),
+                            const SizedBox(width: 15),
+                            Expanded(child: _buildDocCard('Reverso', 'assets/ine_reverso.png', ineReversoB64 != null, () => _pickImage('ineReverso'))),
+                          ],
+                        ),
 
-                      // SECCIÓN INE
-                      _buildSectionTitle('Foto de ', 'INE'),
-                      _buildSubtitle('Sube una foto clara del anverso y reverso'),
-                      const SizedBox(height: 14),
-                      Row(
-                        children: [
-                          Expanded(child: _buildDocCard('Anverso', 'assets/ine_anverso.png', ineFrenteB64 != null, () => _pickImage('ineFrente'))),
-                          const SizedBox(width: 15),
-                          Expanded(child: _buildDocCard('Reverso', 'assets/ine_reverso.png', ineReversoB64 != null, () => _pickImage('ineReverso'))),
-                        ],
-                      ),
+                        const SizedBox(height: 28),
+                        const Divider(color: AppColors.border, height: 1),
+                        const SizedBox(height: 24),
 
-                      const SizedBox(height: 28),
-                      const Divider(color: AppColors.border, height: 1),
-                      const SizedBox(height: 24),
+                        // SECCIÓN LICENCIA
+                        _buildSectionTitle('Licencia de ', 'Conducir'),
+                        _buildSubtitle('Sube una foto clara del anverso y reverso'),
+                        const SizedBox(height: 14),
+                        Row(
+                          children: [
+                            Expanded(child: _buildDocCard('Anverso', 'assets/ine_anverso.png', licenciaFrenteB64 != null, () => _pickImage('licenciaFrente'))),
+                            const SizedBox(width: 15),
+                            Expanded(child: _buildDocCard('Reverso', 'assets/ine_reverso.png', licenciaReversoB64 != null, () => _pickImage('licenciaReverso'))),
+                          ],
+                        ),
 
-                      // SECCIÓN LICENCIA
-                      _buildSectionTitle('Licencia de ', 'Conducir'),
-                      _buildSubtitle('Sube una foto clara del anverso y reverso'),
-                      const SizedBox(height: 14),
-                      Row(
-                        children: [
-                          Expanded(child: _buildDocCard('Anverso', 'assets/ine_anverso.png', licenciaFrenteB64 != null, () => _pickImage('licenciaFrente'))),
-                          const SizedBox(width: 15),
-                          Expanded(child: _buildDocCard('Reverso', 'assets/ine_reverso.png', licenciaReversoB64 != null, () => _pickImage('licenciaReverso'))),
-                        ],
-                      ),
+                        const SizedBox(height: 28),
+                        const Divider(color: AppColors.border, height: 1),
+                        const SizedBox(height: 24),
 
-                      const SizedBox(height: 28),
-                      const Divider(color: AppColors.border, height: 1),
-                      const SizedBox(height: 24),
-
-                      // SECCIÓN PÓLIZA
-                      _buildSectionTitle('Póliza de ', 'Seguro'),
-                      _buildSubtitle('Adjunta el PDF de tu póliza vigente'),
-                      const SizedBox(height: 14),
-                      _buildPdfPicker(),
+                        // SECCIÓN PÓLIZA
+                        _buildSectionTitle('Póliza de ', 'Seguro'),
+                        _buildSubtitle('Adjunta el PDF de tu póliza vigente'),
+                        const SizedBox(height: 14),
+                        _buildPdfPicker(),
+                      ],
 
                       const SizedBox(height: 36),
 
                       // ACCIONES FINALES
-                      _buildOutlinedButton('Datos de mi Vehículo', Icons.directions_car_outlined, () {
-                        Navigator.pushNamed(context, 'Datos_Vehiculo');
-                      }),
+                      _buildOutlinedButton('Datos de mi Vehículo', Icons.directions_car_outlined, _mostrarModalVehiculo),
 
                       const SizedBox(height: 14),
 
-                      _buildPrimaryButton('Guardar y Enviar a Revisión', _enviarDocumentos),
+                      _buildPrimaryButton(isActivo ? 'Guardar Cambios' : 'Guardar y Enviar a Revisión', () => _guardarTodo(isActivo)),
 
                       const SizedBox(height: 40),
                     ],
@@ -310,16 +316,19 @@ class _CompletarPerfilConductorState extends State<CompletarPerfilConductor> wit
 
   // --- WIDGETS DE ESTILO REPOSITORIO ---
 
-  Widget _buildErrorBadge() {
+  Widget _buildStatusBadge(bool isActivo) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      decoration: BoxDecoration(color: AppColors.error, borderRadius: BorderRadius.circular(25)),
+      decoration: BoxDecoration(
+        color: isActivo ? AppColors.primary : AppColors.error, 
+        borderRadius: BorderRadius.circular(25)
+      ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.error_outline, color: AppColors.white, size: 17),
+          Icon(isActivo ? Icons.verified_user_outlined : Icons.error_outline, color: AppColors.white, size: 17),
           const SizedBox(width: 7),
-          Text('Completar perfil', style: GoogleFonts.montserrat(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.white)),
+          Text(isActivo ? 'Perfil validado' : 'Completar perfil', style: GoogleFonts.montserrat(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.white)),
         ],
       ),
     );
@@ -501,18 +510,31 @@ class _HeaderDelegate extends SliverPersistentHeaderDelegate {
             onPressed: () => Navigator.of(context).pop(),
           ),
         ),
-        // Foto de Perfil (Tu Lógica)
+        // Foto de Perfil + Lápiz de Edición
         Positioned(
           left: 20,
           top: 10,
           child: GestureDetector(
             onTap: onPhotoTap,
-            child: CircleAvatar(
-              radius: 22,
-              backgroundColor: AppColors.white,
-              backgroundImage: fotoPerfilBase64 != null
-                  ? MemoryImage(base64Decode(fotoPerfilBase64!)) as ImageProvider
-                  : const AssetImage('assets/conductor.png'),
+            child: Stack(
+              alignment: Alignment.bottomRight,
+              children: [
+                CircleAvatar(
+                  radius: 22,
+                  backgroundColor: AppColors.white,
+                  backgroundImage: fotoPerfilBase64 != null
+                      ? MemoryImage(base64Decode(fotoPerfilBase64!)) as ImageProvider
+                      : const AssetImage('assets/conductor.png'),
+                ),
+                Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: const BoxDecoration(
+                    color: AppColors.primary,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.edit, color: AppColors.white, size: 12),
+                ),
+              ],
             ),
           ),
         ),
@@ -542,4 +564,72 @@ class _HeaderDelegate extends SliverPersistentHeaderDelegate {
   double get minExtent => 85;
   @override
   bool shouldRebuild(covariant _HeaderDelegate oldDelegate) => true;
+}
+
+// --- MODAL DE VEHÍCULO (Recuperado y Adaptado a AppColors) ---
+
+class ModalInfoVehiculo extends StatelessWidget {
+  const ModalInfoVehiculo({super.key});
+
+  Widget _buildReadOnlyField(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 15),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: GoogleFonts.montserrat(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+          const SizedBox(height: 5),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppColors.border.withValues(alpha: 0.2), 
+              borderRadius: BorderRadius.circular(12), 
+              border: Border.all(color: AppColors.border)
+            ),
+            child: Text(value, style: GoogleFonts.montserrat(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(left: 20, right: 20, top: 20, bottom: MediaQuery.of(context).viewInsets.bottom + 20),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+              width: 50, height: 5, 
+              decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(10))
+            )
+          ),
+          const SizedBox(height: 20),
+          Text('Datos de mi Vehículo', style: GoogleFonts.montserrat(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.primary)),
+          const SizedBox(height: 15),
+          _buildReadOnlyField('Marca', 'Nissan'),
+          _buildReadOnlyField('Modelo', 'Versa 2021'),
+          _buildReadOnlyField('Color', 'Plata'),
+          _buildReadOnlyField('Placas', 'XYZ-987-A'),
+          const SizedBox(height: 20),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () => Navigator.pop(context),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))
+              ),
+              child: Text('Cerrar', style: GoogleFonts.montserrat(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.white)),
+            ),
+          )
+        ],
+      ),
+    );
+  }
 }

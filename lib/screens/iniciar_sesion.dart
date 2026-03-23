@@ -310,7 +310,7 @@ class _IniciarSesionState extends State<IniciarSesion> {
       } else if (rol == 'conductor') {
         Navigator.pushReplacementNamed(context, '/principal_conductor');
       } else if (rol == 'administrador') {
-        Navigator.pushReplacementNamed(context, '/gestion_usuarios');
+        Navigator.pushReplacementNamed(context, '/principal_administrador');
       } else {
         _showAlert('Error', 'Rol no reconocido');
       }

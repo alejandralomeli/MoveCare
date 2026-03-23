@@ -1,7 +1,19 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:latlong2/latlong.dart';
+
+// --- WIDGETS Y SERVICIOS RECUPERADOS ---
+import 'widgets/modals/viaje_detalles_modal.dart';
+import 'widgets/home_map_preview.dart';
+import '../providers/user_provider.dart';
+import '../services/home/home_service.dart';
+import '../core/utils/auth_helper.dart';
+
+// --- DEPENDENCIAS ACTUALES ---
 import '../app_theme.dart';
-import 'widgets/mic_button.dart';
 
 class PrincipalConductor extends StatefulWidget {
   const PrincipalConductor({super.key});
@@ -11,6 +23,12 @@ class PrincipalConductor extends StatefulWidget {
 }
 
 class _PrincipalConductorState extends State<PrincipalConductor> {
+  // --- VARIABLES DE LÓGICA RECUPERADAS ---
+  bool _loadingHome = true;
+  List<dynamic> _historialViajes = [];
+  Map<String, dynamic>? _viajeProximo;
+
+  // --- VARIABLES DE UI ACTUALES ---
   String _selectedDate = '';
   bool _isVoiceActive = false;
   DateTime _weekStart = DateTime.now().subtract(Duration(days: DateTime.now().weekday - 1));
@@ -18,9 +36,45 @@ class _PrincipalConductorState extends State<PrincipalConductor> {
   @override
   void initState() {
     super.initState();
-    _buildCalendarDates(DateTime.now());
+    _loadHome();
   }
 
+  // --- FUNCIÓN RECUPERADA: Carga de Datos ---
+  Future<void> _loadHome() async {
+    try {
+      final homeData = await HomeService.getHome(role: "conductor");
+      final userProvider = context.read<UserProvider>();
+      userProvider.setUserFromJson(homeData["usuario"]);
+
+      if (homeData['viaje_proximo'] != null) {
+        _viajeProximo = homeData['viaje_proximo'];
+        final fechaViaje = DateTime.parse(_viajeProximo!['fecha_hora_inicio']);
+        _buildCalendarDates(fechaViaje);
+      } else {
+        _buildCalendarDates(DateTime.now());
+      }
+
+      _historialViajes = homeData['historial'] ?? [];
+      if (mounted) setState(() => _loadingHome = false);
+    } catch (e) {
+      if (mounted) AuthHelper.manejarError(context, e);
+      if (mounted) setState(() => _loadingHome = false);
+    }
+  }
+
+  // --- FUNCIÓN RECUPERADA: Llamadas ---
+  Future<void> _hacerLlamada(String? telefono) async {
+    if (telefono == null || telefono.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Teléfono no disponible")));
+      return;
+    }
+    final Uri launchUri = Uri(scheme: 'tel', path: telefono);
+    if (await canLaunchUrl(launchUri)) {
+      await launchUrl(launchUri);
+    }
+  }
+
+  // --- Lógica del calendario actual ---
   void _buildCalendarDates(DateTime baseDate) {
     final monday = baseDate.subtract(Duration(days: baseDate.weekday - 1));
     _weekStart = monday;
@@ -30,6 +84,16 @@ class _PrincipalConductorState extends State<PrincipalConductor> {
   String _dayLetter(DateTime d) {
     const days = ['L', 'M', 'Mi', 'J', 'V', 'S', 'D'];
     return days[d.weekday - 1];
+  }
+
+  String _dayNameFull(int d) {
+    const days = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+    return days[d - 1];
+  }
+
+  String _monthName(int m) {
+    const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+    return months[m - 1];
   }
 
   TextStyle mBold({Color color = AppColors.textPrimary, double size = 14}) {
@@ -42,6 +106,16 @@ class _PrincipalConductorState extends State<PrincipalConductor> {
 
   @override
   Widget build(BuildContext context) {
+    // --- MANEJO DEL LOADER RECUPERADO ---
+    if (_loadingHome) {
+      return const Scaffold(
+        backgroundColor: AppColors.white,
+        body: Center(child: CircularProgressIndicator(color: AppColors.primary)),
+      );
+    }
+
+    final user = context.watch<UserProvider>().user;
+
     return Scaffold(
       backgroundColor: AppColors.white,
       body: Stack(
@@ -51,7 +125,7 @@ class _PrincipalConductorState extends State<PrincipalConductor> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildHeader(),
+                _buildHeader(user), // Se inyecta el usuario
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Column(
@@ -60,9 +134,12 @@ class _PrincipalConductorState extends State<PrincipalConductor> {
                       const SizedBox(height: 60),
                       Text('Viaje actual', style: mBold(size: 18)),
                       const SizedBox(height: 10),
-                      _buildCurrentTripCard(),
+                      _buildCurrentTripCard(), // Lógica inyectada
                       const SizedBox(height: 20),
-                      _buildRouteSection(),
+                      
+                      // 🚀 LA INTEGRACIÓN CORRECTA DEL MAPA AQUÍ
+                      _buildRouteSection(), 
+                      
                       const SizedBox(height: 25),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -118,7 +195,7 @@ class _PrincipalConductorState extends State<PrincipalConductor> {
                       const SizedBox(height: 10),
                       Text('Historial de viajes', style: mBold(size: 18)),
                       const SizedBox(height: 10),
-                      _buildHistoryCard(),
+                      _buildHistorySection(), // Iteración recuperada
                       const SizedBox(height: 25),
                       SizedBox(
                         width: double.infinity,
@@ -142,15 +219,25 @@ class _PrincipalConductorState extends State<PrincipalConductor> {
               ],
             ),
           ),
+          // Botón del micrófono sin animación respetando tu UI
+          // Positioned(
+          //   right: 20,
+          //   top: 55,
+          //   child: MicButton(
+          //     isActive: _isVoiceActive,
+          //     onTap: () => setState(() => _isVoiceActive = !_isVoiceActive),
+          //     size: 45,
+          //   ),
+          // ),
         ],
       ),
       bottomNavigationBar: const DriverBottomNav(selectedIndex: 0),
     );
   }
 
-  // ── HEADER ────────────────────────────────────────────────────────────────
+  // ── HEADER (Con datos reales y diseño actual) ──────────────────────────────
 
-  Widget _buildHeader() {
+  Widget _buildHeader(dynamic user) {
     return Stack(
       clipBehavior: Clip.none,
       children: [
@@ -161,9 +248,11 @@ class _PrincipalConductorState extends State<PrincipalConductor> {
           child: CircleAvatar(
             radius: 50,
             backgroundColor: AppColors.white,
-            child: const CircleAvatar(
+            child: CircleAvatar(
               radius: 46,
-              backgroundImage: AssetImage('assets/conductor.png'),
+              backgroundImage: (user != null && user.fotoPerfil != null && user.fotoPerfil.isNotEmpty)
+                  ? MemoryImage(base64Decode(user.fotoPerfil.split(',').last))
+                  : const AssetImage('assets/conductor.png') as ImageProvider,
             ),
           ),
         ),
@@ -174,7 +263,7 @@ class _PrincipalConductorState extends State<PrincipalConductor> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Bienvenido',
+                user?.nombre ?? 'Bienvenido', // Nombre real inyectado
                 style: GoogleFonts.montserrat(
                   fontSize: 20,
                   fontWeight: FontWeight.w700,
@@ -208,9 +297,27 @@ class _PrincipalConductorState extends State<PrincipalConductor> {
     );
   }
 
-  // ── VIAJE ACTUAL ──────────────────────────────────────────────────────────
+  // ── VIAJE ACTUAL (Con datos reales, lógica de modales y diseño actual) ───────
 
   Widget _buildCurrentTripCard() {
+    if (_viajeProximo == null) {
+      return Container(
+        padding: const EdgeInsets.all(15),
+        decoration: BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.border, width: 1),
+        ),
+        child: Center(
+          child: Text("Sin viajes próximos", style: mBold(color: AppColors.textSecondary)),
+        ),
+      );
+    }
+
+    final fecha = DateTime.parse(_viajeProximo!['fecha_hora_inicio']);
+    final hora = "${fecha.hour}:${fecha.minute.toString().padLeft(2, '0')} ${fecha.hour >= 12 ? 'PM' : 'AM'}";
+    final fechaStr = "${_dayNameFull(fecha.weekday)} ${fecha.day} de ${_monthName(fecha.month)}";
+
     return Container(
       padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
@@ -227,9 +334,9 @@ class _PrincipalConductorState extends State<PrincipalConductor> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Martes 28 Octubre', style: mBold(size: 13, color: AppColors.textSecondary)),
+                    Text(fechaStr, style: mBold(size: 13, color: AppColors.textSecondary)),
                     const SizedBox(height: 2),
-                    Text('Nombre del pasajero', style: mBold(size: 15)),
+                    Text(_viajeProximo!['nombre_pasajero'] ?? 'Pasajero', style: mBold(size: 15)),
                   ],
                 ),
               ),
@@ -239,7 +346,7 @@ class _PrincipalConductorState extends State<PrincipalConductor> {
                   color: AppColors.primary,
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Text('9:30 AM', style: mBold(color: AppColors.white, size: 12)),
+                child: Text(hora, style: mBold(color: AppColors.white, size: 12)),
               ),
             ],
           ),
@@ -249,14 +356,20 @@ class _PrincipalConductorState extends State<PrincipalConductor> {
             children: [
               const Icon(Icons.location_on, color: AppColors.primary, size: 18),
               const SizedBox(width: 4),
-              Text('Origen', style: mBold(color: AppColors.primary, size: 14)),
+              Expanded(
+                child: Text(_viajeProximo!['punto_inicio'] ?? 'Origen', 
+                  maxLines: 1, overflow: TextOverflow.ellipsis, style: mBold(color: AppColors.primary, size: 12)),
+              ),
               const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16),
+                padding: EdgeInsets.symmetric(horizontal: 8),
                 child: Icon(Icons.arrow_forward_rounded, color: AppColors.textSecondary, size: 20),
               ),
               const Icon(Icons.flag_rounded, color: AppColors.error, size: 18),
               const SizedBox(width: 4),
-              Text('Destino', style: mBold(color: AppColors.primary, size: 14)),
+              Expanded(
+                child: Text(_viajeProximo!['destino'] ?? 'Destino', 
+                  maxLines: 1, overflow: TextOverflow.ellipsis, style: mBold(color: AppColors.primary, size: 12)),
+              ),
             ],
           ),
           const SizedBox(height: 12),
@@ -264,15 +377,26 @@ class _PrincipalConductorState extends State<PrincipalConductor> {
             children: [
               Image.asset('assets/movecare.png', width: 32, height: 32),
               const SizedBox(width: 8),
-              Text('Necesidades especiales', style: mBold(size: 13, color: AppColors.textSecondary)),
+              Expanded(
+                child: Text(_viajeProximo!['necesidad_especial'] ?? 'Sin necesidades especiales', 
+                  style: mBold(size: 12, color: AppColors.textSecondary),
+                  maxLines: 1, overflow: TextOverflow.ellipsis),
+              ),
             ],
           ),
           const SizedBox(height: 14),
           Row(
             children: [
-              _actionBtn('Ver detalles'),
+              _actionBtn('Ver detalles', onTap: () {
+                showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  backgroundColor: Colors.transparent,
+                  builder: (context) => ViajeDetallesModal(viaje: _viajeProximo!, esConductor: true),
+                );
+              }),
               const SizedBox(width: 10),
-              _actionBtn('Contactar pasajero'),
+              _actionBtn('Contactar pasajero', onTap: () => _hacerLlamada(_viajeProximo!['telefono_pasajero'])),
             ],
           ),
         ],
@@ -280,10 +404,10 @@ class _PrincipalConductorState extends State<PrincipalConductor> {
     );
   }
 
-  Widget _actionBtn(String label) {
+  Widget _actionBtn(String label, {required VoidCallback onTap}) {
     return Expanded(
       child: ElevatedButton(
-        onPressed: () {},
+        onPressed: onTap,
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.primary,
           elevation: 0,
@@ -295,45 +419,28 @@ class _PrincipalConductorState extends State<PrincipalConductor> {
     );
   }
 
-  // ── MAPA / RUTA ────────────────────────────────────────────────────────────
-
-  Widget _buildRouteSection() {
-    return Container(
-      height: 120,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: Row(
-          children: [
-            Expanded(
-              flex: 4,
-              child: Container(
-                color: AppColors.primary,
-                child: Center(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: AppColors.white.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: AppColors.white),
-                    ),
-                    child: Text('Abrir ruta', style: mBold(color: AppColors.white, size: 12)),
-                  ),
-                ),
-              ),
-            ),
-            Expanded(
-              flex: 6,
-              child: Image.asset('assets/mapa.png', fit: BoxFit.cover),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  // ── MAPA / RUTA EXACTAMENTE COMO EN EL CÓDIGO VIEJO ────────────────────────
+  
+Widget _buildRouteSection() {
+   return HomeMapPreview(
+     viajeProximo: _viajeProximo, // Sigue pasando el JSON completo para pintar el mapita
+     onOpenRoute: () {
+       // Verificamos que tengamos la información antes de navegar
+       if (_viajeProximo != null && _viajeProximo!['id_viaje'] != null) {
+         Navigator.pushReplacementNamed(
+           context, 
+           '/viaje_actual',
+           // 🚀 AQUÍ ENVIAMOS EL ID CORRECTO BASADO EN TU JSON
+           arguments: _viajeProximo!['id_viaje'], 
+         );
+       } else {
+         ScaffoldMessenger.of(context).showSnackBar(
+           const SnackBar(content: Text("No se encontró el ID del viaje")),
+         );
+       }
+     },
+   );
+ }
 
   // ── CALENDARIO ─────────────────────────────────────────────────────────────
 
@@ -402,10 +509,33 @@ class _PrincipalConductorState extends State<PrincipalConductor> {
     );
   }
 
-  // ── HISTORIAL ──────────────────────────────────────────────────────────────
+  // ── HISTORIAL (Lógica de mapeo y modales con diseño actual) ────────────────
 
-  Widget _buildHistoryCard() {
+  Widget _buildHistorySection() {
+    if (_historialViajes.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.all(10),
+        child: Text("Aún no tienes historial de viajes", style: mBold(color: AppColors.textSecondary)),
+      );
+    }
+    return Column(
+      children: _historialViajes.take(3).map((v) => _buildHistoryCard(v)).toList(),
+    );
+  }
+
+  Widget _buildHistoryCard(dynamic viaje) {
+    // Formatear la fecha si existe en el backend
+    String fechaTexto = "Fecha N/A";
+    if (viaje['fecha_hora_inicio'] != null) {
+      final f = DateTime.parse(viaje['fecha_hora_inicio']);
+      fechaTexto = "${_monthName(f.month).substring(0, 3)} ${f.day}";
+    }
+    
+    // Distancia si existe en el backend
+    String distancia = viaje['distancia_km'] != null ? "${viaje['distancia_km']} km" : "-- km";
+
     return Container(
+      margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.border, width: 1),
@@ -418,10 +548,10 @@ class _PrincipalConductorState extends State<PrincipalConductor> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Oct 13  —  Nombre del pasajero',
+                  Text('$fechaTexto  —  ${viaje['nombre_pasajero'] ?? 'Pasajero'}',
                       style: mBold(color: AppColors.primary, size: 13)),
                   const SizedBox(height: 4),
-                  Text('Distancia: 10 km',
+                  Text('Distancia: $distancia',
                       style: mBold(size: 12, color: AppColors.textSecondary)),
                   const SizedBox(height: 6),
                   Row(
@@ -429,7 +559,7 @@ class _PrincipalConductorState extends State<PrincipalConductor> {
                       5,
                       (i) => Icon(
                         Icons.star_rounded,
-                        color: i < 4 ? Colors.orange : AppColors.border,
+                        color: i < 4 ? Colors.orange : AppColors.border, 
                         size: 16,
                       ),
                     ),
@@ -449,13 +579,23 @@ class _PrincipalConductorState extends State<PrincipalConductor> {
                 ],
               ),
             ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: AppColors.primary,
-                borderRadius: BorderRadius.circular(10),
+            GestureDetector(
+              onTap: () {
+                showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  backgroundColor: Colors.transparent,
+                  builder: (context) => ViajeDetallesModal(viaje: viaje, esConductor: true),
+                );
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text('Ver detalles', style: mBold(color: AppColors.white, size: 11)),
               ),
-              child: Text('Ver detalles', style: mBold(color: AppColors.white, size: 11)),
             ),
           ],
         ),
