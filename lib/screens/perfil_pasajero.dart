@@ -9,6 +9,7 @@ import '../services/auth/auth_service.dart';
 import '../providers/user_provider.dart';
 import 'widgets/modals/terminos_modal.dart';
 import 'widgets/mic_button.dart';
+import 'widgets/font_size_sheet.dart';
 
 class PerfilPasajero extends StatefulWidget {
   const PerfilPasajero({super.key});
@@ -209,6 +210,12 @@ class _PerfilPasajeroState extends State<PerfilPasajero> {
                               builder: (context) => const TerminosModal(),
                             );
                           },
+                        ),
+                        _buildDivider(),
+                        _buildMenuItem(
+                          icon: Icons.text_fields_rounded,
+                          label: 'Tamaño de letra',
+                          onTap: () => showFontSizeSheet(context),
                         ),
                       ],
                     ),

@@ -10,6 +10,7 @@ import 'widgets/modals/terminos_modal.dart';
 // --- DEPENDENCIAS ACTUALES ---
 import '../app_theme.dart';
 import '../core/utils/auth_helper.dart';
+import 'widgets/font_size_sheet.dart';
 
 class MiPerfilConductor extends StatefulWidget {
   const MiPerfilConductor({super.key});
@@ -221,6 +222,12 @@ class MiPerfilConductorState extends State<MiPerfilConductor> {
                               builder: (context) => const TerminosModal(),
                             );
                           },
+                        ),
+                        _buildDivider(),
+                        _buildMenuItem(
+                          icon: Icons.text_fields_rounded,
+                          label: 'Tamaño de letra',
+                          onTap: () => showFontSizeSheet(context),
                         ),
                       ],
                     ),

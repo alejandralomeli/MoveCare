@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../app_theme.dart';
-import 'widgets/mic_button.dart';
-import '../services/reportes/reportes_service.dart';
 
 class MetricasConductor extends StatefulWidget {
   const MetricasConductor({super.key});
@@ -14,34 +12,29 @@ class MetricasConductor extends StatefulWidget {
 
 class _MetricasConductorState extends State<MetricasConductor>
     with SingleTickerProviderStateMixin {
-  bool _isListening = false;
   late TabController _tabController;
 
-  // ── Estado de carga ───────────────────────────────────────────────────────
-  bool _cargando = true;
-  String? _error;
-
-  // ── Datos reales de la API ────────────────────────────────────────────────
-  List<double> _viajesSemana = [0, 0, 0, 0, 0, 0, 0];
-  List<double> _gananciasMes = [0, 0, 0, 0, 0];
-  Map<String, double> _estadosViajes = {
-    'Completados': 0,
-    'Cancelados': 0,
-    'En curso': 0,
+  // ── Datos demo ────────────────────────────────────────────────────────────
+  final List<double> _viajesSemana = [3, 5, 4, 7, 6, 8, 2];
+  final List<double> _gananciasMes = [420, 560, 390, 680, 510];
+  final Map<String, double> _estadosViajes = {
+    'Completados': 72,
+    'Cancelados': 18,
+    'En curso': 10,
   };
-  Map<String, dynamic> _kpis = {
-    'total_viajes': 0,
-    'km_totales': 0.0,
-    'calificacion': null,
-    'ganancias_total': 0.0,
+  final Map<String, dynamic> _kpis = {
+    'total_viajes': 35,
+    'km_totales': 412.5,
+    'calificacion': 4.8,
+    'ganancias_total': 2560.0,
   };
-  Map<String, dynamic> _resumen = {
-    'viajes_completados': 0,
-    'viajes_cancelados': 0,
-    'km_promedio': 0.0,
-    'tiempo_promedio_min': 0,
-    'ganancia_promedio': 0.0,
-    'mejor_dia': 'N/A',
+  final Map<String, dynamic> _resumen = {
+    'viajes_completados': 28,
+    'viajes_cancelados': 7,
+    'km_promedio': 11.8,
+    'tiempo_promedio_min': 24,
+    'ganancia_promedio': 73.1,
+    'mejor_dia': 'Sábado',
   };
 
   // ── Estáticos ─────────────────────────────────────────────────────────────
@@ -66,33 +59,6 @@ class _MetricasConductorState extends State<MetricasConductor>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    _cargarMetricas();
-  }
-
-  Future<void> _cargarMetricas() async {
-    setState(() { _cargando = true; _error = null; });
-    try {
-      final data = await ReportesService.obtenerMetricasConductor();
-      setState(() {
-        _kpis = data['kpis'] as Map<String, dynamic>;
-        _viajesSemana = (data['viajes_semana'] as List)
-            .map((v) => (v as num).toDouble())
-            .toList();
-        _gananciasMes = (data['ganancias_semanas'] as List)
-            .map((v) => (v as num).toDouble())
-            .toList();
-        final estados = data['estados'] as Map<String, dynamic>;
-        _estadosViajes = {
-          'Completados': (estados['completados'] as num).toDouble(),
-          'Cancelados': (estados['cancelados'] as num).toDouble(),
-          'En curso': (estados['en_curso'] as num).toDouble(),
-        };
-        _resumen = data['resumen'] as Map<String, dynamic>;
-        _cargando = false;
-      });
-    } catch (e) {
-      if (mounted) setState(() { _error = e.toString(); _cargando = false; });
-    }
   }
 
   @override
@@ -111,39 +77,10 @@ class _MetricasConductorState extends State<MetricasConductor>
         slivers: [
           SliverPersistentHeader(
             pinned: true,
-            delegate: _HeaderDelegate(
-              isVoiceActive: _isListening,
-              onVoiceTap: () => setState(() => _isListening = !_isListening),
-            ),
+            delegate: _HeaderDelegate(),
           ),
           SliverToBoxAdapter(
-            child: _cargando
-                ? const SizedBox(
-                    height: 400,
-                    child: Center(child: CircularProgressIndicator()),
-                  )
-                : _error != null
-                    ? SizedBox(
-                        height: 300,
-                        child: Center(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.error_outline, color: AppColors.error, size: 40),
-                              const SizedBox(height: 12),
-                              Text('Error al cargar métricas', style: mBold(color: AppColors.error)),
-                              const SizedBox(height: 12),
-                              ElevatedButton.icon(
-                                onPressed: _cargarMetricas,
-                                icon: const Icon(Icons.refresh),
-                                label: const Text('Reintentar'),
-                                style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
-                              ),
-                            ],
-                          ),
-                        ),
-                      )
-                    : Padding(
+            child: Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -494,10 +431,7 @@ class _MetricasConductorState extends State<MetricasConductor>
 // ── HEADER ────────────────────────────────────────────────────────────────────
 
 class _HeaderDelegate extends SliverPersistentHeaderDelegate {
-  final bool isVoiceActive;
-  final VoidCallback onVoiceTap;
-
-  _HeaderDelegate({required this.isVoiceActive, required this.onVoiceTap});
+  _HeaderDelegate();
 
   @override
   Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
