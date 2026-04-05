@@ -234,59 +234,62 @@ class PassengerBottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 70,
-      decoration: const BoxDecoration(
-        color: AppColors.white,
-        border: Border(top: BorderSide(color: AppColors.border, width: 1)),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: List.generate(4, (i) {
-          final active = selectedIndex == i;
-          return GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: () {
-              if (onTap != null) {
-                onTap!(i);
-              } else if (selectedIndex != i) {
-                Navigator.pushReplacementNamed(context, _routes[i]);
-              }
-            },
-            child: SizedBox(
-              width: 60,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: active ? AppColors.primary : Colors.transparent,
-                      borderRadius: BorderRadius.circular(12),
+    return MediaQuery(
+      data: MediaQuery.of(context).copyWith(textScaler: TextScaler.noScaling),
+      child: Container(
+        height: 70,
+        decoration: const BoxDecoration(
+          color: AppColors.white,
+          border: Border(top: BorderSide(color: AppColors.border, width: 1)),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: List.generate(4, (i) {
+            final active = selectedIndex == i;
+            return GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () {
+                if (onTap != null) {
+                  onTap!(i);
+                } else if (selectedIndex != i) {
+                  Navigator.pushReplacementNamed(context, _routes[i]);
+                }
+              },
+              child: SizedBox(
+                width: 60,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: active ? AppColors.primary : Colors.transparent,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        _icons[i],
+                        color: active ? AppColors.white : AppColors.textSecondary,
+                        size: 22,
+                      ),
                     ),
-                    child: Icon(
-                      _icons[i],
-                      color: active ? AppColors.white : AppColors.textSecondary,
-                      size: 22,
+                    const SizedBox(height: 2),
+                    Text(
+                      _labels[i],
+                      style: GoogleFonts.montserrat(
+                        fontSize: 10,
+                        fontWeight:
+                            active ? FontWeight.w600 : FontWeight.w400,
+                        color: active
+                            ? AppColors.primary
+                            : AppColors.textSecondary,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    _labels[i],
-                    style: GoogleFonts.montserrat(
-                      fontSize: 10,
-                      fontWeight:
-                          active ? FontWeight.w600 : FontWeight.w400,
-                      color: active
-                          ? AppColors.primary
-                          : AppColors.textSecondary,
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          );
-        }),
+            );
+          }),
+        ),
       ),
     );
   }
@@ -318,57 +321,60 @@ class DriverBottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 70,
-      decoration: const BoxDecoration(
-        color: AppColors.white,
-        border: Border(top: BorderSide(color: AppColors.border, width: 1)),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: List.generate(5, (i) {
-          final active = selectedIndex == i;
-          return GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: () {
-              if (selectedIndex != i) {
-                Navigator.pushReplacementNamed(context, _routes[i]);
-              }
-            },
-            child: SizedBox(
-              width: 60,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: active ? AppColors.primary : Colors.transparent,
-                      borderRadius: BorderRadius.circular(12),
+    return MediaQuery(
+      data: MediaQuery.of(context).copyWith(textScaler: TextScaler.noScaling),
+      child: Container(
+        height: 70,
+        decoration: const BoxDecoration(
+          color: AppColors.white,
+          border: Border(top: BorderSide(color: AppColors.border, width: 1)),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: List.generate(5, (i) {
+            final active = selectedIndex == i;
+            return GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () {
+                if (selectedIndex != i) {
+                  Navigator.pushReplacementNamed(context, _routes[i]);
+                }
+              },
+              child: SizedBox(
+                width: 60,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: active ? AppColors.primary : Colors.transparent,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        _icons[i],
+                        color: active ? AppColors.white : AppColors.textSecondary,
+                        size: 22,
+                      ),
                     ),
-                    child: Icon(
-                      _icons[i],
-                      color: active ? AppColors.white : AppColors.textSecondary,
-                      size: 22,
+                    const SizedBox(height: 2),
+                    Text(
+                      _labels[i],
+                      style: GoogleFonts.montserrat(
+                        fontSize: 10,
+                        fontWeight:
+                            active ? FontWeight.w600 : FontWeight.w400,
+                        color: active
+                            ? AppColors.primary
+                            : AppColors.textSecondary,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    _labels[i],
-                    style: GoogleFonts.montserrat(
-                      fontSize: 10,
-                      fontWeight:
-                          active ? FontWeight.w600 : FontWeight.w400,
-                      color: active
-                          ? AppColors.primary
-                          : AppColors.textSecondary,
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          );
-        }),
+            );
+          }),
+        ),
       ),
     );
   }
@@ -398,54 +404,57 @@ class AdminBottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 70,
-      decoration: const BoxDecoration(
-        color: AppColors.white,
-        border: Border(top: BorderSide(color: AppColors.border, width: 1)),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: List.generate(4, (i) {
-          final active = selectedIndex == i;
-          return GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: () {
-              if (selectedIndex != i) {
-                Navigator.pushReplacementNamed(context, _routes[i]);
-              }
-            },
-            child: SizedBox(
-              width: 60,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: active ? AppColors.primary : Colors.transparent,
-                      borderRadius: BorderRadius.circular(12),
+    return MediaQuery(
+      data: MediaQuery.of(context).copyWith(textScaler: TextScaler.noScaling),
+      child: Container(
+        height: 70,
+        decoration: const BoxDecoration(
+          color: AppColors.white,
+          border: Border(top: BorderSide(color: AppColors.border, width: 1)),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: List.generate(4, (i) {
+            final active = selectedIndex == i;
+            return GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () {
+                if (selectedIndex != i) {
+                  Navigator.pushReplacementNamed(context, _routes[i]);
+                }
+              },
+              child: SizedBox(
+                width: 60,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: active ? AppColors.primary : Colors.transparent,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        _icons[i],
+                        color: active ? AppColors.white : AppColors.textSecondary,
+                        size: 22,
+                      ),
                     ),
-                    child: Icon(
-                      _icons[i],
-                      color: active ? AppColors.white : AppColors.textSecondary,
-                      size: 22,
+                    const SizedBox(height: 2),
+                    Text(
+                      _labels[i],
+                      style: GoogleFonts.montserrat(
+                        fontSize: 10,
+                        fontWeight: active ? FontWeight.w600 : FontWeight.w400,
+                        color: active ? AppColors.primary : AppColors.textSecondary,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    _labels[i],
-                    style: GoogleFonts.montserrat(
-                      fontSize: 10,
-                      fontWeight: active ? FontWeight.w600 : FontWeight.w400,
-                      color: active ? AppColors.primary : AppColors.textSecondary,
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          );
-        }),
+            );
+          }),
+        ),
       ),
     );
   }

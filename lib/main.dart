@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:movecare/providers/font_size_provider.dart' show FontSizeProvider;
 import './providers/user_provider.dart';
 import 'app_theme.dart';
 
@@ -56,7 +57,10 @@ const Color cardBackgroundColor = Color(0xFFE3F2FD);
 void main() {
   runApp(
     MultiProvider(
-      providers: [ChangeNotifierProvider(create: (_) => UserProvider())],
+      providers: [
+        ChangeNotifierProvider(create: (_) => UserProvider()),
+        ChangeNotifierProvider(create: (_) => FontSizeProvider()),
+      ],
       child: const MyApp(),
     ),
   );
@@ -71,9 +75,18 @@ class MyApp extends StatelessWidget {
       title: 'MoveCare App',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
+      builder: (context, child) {
+        final scale = context.watch<FontSizeProvider>().scaleFactor;
+        return MediaQuery(
+          data: MediaQuery.of(context).copyWith(
+            textScaler: TextScaler.linear(scale),
+          ),
+          child: child!,
+        );
+      },
 
       // Mantenemos la lógica del Splash como entrada
-      home: const SplashScreen(), 
+      home: const SplashScreen(),
 
       routes: {
         // Rutas de Autenticación y Sistema
