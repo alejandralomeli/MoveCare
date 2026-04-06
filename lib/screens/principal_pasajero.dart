@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:speech_to_text/speech_to_text.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 
 import 'widgets/map_widget.dart';
 import 'widgets/mic_button.dart';
 import '../providers/user_provider.dart';
 import '../services/home/home_service.dart';
+import '../services/voz/voz_service.dart';
 import '../core/utils/auth_helper.dart';
 import '../app_theme.dart';
 
@@ -20,7 +23,13 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
   // Estado lógico
   bool _loadingHome = true;
   bool _isListening = false;
+  bool _procesandoVoz = false;
   String _selectedDateNum = '';
+
+  // Voz
+  final SpeechToText _speech = SpeechToText();
+  final FlutterTts _tts = FlutterTts();
+  bool _speechDisponible = false;
 
   DateTime _weekStart = DateTime.now();
   Map<String, dynamic>? _viajeProximo;
@@ -30,6 +39,22 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
   void initState() {
     super.initState();
     _loadHome();
+    _inicializarVoz();
+  }
+
+  Future<void> _inicializarVoz() async {
+    _speechDisponible = await _speech.initialize(
+      onStatus: (status) {
+        if (status == 'done' || status == 'notListening') {
+          if (mounted) setState(() => _isListening = false);
+        }
+      },
+      onError: (_) {
+        if (mounted) setState(() => _isListening = false);
+      },
+    );
+    await _tts.setLanguage('es-MX');
+    await _tts.setSpeechRate(0.45);
   }
 
   // --- LÓGICA DE DATOS ---
@@ -70,8 +95,155 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
   }
 
   // --- INTERFAZ DE VOZ ---
-  void _toggleListening() {
-    setState(() => _isListening = !_isListening);
+  Future<void> _toggleListening() async {
+    if (!_speechDisponible) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Micrófono no disponible en este dispositivo')),
+      );
+      return;
+    }
+
+    if (_isListening) {
+      await _speech.stop();
+      setState(() => _isListening = false);
+      return;
+    }
+
+    setState(() => _isListening = true);
+
+    await _speech.listen(
+      localeId: 'es_MX',
+      listenFor: const Duration(seconds: 8),
+      pauseFor: const Duration(seconds: 2),
+      onResult: (result) async {
+        if (!result.finalResult) return;
+
+        final texto = result.recognizedWords.trim();
+        if (texto.isEmpty) {
+          setState(() => _isListening = false);
+          return;
+        }
+
+        setState(() {
+          _isListening = false;
+          _procesandoVoz = true;
+        });
+
+        try {
+          final respuesta = await VozService.interpretarComando(texto);
+          if (!mounted) return;
+          setState(() => _procesandoVoz = false);
+
+          await _tts.speak(respuesta['respuesta_voz'] ?? '');
+          _manejarAccionVoz(respuesta);
+        } catch (_) {
+          if (!mounted) return;
+          setState(() => _procesandoVoz = false);
+          await _tts.speak('Lo siento, no pude conectar con el servidor');
+        }
+      },
+    );
+  }
+
+  void _manejarAccionVoz(Map<String, dynamic> respuesta) {
+    final intencion = respuesta['intencion'] as String? ?? 'no_reconocido';
+    final entidades = respuesta['entidades'] as Map<String, dynamic>? ?? {};
+
+    switch (intencion) {
+      case 'solicitar_viaje':
+        Navigator.pushNamed(context, '/agendar_viaje', arguments: entidades);
+        break;
+      case 'solicitar_viaje_multiple':
+        Navigator.pushNamed(context, '/agendar_varios_destinos', arguments: entidades);
+        break;
+      case 'ver_historial':
+        Navigator.pushNamed(context, '/historial_viajes_pasajero');
+        break;
+      case 'cancelar_viaje':
+        _mostrarConfirmacionCancelar();
+        break;
+      case 'ver_viaje_actual':
+        Navigator.pushNamed(context, '/viaje_actual');
+        break;
+      case 'crear_acompanante':
+        Navigator.pushNamed(context, '/registro_acompanante', arguments: entidades);
+        break;
+      case 'ver_acompanantes':
+        Navigator.pushNamed(context, '/registro_acompanante');
+        break;
+      case 'ver_pagos':
+        Navigator.pushNamed(context, '/metodos_pago');
+        break;
+      case 'ver_home':
+        // Ya estamos en home, no hace nada
+        break;
+      default:
+        _mostrarNoReconocido(respuesta['transcripcion'] ?? '');
+    }
+  }
+
+  void _mostrarConfirmacionCancelar() {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text('Cancelar viaje', style: mExtrabold(size: 16)),
+        content: Text('¿Confirmas cancelar tu viaje actual?', style: mExtrabold(color: AppColors.textSecondary)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('No')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.pushNamed(context, '/viaje_actual');
+            },
+            child: Text('Cancelar viaje', style: mExtrabold(color: AppColors.white, size: 13)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _mostrarNoReconocido(String texto) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) => Container(
+        padding: const EdgeInsets.all(28),
+        decoration: const BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Image.asset('assets/rechazado.png', height: 64),
+            const SizedBox(height: 16),
+            Text('No entendí el comando', style: mExtrabold(size: 16)),
+            const SizedBox(height: 8),
+            Text(
+              texto.isNotEmpty ? '"$texto"' : 'Intenta de nuevo',
+              style: mExtrabold(color: AppColors.textSecondary, size: 13),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'Puedes decir:\n"Quiero un viaje al hospital"\n"Ver mi historial"\n"Agregar acompañante"',
+              style: GoogleFonts.montserrat(fontSize: 12, color: AppColors.textSecondary),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+                child: Text('Entendido', style: mExtrabold(color: AppColors.white)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   // --- MODAL AGENDAR ---
@@ -105,6 +277,27 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
       backgroundColor: AppColors.white,
       body: Stack(
         children: [
+          if (_procesandoVoz)
+            Container(
+              color: Colors.black45,
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Image.asset('assets/escuchando.png', height: 80),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Procesando comando...',
+                      style: GoogleFonts.montserrat(
+                        color: AppColors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           SingleChildScrollView(
             physics: const BouncingScrollPhysics(),
             child: Column(

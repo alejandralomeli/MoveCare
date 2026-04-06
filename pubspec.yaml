@@ -21,6 +21,8 @@ dependencies:
   provider: ^6.0.5
   image_picker: ^1.2.1
   url_launcher: ^6.3.2
+  speech_to_text: ^7.0.0
+  flutter_tts: ^4.2.0
 
 dev_dependencies:
   flutter_test:
