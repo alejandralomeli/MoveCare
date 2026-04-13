@@ -89,15 +89,15 @@ class _HistorialViajesPasajero extends State<HistorialViajesPasajero> {
 
   Color _getStatusColor(String status) {
     switch (status.toLowerCase()) {
-      case 'en_curso':
+      case 'En_curso':
         return AppColors.primary;
-      case 'finalizado':
+      case 'Finalizado':
         return const Color(0xFF16A34A);
-      case 'cancelado':
+      case 'Cancelado':
         return AppColors.error;
-      case 'agendado':
+      case 'Agendado':
         return const Color(0xFFF59E0B);
-      case 'pendiente':
+      case 'Pendiente':
         return const Color(0xFFFBBF24);
       default:
         return AppColors.textSecondary;

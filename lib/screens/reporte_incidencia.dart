@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../app_theme.dart';
-import 'widgets/mic_button.dart';
+import 'widgets/mic_button.dart'; // Mantengo tu import
+import '../services/incidencias/incidencias_service.dart'; // Ajusta la ruta a tu service
 
 class ReporteIncidencia extends StatefulWidget {
   const ReporteIncidencia({super.key});
@@ -12,6 +13,84 @@ class ReporteIncidencia extends StatefulWidget {
 
 class _ReporteIncidenciaState extends State<ReporteIncidencia> {
   bool _isListening = false;
+  bool _isLoading = true;
+  List<dynamic> _reportes = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _cargarReportes();
+  }
+
+  // --- CARGAR REPORTES DESDE EL BACKEND ---
+  Future<void> _cargarReportes() async {
+    try {
+      final data = await IncidenciasService.obtenerReportesPendientes();
+      if (mounted) {
+        setState(() {
+          _reportes = data;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString().replaceAll("Exception: ", "")),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
+
+  // --- PROCESAR ACCIÓN (ACEPTAR/RECHAZAR) ---
+  Future<void> _procesarReporte(String idReporte, String nuevoEstado) async {
+    // TODO: Obtener este ID desde la sesión del usuario (ej. AuthHelper.getUsuarioId())
+    const int idAdminActual = 1; 
+
+    // Mostrar un pequeño indicador de carga (opcional pero recomendado)
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      await IncidenciasService.cambiarEstadoReporte(
+        idReporte: idReporte,
+        estado: nuevoEstado,
+        idAdministrador: idAdminActual,
+      );
+
+      if (mounted) {
+        Navigator.pop(context); // Cierra el dialog de carga
+        
+        // Removemos el reporte de la lista local para no volver a consultarlo
+        setState(() {
+          _reportes.removeWhere((r) => r['id_reporte'].toString() == idReporte);
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Reporte marcado como $nuevoEstado'),
+            backgroundColor: const Color(0xFF16A34A), // Verde éxito
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context); // Cierra el dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString().replaceAll("Exception: ", "")),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
 
   double sp(double size, BuildContext context) {
     double sw = MediaQuery.of(context).size.width;
@@ -33,7 +112,7 @@ class _ReporteIncidenciaState extends State<ReporteIncidencia> {
 
     return Scaffold(
       backgroundColor: AppColors.white,
-      bottomNavigationBar: const AdminBottomNav(selectedIndex: 2),
+      bottomNavigationBar: const AdminBottomNav(selectedIndex: 2), // Asegúrate de tener este widget
       body: CustomScrollView(
         physics: const BouncingScrollPhysics(),
         slivers: [
@@ -44,20 +123,52 @@ class _ReporteIncidenciaState extends State<ReporteIncidencia> {
               onVoiceTap: () => setState(() => _isListening = !_isListening),
             ),
           ),
-          SliverFillRemaining(
-            child: ListView.builder(
-              padding: EdgeInsets.symmetric(horizontal: sw * 0.06, vertical: 20),
-              physics: const BouncingScrollPhysics(),
-              itemCount: 5,
-              itemBuilder: (context, index) => _buildReportCard(context, index),
+          
+          // --- RENDERIZADO CONDICIONAL DE LA LISTA ---
+          if (_isLoading)
+            const SliverFillRemaining(
+              child: Center(
+                child: CircularProgressIndicator(color: AppColors.primary),
+              ),
+            )
+          else if (_reportes.isEmpty)
+            SliverFillRemaining(
+              child: Center(
+                child: Text(
+                  'No hay reportes pendientes',
+                  style: GoogleFonts.montserrat(
+                    color: AppColors.textSecondary,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            )
+          else
+            SliverFillRemaining(
+              child: ListView.builder(
+                padding: EdgeInsets.symmetric(horizontal: sw * 0.06, vertical: 20),
+                physics: const BouncingScrollPhysics(),
+                itemCount: _reportes.length,
+                itemBuilder: (context, index) {
+                  final reporte = _reportes[index];
+                  return _buildReportCard(context, reporte);
+                },
+              ),
             ),
-          ),
         ],
       ),
     );
   }
 
-  Widget _buildReportCard(BuildContext context, int index) {
+  Widget _buildReportCard(BuildContext context, dynamic reporte) {
+    // Extracción segura de datos
+    final String idReporte = reporte['id_reporte']?.toString() ?? 'N/A';
+    final String tipoReporte = reporte['tipo_reporte']?.toString() ?? 'Reporte general';
+    final String descripcion = reporte['descripcion']?.toString() ?? 'Sin descripción proporcionada.';
+    // Si tu backend manda fecha, úsala. Si no, ponemos un placeholder
+    final String fecha = reporte['fecha_creacion']?.toString() ?? 'Fecha no disponible';
+
     return Container(
       margin: const EdgeInsets.only(bottom: 20),
       padding: const EdgeInsets.all(15),
@@ -72,7 +183,7 @@ class _ReporteIncidenciaState extends State<ReporteIncidencia> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Reporte #120$index', style: mExtrabold(size: 15, context: context)),
+              Text('Reporte #$idReporte', style: mExtrabold(size: 15, context: context)),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
@@ -80,7 +191,7 @@ class _ReporteIncidenciaState extends State<ReporteIncidencia> {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  'URGENTE',
+                  tipoReporte.toUpperCase(),
                   style: mExtrabold(color: AppColors.white, size: 10, context: context),
                 ),
               )
@@ -88,12 +199,12 @@ class _ReporteIncidenciaState extends State<ReporteIncidencia> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Fecha: 24 Octubre 2025',
+            'Fecha: $fecha',
             style: GoogleFonts.montserrat(fontSize: sp(12, context), fontWeight: FontWeight.w600),
           ),
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 10),
-            child: Divider(color: AppColors.border, thickness: 1),
+            child: const Divider(color: AppColors.border, thickness: 1),
           ),
           Text(
             'Descripción:',
@@ -101,15 +212,27 @@ class _ReporteIncidenciaState extends State<ReporteIncidencia> {
           ),
           const SizedBox(height: 5),
           Text(
-            'El usuario reporta que el vehículo no contaba con la rampa hidráulica mencionada en el perfil del conductor.',
+            descripcion,
             style: GoogleFonts.montserrat(fontSize: sp(12, context)),
           ),
           const SizedBox(height: 15),
           Row(
             children: [
-              _actionBtn('Descartar', AppColors.white, AppColors.textSecondary, context),
+              _actionBtn(
+                label: 'Descartar',
+                bgColor: AppColors.white,
+                textColor: AppColors.textSecondary,
+                context: context,
+                onPressed: () => _procesarReporte(idReporte, 'Rechazado'),
+              ),
               const SizedBox(width: 10),
-              _actionBtn('Bloquear', AppColors.error, AppColors.white, context),
+              _actionBtn(
+                label: 'Aceptar', // Cambié "Bloquear" por "Aceptar" para que haga sentido con el backend
+                bgColor: AppColors.error,
+                textColor: AppColors.white,
+                context: context,
+                onPressed: () => _procesarReporte(idReporte, 'Aceptado'),
+              ),
             ],
           )
         ],
@@ -117,10 +240,17 @@ class _ReporteIncidenciaState extends State<ReporteIncidencia> {
     );
   }
 
-  Widget _actionBtn(String label, Color bgColor, Color textColor, BuildContext context) {
+  // Modifiqué el botón para que acepte el callback
+  Widget _actionBtn({
+    required String label, 
+    required Color bgColor, 
+    required Color textColor, 
+    required BuildContext context,
+    required VoidCallback onPressed,
+  }) {
     return Expanded(
       child: ElevatedButton(
-        onPressed: () {},
+        onPressed: onPressed,
         style: ElevatedButton.styleFrom(
           backgroundColor: bgColor,
           foregroundColor: textColor,

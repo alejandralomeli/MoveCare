@@ -202,4 +202,25 @@ class ViajeService {
 
     return points;
   }
+
+  static Future<Map<String, dynamic>> obtenerDetalleViaje(String idViaje) async {
+    // Apuntamos a la nueva ruta RESTful que creamos
+    final response = await HttpClient.get("/viajes/$idViaje/detalle");
+
+    if (response.statusCode == 200) {
+      final bodyResponse = jsonDecode(response.body);
+      
+      // Extraemos el objeto "data" ya que el back responde con {"ok": true, "data": {...}}
+      if (bodyResponse["ok"] == true && bodyResponse.containsKey("data")) {
+        return bodyResponse["data"] as Map<String, dynamic>;
+      }
+      return bodyResponse as Map<String, dynamic>;
+    }
+
+    if (response.statusCode == 401) {
+      throw Exception('TOKEN_INVALIDO');
+    }
+
+    throw Exception("Error al obtener los detalles del viaje");
+  }
 }

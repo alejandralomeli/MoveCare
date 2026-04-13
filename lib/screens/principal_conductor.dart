@@ -31,7 +31,9 @@ class _PrincipalConductorState extends State<PrincipalConductor> {
   // --- VARIABLES DE UI ACTUALES ---
   String _selectedDate = '';
   bool _isVoiceActive = false;
-  DateTime _weekStart = DateTime.now().subtract(Duration(days: DateTime.now().weekday - 1));
+  DateTime _weekStart = DateTime.now().subtract(
+    Duration(days: DateTime.now().weekday - 1),
+  );
 
   @override
   void initState() {
@@ -65,7 +67,9 @@ class _PrincipalConductorState extends State<PrincipalConductor> {
   // --- FUNCIÓN RECUPERADA: Llamadas ---
   Future<void> _hacerLlamada(String? telefono) async {
     if (telefono == null || telefono.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Teléfono no disponible")));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Teléfono no disponible")));
       return;
     }
     final Uri launchUri = Uri(scheme: 'tel', path: telefono);
@@ -87,12 +91,33 @@ class _PrincipalConductorState extends State<PrincipalConductor> {
   }
 
   String _dayNameFull(int d) {
-    const days = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+    const days = [
+      'Lunes',
+      'Martes',
+      'Miércoles',
+      'Jueves',
+      'Viernes',
+      'Sábado',
+      'Domingo',
+    ];
     return days[d - 1];
   }
 
   String _monthName(int m) {
-    const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+    const months = [
+      'Enero',
+      'Febrero',
+      'Marzo',
+      'Abril',
+      'Mayo',
+      'Junio',
+      'Julio',
+      'Agosto',
+      'Septiembre',
+      'Octubre',
+      'Noviembre',
+      'Diciembre',
+    ];
     return months[m - 1];
   }
 
@@ -110,7 +135,9 @@ class _PrincipalConductorState extends State<PrincipalConductor> {
     if (_loadingHome) {
       return const Scaffold(
         backgroundColor: AppColors.white,
-        body: Center(child: CircularProgressIndicator(color: AppColors.primary)),
+        body: Center(
+          child: CircularProgressIndicator(color: AppColors.primary),
+        ),
       );
     }
 
@@ -136,10 +163,10 @@ class _PrincipalConductorState extends State<PrincipalConductor> {
                       const SizedBox(height: 10),
                       _buildCurrentTripCard(), // Lógica inyectada
                       const SizedBox(height: 20),
-                      
+
                       // 🚀 LA INTEGRACIÓN CORRECTA DEL MAPA AQUÍ
-                      _buildRouteSection(), 
-                      
+                      _buildRouteSection(),
+
                       const SizedBox(height: 25),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -148,13 +175,20 @@ class _PrincipalConductorState extends State<PrincipalConductor> {
                           Row(
                             children: [
                               IconButton(
-                                icon: const Icon(Icons.chevron_left, color: AppColors.primary),
+                                icon: const Icon(
+                                  Icons.chevron_left,
+                                  color: AppColors.primary,
+                                ),
                                 padding: EdgeInsets.zero,
                                 constraints: const BoxConstraints(),
                                 onPressed: () {
                                   final now = DateTime.now();
-                                  final currentWeekStart = now.subtract(Duration(days: now.weekday - 1));
-                                  final prev = _weekStart.subtract(const Duration(days: 7));
+                                  final currentWeekStart = now.subtract(
+                                    Duration(days: now.weekday - 1),
+                                  );
+                                  final prev = _weekStart.subtract(
+                                    const Duration(days: 7),
+                                  );
                                   if (!prev.isBefore(currentWeekStart)) {
                                     setState(() => _weekStart = prev);
                                   }
@@ -162,10 +196,17 @@ class _PrincipalConductorState extends State<PrincipalConductor> {
                               ),
                               const SizedBox(width: 10),
                               IconButton(
-                                icon: const Icon(Icons.chevron_right, color: AppColors.primary),
+                                icon: const Icon(
+                                  Icons.chevron_right,
+                                  color: AppColors.primary,
+                                ),
                                 padding: EdgeInsets.zero,
                                 constraints: const BoxConstraints(),
-                                onPressed: () => setState(() => _weekStart = _weekStart.add(const Duration(days: 7))),
+                                onPressed: () => setState(
+                                  () => _weekStart = _weekStart.add(
+                                    const Duration(days: 7),
+                                  ),
+                                ),
                               ),
                             ],
                           ),
@@ -181,37 +222,29 @@ class _PrincipalConductorState extends State<PrincipalConductor> {
                               context: context,
                               initialDate: DateTime.now(),
                               firstDate: DateTime.now(),
-                              lastDate: DateTime.now().add(const Duration(days: 365)),
+                              lastDate: DateTime.now().add(
+                                const Duration(days: 365),
+                              ),
                             );
                             if (picked != null) {
                               setState(() => _buildCalendarDates(picked));
                             }
                           },
-                          icon: const Icon(Icons.calendar_month_outlined, size: 16),
+                          icon: const Icon(
+                            Icons.calendar_month_outlined,
+                            size: 16,
+                          ),
                           label: const Text('Ver más'),
-                          style: TextButton.styleFrom(foregroundColor: AppColors.primary),
+                          style: TextButton.styleFrom(
+                            foregroundColor: AppColors.primary,
+                          ),
                         ),
                       ),
                       const SizedBox(height: 10),
                       Text('Historial de viajes', style: mBold(size: 18)),
                       const SizedBox(height: 10),
                       _buildHistorySection(), // Iteración recuperada
-                      const SizedBox(height: 25),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          onPressed: () => Navigator.pushNamed(context, '/reporte_incidencia_conductor'),
-                          icon: const Icon(Icons.error, color: AppColors.white),
-                          label: Text(
-                            'Reportar incidencia',
-                            style: mBold(color: AppColors.white, size: 15),
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color.fromARGB(255, 219, 26, 26),
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                          ),
-                        ),
-                      ),
+                      // ¡AQUÍ SE ELIMINÓ EL BOTÓN ROJO GRANDE!
                       const SizedBox(height: 30),
                     ],
                   ),
@@ -241,7 +274,11 @@ class _PrincipalConductorState extends State<PrincipalConductor> {
     return Stack(
       clipBehavior: Clip.none,
       children: [
-        Container(height: 80, width: double.infinity, color: AppColors.primaryLight),
+        Container(
+          height: 80,
+          width: double.infinity,
+          color: AppColors.primaryLight,
+        ),
         Positioned(
           bottom: -50,
           left: 20,
@@ -250,7 +287,10 @@ class _PrincipalConductorState extends State<PrincipalConductor> {
             backgroundColor: AppColors.white,
             child: CircleAvatar(
               radius: 46,
-              backgroundImage: (user != null && user.fotoPerfil != null && user.fotoPerfil.isNotEmpty)
+              backgroundImage:
+                  (user != null &&
+                      user.fotoPerfil != null &&
+                      user.fotoPerfil.isNotEmpty)
                   ? MemoryImage(base64Decode(user.fotoPerfil.split(',').last))
                   : const AssetImage('assets/conductor.png') as ImageProvider,
             ),
@@ -291,7 +331,10 @@ class _PrincipalConductorState extends State<PrincipalConductor> {
         children: [
           const Icon(Icons.info_outline, color: AppColors.white, size: 12),
           const SizedBox(width: 4),
-          Text('Completa tu perfil', style: mBold(color: AppColors.white, size: 10)),
+          Text(
+            'Completa tu perfil',
+            style: mBold(color: AppColors.white, size: 10),
+          ),
         ],
       ),
     );
@@ -309,14 +352,19 @@ class _PrincipalConductorState extends State<PrincipalConductor> {
           border: Border.all(color: AppColors.border, width: 1),
         ),
         child: Center(
-          child: Text("Sin viajes próximos", style: mBold(color: AppColors.textSecondary)),
+          child: Text(
+            "Sin viajes próximos",
+            style: mBold(color: AppColors.textSecondary),
+          ),
         ),
       );
     }
 
     final fecha = DateTime.parse(_viajeProximo!['fecha_hora_inicio']);
-    final hora = "${fecha.hour}:${fecha.minute.toString().padLeft(2, '0')} ${fecha.hour >= 12 ? 'PM' : 'AM'}";
-    final fechaStr = "${_dayNameFull(fecha.weekday)} ${fecha.day} de ${_monthName(fecha.month)}";
+    final hora =
+        "${fecha.hour}:${fecha.minute.toString().padLeft(2, '0')} ${fecha.hour >= 12 ? 'PM' : 'AM'}";
+    final fechaStr =
+        "${_dayNameFull(fecha.weekday)} ${fecha.day} de ${_monthName(fecha.month)}";
 
     return Container(
       padding: const EdgeInsets.all(15),
@@ -334,19 +382,31 @@ class _PrincipalConductorState extends State<PrincipalConductor> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(fechaStr, style: mBold(size: 13, color: AppColors.textSecondary)),
+                    Text(
+                      fechaStr,
+                      style: mBold(size: 13, color: AppColors.textSecondary),
+                    ),
                     const SizedBox(height: 2),
-                    Text(_viajeProximo!['nombre_pasajero'] ?? 'Pasajero', style: mBold(size: 15)),
+                    Text(
+                      _viajeProximo!['nombre_pasajero'] ?? 'Pasajero',
+                      style: mBold(size: 15),
+                    ),
                   ],
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 5,
+                ),
                 decoration: BoxDecoration(
                   color: AppColors.primary,
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Text(hora, style: mBold(color: AppColors.white, size: 12)),
+                child: Text(
+                  hora,
+                  style: mBold(color: AppColors.white, size: 12),
+                ),
               ),
             ],
           ),
@@ -357,18 +417,30 @@ class _PrincipalConductorState extends State<PrincipalConductor> {
               const Icon(Icons.location_on, color: AppColors.primary, size: 18),
               const SizedBox(width: 4),
               Expanded(
-                child: Text(_viajeProximo!['punto_inicio'] ?? 'Origen', 
-                  maxLines: 1, overflow: TextOverflow.ellipsis, style: mBold(color: AppColors.primary, size: 12)),
+                child: Text(
+                  _viajeProximo!['punto_inicio'] ?? 'Origen',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: mBold(color: AppColors.primary, size: 12),
+                ),
               ),
               const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 8),
-                child: Icon(Icons.arrow_forward_rounded, color: AppColors.textSecondary, size: 20),
+                child: Icon(
+                  Icons.arrow_forward_rounded,
+                  color: AppColors.textSecondary,
+                  size: 20,
+                ),
               ),
               const Icon(Icons.flag_rounded, color: AppColors.error, size: 18),
               const SizedBox(width: 4),
               Expanded(
-                child: Text(_viajeProximo!['destino'] ?? 'Destino', 
-                  maxLines: 1, overflow: TextOverflow.ellipsis, style: mBold(color: AppColors.primary, size: 12)),
+                child: Text(
+                  _viajeProximo!['destino'] ?? 'Destino',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: mBold(color: AppColors.primary, size: 12),
+                ),
               ),
             ],
           ),
@@ -378,25 +450,38 @@ class _PrincipalConductorState extends State<PrincipalConductor> {
               Image.asset('assets/movecare.png', width: 32, height: 32),
               const SizedBox(width: 8),
               Expanded(
-                child: Text(_viajeProximo!['necesidad_especial'] ?? 'Sin necesidades especiales', 
+                child: Text(
+                  _viajeProximo!['necesidad_especial'] ??
+                      'Sin necesidades especiales',
                   style: mBold(size: 12, color: AppColors.textSecondary),
-                  maxLines: 1, overflow: TextOverflow.ellipsis),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ],
           ),
           const SizedBox(height: 14),
           Row(
             children: [
-              _actionBtn('Ver detalles', onTap: () {
-                showModalBottomSheet(
-                  context: context,
-                  isScrollControlled: true,
-                  backgroundColor: Colors.transparent,
-                  builder: (context) => ViajeDetallesModal(viaje: _viajeProximo!, esConductor: true),
-                );
-              }),
+              _actionBtn(
+                'Ver detalles',
+                onTap: () {
+                  showModalBottomSheet(
+                    context: context,
+                    isScrollControlled: true,
+                    backgroundColor: Colors.transparent,
+                    builder: (context) => ViajeDetallesModal(
+                      viaje: _viajeProximo!,
+                      esConductor: true,
+                    ),
+                  );
+                },
+              ),
               const SizedBox(width: 10),
-              _actionBtn('Contactar pasajero', onTap: () => _hacerLlamada(_viajeProximo!['telefono_pasajero'])),
+              _actionBtn(
+                'Contactar pasajero',
+                onTap: () => _hacerLlamada(_viajeProximo!['telefono_pasajero']),
+              ),
             ],
           ),
         ],
@@ -411,44 +496,52 @@ class _PrincipalConductorState extends State<PrincipalConductor> {
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.primary,
           elevation: 0,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
           padding: const EdgeInsets.symmetric(vertical: 10),
         ),
-        child: Text(label, textAlign: TextAlign.center, style: mBold(color: AppColors.white, size: 11)),
+        child: Text(
+          label,
+          textAlign: TextAlign.center,
+          style: mBold(color: AppColors.white, size: 11),
+        ),
       ),
     );
   }
 
   // ── MAPA / RUTA EXACTAMENTE COMO EN EL CÓDIGO VIEJO ────────────────────────
-  
-Widget _buildRouteSection() {
-   return HomeMapPreview(
-     viajeProximo: _viajeProximo, // Sigue pasando el JSON completo para pintar el mapita
-     onOpenRoute: () {
-       // Verificamos que tengamos la información antes de navegar
-       if (_viajeProximo != null && _viajeProximo!['id_viaje'] != null) {
-         Navigator.pushReplacementNamed(
-           context, 
-           '/viaje_actual',
-           // 🚀 AQUÍ ENVIAMOS EL ID CORRECTO BASADO EN TU JSON
-           arguments: _viajeProximo!['id_viaje'], 
-         );
-       } else {
-         ScaffoldMessenger.of(context).showSnackBar(
-           const SnackBar(content: Text("No se encontró el ID del viaje")),
-         );
-       }
-     },
-   );
- }
+
+  Widget _buildRouteSection() {
+    return HomeMapPreview(
+      viajeProximo:
+          _viajeProximo, // Sigue pasando el JSON completo para pintar el mapita
+      onOpenRoute: () {
+        // Verificamos que tengamos la información antes de navegar
+        if (_viajeProximo != null && _viajeProximo!['id_viaje'] != null) {
+          Navigator.pushReplacementNamed(
+            context,
+            '/viaje_actual',
+            // 🚀 AQUÍ ENVIAMOS EL ID CORRECTO BASADO EN TU JSON
+            arguments: _viajeProximo!['id_viaje'],
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("No se encontró el ID del viaje")),
+          );
+        }
+      },
+    );
+  }
 
   // ── CALENDARIO ─────────────────────────────────────────────────────────────
 
   Widget _buildCalendarRow() {
     return Row(
-      children: List.generate(7, (i) => _weekStart.add(Duration(days: i)))
-          .map((date) => Expanded(child: _calendarDay(date)))
-          .toList(),
+      children: List.generate(
+        7,
+        (i) => _weekStart.add(Duration(days: i)),
+      ).map((date) => Expanded(child: _calendarDay(date))).toList(),
     );
   }
 
@@ -459,7 +552,9 @@ Widget _buildRouteSection() {
     return Opacity(
       opacity: isPast ? 0.4 : 1.0,
       child: GestureDetector(
-        onTap: isPast ? null : () => setState(() => _selectedDate = date.day.toString()),
+        onTap: isPast
+            ? null
+            : () => setState(() => _selectedDate = date.day.toString()),
         child: Container(
           height: 65,
           margin: const EdgeInsets.symmetric(horizontal: 3),
@@ -515,11 +610,17 @@ Widget _buildRouteSection() {
     if (_historialViajes.isEmpty) {
       return Padding(
         padding: const EdgeInsets.all(10),
-        child: Text("Aún no tienes historial de viajes", style: mBold(color: AppColors.textSecondary)),
+        child: Text(
+          "Aún no tienes historial de viajes",
+          style: mBold(color: AppColors.textSecondary),
+        ),
       );
     }
     return Column(
-      children: _historialViajes.take(3).map((v) => _buildHistoryCard(v)).toList(),
+      children: _historialViajes
+          .take(3)
+          .map((v) => _buildHistoryCard(v))
+          .toList(),
     );
   }
 
@@ -530,9 +631,11 @@ Widget _buildRouteSection() {
       final f = DateTime.parse(viaje['fecha_hora_inicio']);
       fechaTexto = "${_monthName(f.month).substring(0, 3)} ${f.day}";
     }
-    
+
     // Distancia si existe en el backend
-    String distancia = viaje['distancia_km'] != null ? "${viaje['distancia_km']} km" : "-- km";
+    String distancia = viaje['distancia_km'] != null
+        ? "${viaje['distancia_km']} km"
+        : "-- km";
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -548,31 +651,58 @@ Widget _buildRouteSection() {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('$fechaTexto  —  ${viaje['nombre_pasajero'] ?? 'Pasajero'}',
-                      style: mBold(color: AppColors.primary, size: 13)),
+                  Text(
+                    '$fechaTexto  —  ${viaje['nombre_pasajero'] ?? 'Pasajero'}',
+                    style: mBold(color: AppColors.primary, size: 13),
+                  ),
                   const SizedBox(height: 4),
-                  Text('Distancia: $distancia',
-                      style: mBold(size: 12, color: AppColors.textSecondary)),
+                  Text(
+                    'Distancia: $distancia',
+                    style: mBold(size: 12, color: AppColors.textSecondary),
+                  ),
                   const SizedBox(height: 6),
                   Row(
                     children: List.generate(
                       5,
                       (i) => Icon(
                         Icons.star_rounded,
-                        color: i < 4 ? Colors.orange : AppColors.border, 
+                        color: i < 4 ? Colors.orange : AppColors.border,
                         size: 16,
                       ),
                     ),
                   ),
                   const SizedBox(height: 8),
                   GestureDetector(
-                    onTap: () => Navigator.pushNamed(context, '/reporte_incidencia_conductor'),
+                    // 🚀 AQUÍ ENVIAMOS EL ID_VIAJE COMO ARGUMENTO
+                    onTap: () {
+                      if (viaje['id_viaje'] != null) {
+                        Navigator.pushNamed(
+                          context,
+                          '/reporte_incidencia_conductor',
+                          arguments: viaje['id_viaje'],
+                        );
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              "Error: Este viaje no tiene ID asociado",
+                            ),
+                          ),
+                        );
+                      }
+                    },
                     child: Row(
                       children: [
-                        const Icon(Icons.error_outline, color: AppColors.error, size: 14),
+                        const Icon(
+                          Icons.error_outline,
+                          color: AppColors.error,
+                          size: 14,
+                        ),
                         const SizedBox(width: 4),
-                        Text('Reportar incidencia',
-                            style: mBold(color: AppColors.error, size: 11)),
+                        Text(
+                          'Reportar incidencia',
+                          style: mBold(color: AppColors.error, size: 11),
+                        ),
                       ],
                     ),
                   ),
@@ -585,16 +715,23 @@ Widget _buildRouteSection() {
                   context: context,
                   isScrollControlled: true,
                   backgroundColor: Colors.transparent,
-                  builder: (context) => ViajeDetallesModal(viaje: viaje, esConductor: true),
+                  builder: (context) =>
+                      ViajeDetallesModal(viaje: viaje, esConductor: true),
                 );
               },
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   color: AppColors.primary,
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Text('Ver detalles', style: mBold(color: AppColors.white, size: 11)),
+                child: Text(
+                  'Ver detalles',
+                  style: mBold(color: AppColors.white, size: 11),
+                ),
               ),
             ),
           ],

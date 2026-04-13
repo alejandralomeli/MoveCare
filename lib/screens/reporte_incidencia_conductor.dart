@@ -1,7 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+
+// --- TUS DEPENDENCIAS (Ajusta las rutas según tu proyecto) ---
 import '../app_theme.dart';
 import 'widgets/mic_button.dart';
+import '../providers/user_provider.dart'; 
+import '../services/incidencias/incidencias_service.dart';
+// 👇 IMPORTA AQUÍ EL SERVICIO DONDE TIENES obtenerDetalleViaje
+import '../services/viaje/viaje_service.dart'; 
 
 class ReporteIncidenciaConductor extends StatefulWidget {
   const ReporteIncidenciaConductor({super.key});
@@ -12,7 +19,9 @@ class ReporteIncidenciaConductor extends StatefulWidget {
 
 class _ReporteIncidenciaConductorState extends State<ReporteIncidenciaConductor> {
   bool _isListening = false;
+  bool _isSubmitting = false;
   int? _tipoSeleccionado;
+  String? _idViaje; 
   final TextEditingController _descripcionCtrl = TextEditingController();
 
   final List<Map<String, dynamic>> _tiposIncidencia = [
@@ -23,6 +32,15 @@ class _ReporteIncidenciaConductorState extends State<ReporteIncidenciaConductor>
     {'label': 'Emergencia médica', 'icon': Icons.medical_services_rounded},
     {'label': 'Otro', 'icon': Icons.more_horiz_rounded},
   ];
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final arg = ModalRoute.of(context)?.settings.arguments;
+    if (arg != null) {
+      _idViaje = arg.toString();
+    }
+  }
 
   TextStyle mBold({Color color = AppColors.textPrimary, double size = 14}) {
     return GoogleFonts.montserrat(
@@ -51,13 +69,71 @@ class _ReporteIncidenciaConductorState extends State<ReporteIncidenciaConductor>
       );
       return;
     }
+    if (_idViaje == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Error: No se identificó el viaje a reportar')),
+      );
+      return;
+    }
+    
     _mostrarConfirmacion();
+  }
+
+  // 🚀 LÓGICA DE CONEXIÓN ACTUALIZADA
+  Future<void> _ejecutarEnvioBackend() async {
+    Navigator.pop(context); 
+    
+    setState(() => _isSubmitting = true);
+
+    try {
+      final userProvider = context.read<UserProvider>();
+      final String idUsuario = userProvider.user?.idUsuario ?? "0"; 
+      
+      final tipoReporteStr = _tiposIncidencia[_tipoSeleccionado!]['label'];
+
+      // 1. Buscamos la info del viaje con tu servicio
+      // Cambia "ViajesService" por el nombre real de tu clase
+      final Map<String, dynamic> infoViaje = await ViajeService.obtenerDetalleViaje(_idViaje!);
+
+      // 2. Extraemos el id del pasajero desde el JSON que me mostraste
+      final String idPasajero = infoViaje['id_pasajero'];
+
+      // 3. Enviamos todos los datos correctamente al backend estricto
+      await IncidenciasService.enviarIncidencia(
+        idReportante: idUsuario,
+        idReportado: idPasajero, // 👈 Ahora sí enviamos el del pasajero
+        idViaje: _idViaje!,      // 👈 Y enviamos explícitamente el del viaje
+        tipoReporte: tipoReporteStr,
+        descripcion: _descripcionCtrl.text.trim(),
+      );
+
+      if (!mounted) return;
+      
+      Navigator.pop(context); 
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Reporte enviado correctamente'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString().replaceAll("Exception: ", "")),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
   }
 
   void _mostrarConfirmacion() {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
+      isDismissible: !_isSubmitting, 
       builder: (context) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 32),
         decoration: const BoxDecoration(
@@ -105,7 +181,7 @@ class _ReporteIncidenciaConductorState extends State<ReporteIncidenciaConductor>
               children: [
                 Expanded(
                   child: OutlinedButton(
-                    onPressed: () => Navigator.pop(context),
+                    onPressed: _isSubmitting ? null : () => Navigator.pop(context),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColors.textSecondary,
                       side: const BorderSide(color: AppColors.border),
@@ -118,13 +194,7 @@ class _ReporteIncidenciaConductorState extends State<ReporteIncidenciaConductor>
                 const SizedBox(width: 12),
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Reporte enviado correctamente')),
-                      );
-                    },
+                    onPressed: _isSubmitting ? null : _ejecutarEnvioBackend,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.error,
                       foregroundColor: AppColors.white,
@@ -149,131 +219,147 @@ class _ReporteIncidenciaConductorState extends State<ReporteIncidenciaConductor>
     return Scaffold(
       backgroundColor: AppColors.white,
       bottomNavigationBar: const DriverBottomNav(selectedIndex: 0),
-      body: CustomScrollView(
-        physics: const BouncingScrollPhysics(),
-        slivers: [
-          SliverPersistentHeader(
-            pinned: true,
-            delegate: _HeaderDelegate(
-              isVoiceActive: _isListening,
-              onVoiceTap: () => setState(() => _isListening = !_isListening),
-            ),
-          ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Aviso informativo
-                  Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: AppColors.error.withValues(alpha: 0.07),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.error.withValues(alpha: 0.2)),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.info_outline_rounded, color: AppColors.error, size: 20),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            'Tu reporte es confidencial y será atendido en menos de 24 horas.',
-                            style: mBold(color: AppColors.error, size: 12),
-                          ),
+      body: Stack(
+        children: [
+          CustomScrollView(
+            physics: const BouncingScrollPhysics(),
+            slivers: [
+              SliverPersistentHeader(
+                pinned: true,
+                delegate: _HeaderDelegate(
+                  isVoiceActive: _isListening,
+                  onVoiceTap: () => setState(() => _isListening = !_isListening),
+                ),
+              ),
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: AppColors.error.withValues(alpha: 0.07),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppColors.error.withValues(alpha: 0.2)),
                         ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Tipo de incidencia
-                  Text('Tipo de incidencia', style: mBold(size: 16)),
-                  const SizedBox(height: 12),
-                  GridView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 3,
-                      mainAxisSpacing: 10,
-                      crossAxisSpacing: 10,
-                      childAspectRatio: 1.1,
-                    ),
-                    itemCount: _tiposIncidencia.length,
-                    itemBuilder: (context, i) {
-                      final selected = _tipoSeleccionado == i;
-                      return GestureDetector(
-                        onTap: () => setState(() => _tipoSeleccionado = i),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          decoration: BoxDecoration(
-                            color: selected ? AppColors.primary : AppColors.surface,
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(
-                              color: selected ? AppColors.primary : AppColors.border,
-                              width: selected ? 2 : 1,
-                            ),
-                          ),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                _tiposIncidencia[i]['icon'] as IconData,
-                                color: selected ? AppColors.white : AppColors.primary,
-                                size: 26,
+                        child: Row(
+                          children: [
+                            const Icon(Icons.info_outline_rounded, color: AppColors.error, size: 20),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                'Tu reporte es confidencial y será atendido en menos de 24 horas.',
+                                style: mBold(color: AppColors.error, size: 12),
                               ),
-                              const SizedBox(height: 6),
-                              Text(
-                                _tiposIncidencia[i]['label'] as String,
-                                textAlign: TextAlign.center,
-                                style: mBold(
-                                  color: selected ? AppColors.white : AppColors.textPrimary,
-                                  size: 10,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+
+                      Text('Tipo de incidencia', style: mBold(size: 16)),
+                      const SizedBox(height: 12),
+                      GridView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 3,
+                          mainAxisSpacing: 10,
+                          crossAxisSpacing: 10,
+                          childAspectRatio: 1.1,
+                        ),
+                        itemCount: _tiposIncidencia.length,
+                        itemBuilder: (context, i) {
+                          final selected = _tipoSeleccionado == i;
+                          return GestureDetector(
+                            onTap: () => setState(() => _tipoSeleccionado = i),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              decoration: BoxDecoration(
+                                color: selected ? AppColors.primary : AppColors.surface,
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(
+                                  color: selected ? AppColors.primary : AppColors.border,
+                                  width: selected ? 2 : 1,
                                 ),
                               ),
-                            ],
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    _tiposIncidencia[i]['icon'] as IconData,
+                                    color: selected ? AppColors.white : AppColors.primary,
+                                    size: 26,
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    _tiposIncidencia[i]['label'] as String,
+                                    textAlign: TextAlign.center,
+                                    style: mBold(
+                                      color: selected ? AppColors.white : AppColors.textPrimary,
+                                      size: 10,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 24),
+
+                      Text('Descripción', style: mBold(size: 16)),
+                      const SizedBox(height: 10),
+                      TextField(
+                        controller: _descripcionCtrl,
+                        maxLines: 5,
+                        decoration: InputDecoration(
+                          hintText: 'Describe con detalle lo que ocurrió...',
+                          hintStyle: mBold(color: AppColors.textSecondary, size: 13),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: AppColors.border),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: AppColors.primary, width: 2),
                           ),
                         ),
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Descripción
-                  Text('Descripción', style: mBold(size: 16)),
-                  const SizedBox(height: 10),
-                  TextField(
-                    controller: _descripcionCtrl,
-                    maxLines: 5,
-                    decoration: InputDecoration(
-                      hintText: 'Describe con detalle lo que ocurrió...',
-                      hintStyle: mBold(color: AppColors.textSecondary, size: 13),
-                    ),
-                  ),
-                  const SizedBox(height: 32),
-
-                  // Botón enviar
-                  SizedBox(
-                    width: double.infinity,
-                    height: 50,
-                    child: ElevatedButton.icon(
-                      onPressed: _enviarReporte,
-                      icon: const Icon(Icons.send_rounded, size: 18),
-                      label: Text('Enviar reporte', style: mBold(color: AppColors.white, size: 15)),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.error,
-                        foregroundColor: AppColors.white,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                       ),
-                    ),
+                      const SizedBox(height: 32),
+
+                      SizedBox(
+                        width: double.infinity,
+                        height: 50,
+                        child: ElevatedButton.icon(
+                          onPressed: _isSubmitting ? null : _enviarReporte,
+                          icon: const Icon(Icons.send_rounded, size: 18),
+                          label: Text('Enviar reporte', style: mBold(color: AppColors.white, size: 15)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.error,
+                            foregroundColor: AppColors.white,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                    ],
                   ),
-                  const SizedBox(height: 20),
-                ],
+                ),
+              ),
+            ],
+          ),
+          
+          if (_isSubmitting)
+            Container(
+              color: Colors.black.withValues(alpha: 0.3),
+              child: const Center(
+                child: CircularProgressIndicator(color: AppColors.error),
               ),
             ),
-          ),
         ],
       ),
     );
@@ -314,7 +400,6 @@ class _HeaderDelegate extends SliverPersistentHeaderDelegate {
             onPressed: () => Navigator.of(context).pop(),
           ),
         ),
-    
       ],
     );
   }

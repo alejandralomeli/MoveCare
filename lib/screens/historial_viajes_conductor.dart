@@ -163,6 +163,7 @@ class _HistorialViajesConductorState extends State<HistorialViajesConductor> {
     String estado = viaje['estado'].toString().toLowerCase();
     String statusText = 'Desconocido';
     Color statusColor = AppColors.primary;
+    bool esFinalizado = false;
 
     // Colores y textos adaptados a tu base de datos y nuevo diseño
     if (estado == 'en_curso') {
@@ -174,6 +175,7 @@ class _HistorialViajesConductorState extends State<HistorialViajesConductor> {
     } else if (estado == 'finalizado' || estado == 'aceptado') {
       statusText = 'Finalizado';
       statusColor = const Color(0xFF16A34A);
+      esFinalizado = true; // Variable para controlar la visibilidad del botón
     } else if (estado == 'cancelado' || estado == 'rechazado') {
       statusText = 'Cancelado';
       statusColor = AppColors.error;
@@ -183,6 +185,10 @@ class _HistorialViajesConductorState extends State<HistorialViajesConductor> {
     String destino = viaje['destino'] ?? 'Destino desconocido';
     String date = viaje['fecha_inicio'] ?? '---';
     String pasajero = viaje['nombre_pasajero'] ?? 'Pasajero';
+
+    // Extracción segura del ID del viaje (Ajusta 'id_viaje' si tu API lo manda con otro nombre)
+    String idViaje =
+        viaje['id_viaje']?.toString() ?? viaje['id']?.toString() ?? '';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 20),
@@ -349,6 +355,54 @@ class _HistorialViajesConductorState extends State<HistorialViajesConductor> {
                     _buildDiscapacidadIcons(viaje['necesidad_especial']),
                   ],
                 ),
+
+                // 🚀 AQUÍ AÑADIMOS EL BOTÓN CONDICIONAL DE REPORTE
+                if (esFinalizado) ...[
+                  const SizedBox(height: 12),
+                  const Divider(height: 1, color: AppColors.border),
+                  const SizedBox(height: 6),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton.icon(
+                      onPressed: () {
+                        // Reemplaza '/reporte_incidencia' por el nombre de ruta real en tu MaterialApp
+                        Navigator.pushNamed(
+                          context,
+                          '/reporte_incidencia_conductor',
+                          arguments: idViaje,
+                        );
+                      },
+                      icon: const Icon(
+                        Icons.flag_rounded,
+                        color: AppColors.error,
+                        size: 16,
+                      ),
+                      label: Text(
+                        'Reportar',
+                        style: mFont(
+                          color: AppColors.error,
+                          size: 12,
+                          weight: FontWeight.w600,
+                        ),
+                      ),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        backgroundColor: AppColors.error.withValues(
+                          alpha: 0.05,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+                // ----------------------------------------------------
               ],
             ),
           ),
