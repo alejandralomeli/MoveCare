@@ -37,6 +37,14 @@ class _MetricasConductorState extends State<MetricasConductor>
     'mejor_dia': 'Sábado',
   };
 
+  // ── Datos gasolina ────────────────────────────────────────────────────────
+  double _nivelCombustible = 0.65; // 0.0 – 1.0
+  final double _litrosConsumidos = 38.4;
+  final double _costoGasolina = 921.6;
+  final double _rendimientoKmL = 10.7;
+  bool _editandoNivel = false;
+  double _nivelTemporal = 0.65;
+
   // ── Estáticos ─────────────────────────────────────────────────────────────
   final List<String> _diasSemana = ['L', 'M', 'Mi', 'J', 'V', 'S', 'D'];
   final List<String> _semanasMes = ['S1', 'S2', 'S3', 'S4', 'S5'];
@@ -102,6 +110,10 @@ class _MetricasConductorState extends State<MetricasConductor>
                             _buildSectionTitle('Resumen del mes', Icons.table_chart_rounded),
                             const SizedBox(height: 14),
                             _buildResumenTable(),
+                            const SizedBox(height: 28),
+                            _buildSectionTitle('Control de gasolina', Icons.local_gas_station_rounded),
+                            const SizedBox(height: 14),
+                            _buildFuelSection(),
                             const SizedBox(height: 30),
                           ],
                         ),
@@ -382,6 +394,174 @@ class _MetricasConductorState extends State<MetricasConductor>
                   ],
                 ),
               )),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── CONTROL GASOLINA ──────────────────────────────────────────────────────
+
+  Color _fuelColor(double nivel) {
+    if (nivel > 0.5) return AppColors.success;
+    if (nivel > 0.25) return const Color(0xFFF59E0B);
+    return AppColors.error;
+  }
+
+  Widget _buildFuelSection() {
+    final color = _fuelColor(_nivelCombustible);
+    final porcentaje = (_nivelCombustible * 100).round();
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── Indicador nivel ──────────────────────────────────────────────
+          Row(
+            children: [
+              Icon(Icons.local_gas_station_rounded, color: color, size: 22),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('Nivel actual', style: mBold(color: AppColors.textSecondary, size: 12)),
+                        Text('$porcentaje%', style: mBold(color: color, size: 14)),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: LinearProgressIndicator(
+                        value: _nivelCombustible,
+                        minHeight: 14,
+                        backgroundColor: color.withValues(alpha: 0.15),
+                        valueColor: AlwaysStoppedAnimation<Color>(color),
+                      ),
+                    ),
+                    if (_nivelCombustible <= 0.25)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: Row(
+                          children: [
+                            Icon(Icons.warning_amber_rounded, color: AppColors.error, size: 14),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Nivel bajo — recarga pronto',
+                              style: mBold(color: AppColors.error, size: 11),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+
+          // ── Editar nivel ─────────────────────────────────────────────────
+          if (_editandoNivel) ...[
+            const SizedBox(height: 16),
+            Text('Ajustar nivel:', style: mBold(color: AppColors.textSecondary, size: 12)),
+            Slider(
+              value: _nivelTemporal,
+              min: 0.0,
+              max: 1.0,
+              divisions: 20,
+              activeColor: _fuelColor(_nivelTemporal),
+              inactiveColor: AppColors.border,
+              label: '${(_nivelTemporal * 100).round()}%',
+              onChanged: (v) => setState(() => _nivelTemporal = v),
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton(
+                  onPressed: () => setState(() => _editandoNivel = false),
+                  child: Text('Cancelar', style: mBold(color: AppColors.textSecondary, size: 13)),
+                ),
+                const SizedBox(width: 8),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  ),
+                  onPressed: () => setState(() {
+                    _nivelCombustible = _nivelTemporal;
+                    _editandoNivel = false;
+                  }),
+                  child: Text('Guardar', style: mBold(color: AppColors.white, size: 13)),
+                ),
+              ],
+            ),
+          ] else ...[
+            const SizedBox(height: 10),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: () => setState(() {
+                  _nivelTemporal = _nivelCombustible;
+                  _editandoNivel = true;
+                }),
+                icon: const Icon(Icons.edit_rounded, size: 15, color: AppColors.primary),
+                label: Text('Actualizar nivel', style: mBold(color: AppColors.primary, size: 12)),
+              ),
+            ),
+          ],
+
+          const Divider(height: 24, color: AppColors.border),
+
+          // ── Stats gasolina ────────────────────────────────────────────────
+          Row(
+            children: [
+              Expanded(child: _buildFuelStat(Icons.opacity_rounded, 'Litros consumidos', '${_litrosConsumidos.toStringAsFixed(1)} L', AppColors.primary)),
+              const SizedBox(width: 12),
+              Expanded(child: _buildFuelStat(Icons.attach_money_rounded, 'Costo estimado', '\$${_costoGasolina.toStringAsFixed(0)}', AppColors.success)),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(child: _buildFuelStat(Icons.speed_rounded, 'Rendimiento', '${_rendimientoKmL.toStringAsFixed(1)} km/L', const Color(0xFFF59E0B))),
+              const SizedBox(width: 12),
+              Expanded(child: _buildFuelStat(Icons.route_rounded, 'Km este mes', '${_kpis['km_totales']} km', AppColors.primary)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFuelStat(IconData icon, String label, String value, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.07),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: color, size: 18),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: mBold(color: AppColors.textSecondary, size: 10)),
+                const SizedBox(height: 2),
+                Text(value, style: mBold(color: AppColors.textPrimary, size: 13)),
+              ],
             ),
           ),
         ],
