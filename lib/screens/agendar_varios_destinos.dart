@@ -53,8 +53,8 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
     (index) => index.toString().padLeft(2, '0'),
   );
   final List<String> minutesList = List.generate(
-    60,
-    (index) => index.toString().padLeft(2, '0'),
+    12,
+    (index) => (index * 5).toString().padLeft(2, '0'),
   );
 
   final List<String> zmgLocations = [
@@ -666,6 +666,7 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
   // --- WIDGETS AUXILIARES ---
 
   Widget _buildOneDestinationButton() {
+    final double sw = MediaQuery.of(context).size.width;
     return Center(
       child: ElevatedButton.icon(
         onPressed: () {
@@ -674,7 +675,7 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
         icon: const Icon(Icons.alt_route, color: AppColors.white),
         label: Text(
           'Agendar un solo destino',
-          style: oldMSemibold(color: AppColors.white),
+          style: mSemibold(sw, color: AppColors.white),
         ),
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.primary,
@@ -828,9 +829,9 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
           controller: ct,
           focusNode: f,
           onChanged: (text) => controller.text = text,
-          textInputAction: TextInputAction.search, // Botón de buscar en teclado
+          style: mSemibold(sw, color: AppColors.primary),
+          textInputAction: TextInputAction.search,
           onSubmitted: (_) {
-            // Al dar enter o buscar en teclado
             controller.text = ct.text;
             _calcularRutaMultiDestino();
           },
@@ -887,10 +888,11 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
           value: v,
-          hint: Text(h, style: labelStyle(sw, size: 12)),
+          style: mSemibold(sw, color: AppColors.primary),
+          hint: Text(h, style: mSemibold(sw, color: AppColors.textSecondary, size: 12)),
           isExpanded: true,
           items: i
-              .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+              .map((e) => DropdownMenuItem(value: e, child: Text(e, style: mSemibold(sw, color: AppColors.primary))))
               .toList(),
           onChanged: o,
         ),
@@ -909,10 +911,11 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
           value: selectedNeed,
-          hint: Text('Necesidad especial', style: labelStyle(sw, size: 13)),
+          style: mSemibold(sw, color: AppColors.primary),
+          hint: Text('Necesidad especial', style: mSemibold(sw, color: AppColors.textSecondary, size: 13)),
           isExpanded: true,
           items: needsList
-              .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+              .map((e) => DropdownMenuItem(value: e, child: Text(e, style: mSemibold(sw, color: AppColors.primary))))
               .toList(),
           onChanged: (v) => setState(() {
             selectedNeed = v;
@@ -941,16 +944,17 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
           value: v,
+          style: mSemibold(sw, color: AppColors.primary),
           hint: Row(
             children: [
               Icon(i, color: AppColors.primary, size: 20),
               const SizedBox(width: 10),
-              Text(h, style: labelStyle(sw, size: 13)),
+              Text(h, style: mSemibold(sw, color: AppColors.textSecondary, size: 13)),
             ],
           ),
           isExpanded: true,
           items: it
-              .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+              .map((e) => DropdownMenuItem(value: e, child: Text(e, style: mSemibold(sw, color: AppColors.primary))))
               .toList(),
           onChanged: o,
         ),
