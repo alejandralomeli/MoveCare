@@ -26,6 +26,8 @@ dependencies:
   syncfusion_flutter_pdfviewer: ^33.1.44
   speech_to_text: ^7.0.0
   flutter_tts: ^4.2.0
+  flutter_dotenv: ^6.0.0
+  flutter_stripe: ^12.6.0
 
 dev_dependencies:
   flutter_test:
@@ -35,6 +37,7 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
+    - .env
     - assets/ruta.png
     - assets/movecare.png
     - assets/icono_google.png

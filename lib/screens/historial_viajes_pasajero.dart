@@ -1,3 +1,4 @@
+import 'dart:convert'; // 👈 IMPORTANTE: Necesario para decodificar Base64
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../app_theme.dart';
@@ -22,7 +23,7 @@ class _HistorialViajesPasajero extends State<HistorialViajesPasajero> {
   List<dynamic> _viajesCompletos = [];
   List<dynamic> _viajesFiltrados = [];
 
-  // Filtros completos (HEAD)
+  // Filtros completos
   final List<String> filters = [
     'Todos',
     'Pendiente',
@@ -38,7 +39,7 @@ class _HistorialViajesPasajero extends State<HistorialViajesPasajero> {
     _cargarHistorial();
   }
 
-  // Estilo de texto flexible (Basado en Main)
+  // Estilo de texto flexible
   TextStyle mFont({
     Color color = AppColors.primary,
     double size = 14,
@@ -63,7 +64,7 @@ class _HistorialViajesPasajero extends State<HistorialViajesPasajero> {
       }
     } catch (e) {
       if (mounted) {
-        setState(() => _isLoading = false); // Asegurar que deje de cargar
+        setState(() => _isLoading = false);
         AuthHelper.manejarError(context, e);
       }
     }
@@ -79,7 +80,7 @@ class _HistorialViajesPasajero extends State<HistorialViajesPasajero> {
         _viajesFiltrados = _viajesCompletos
             .where(
               (v) =>
-                  v['estado'].toString().toLowerCase() ==
+                  v['estado']?.toString().toLowerCase() ==
                   filtroNormalizado.toLowerCase(),
             )
             .toList();
@@ -87,20 +88,25 @@ class _HistorialViajesPasajero extends State<HistorialViajesPasajero> {
     });
   }
 
-  Color _getStatusColor(String status) {
-    switch (status.toLowerCase()) {
-      case 'En_curso':
-        return AppColors.primary;
-      case 'Finalizado':
-        return const Color(0xFF16A34A);
-      case 'Cancelado':
-        return AppColors.error;
-      case 'Agendado':
-        return const Color(0xFFF59E0B);
-      case 'Pendiente':
-        return const Color(0xFFFBBF24);
-      default:
-        return AppColors.textSecondary;
+  // 🚀 NUEVA FUNCIÓN: Decodificador seguro de Base64 a Imagen
+  ImageProvider _getProfileImage(String? base64Data) {
+    if (base64Data == null || base64Data.trim().isEmpty) {
+      return const AssetImage('assets/conductor.png'); // Imagen por defecto
+    }
+
+    try {
+      String cleanBase64 = base64Data;
+      // Si el backend manda el prefijo "data:image/png;base64,", lo quitamos
+      if (cleanBase64.contains(',')) {
+        cleanBase64 = cleanBase64.split(',').last;
+      }
+      // Quitamos espacios en blanco o saltos de línea indeseados
+      cleanBase64 = cleanBase64.replaceAll(RegExp(r'\s+'), '');
+
+      return MemoryImage(base64Decode(cleanBase64));
+    } catch (e) {
+      // Si el string viene corrupto, mostramos el avatar por defecto y evitamos el crasheo
+      return const AssetImage('assets/conductor.png');
     }
   }
 
@@ -121,10 +127,7 @@ class _HistorialViajesPasajero extends State<HistorialViajesPasajero> {
           ),
           SliverToBoxAdapter(
             child: Column(
-              children: [
-                const SizedBox(height: 35),
-                _buildFilterMenu(),
-              ],
+              children: [const SizedBox(height: 35), _buildFilterMenu()],
             ),
           ),
           if (_isLoading)
@@ -149,26 +152,14 @@ class _HistorialViajesPasajero extends State<HistorialViajesPasajero> {
             SliverPadding(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
               sliver: SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    final viaje = _viajesFiltrados[index];
-                    return _buildTripCard(
-                      viaje['estado'].toString().replaceAll("_", " "),
-                      _getStatusColor(viaje['estado']),
-                      viaje['fecha_inicio'] ?? 'Fecha desconocida',
-                      viaje['punto_inicio'] ?? 'Origen desconocido',
-                      viaje['destino'] ?? 'Múltiples destinos',
-                      viaje['nombre_conductor'],
-                      viaje['foto_conductor'],
-                    );
-                  },
-                  childCount: _viajesFiltrados.length,
-                ),
+                delegate: SliverChildBuilderDelegate((context, index) {
+                  final viaje = _viajesFiltrados[index];
+                  return _buildTripCard(viaje);
+                }, childCount: _viajesFiltrados.length),
               ),
             ),
         ],
       ),
-      bottomNavigationBar: const PassengerBottomNav(selectedIndex: 2),
     );
   }
 
@@ -207,16 +198,53 @@ class _HistorialViajesPasajero extends State<HistorialViajesPasajero> {
     );
   }
 
-  // Tarjeta híbrida: Datos de HEAD + Estilo de Main
-  Widget _buildTripCard(
-    String status,
-    Color statusColor,
-    String date,
-    String origen,
-    String destino,
-    String? conductor,
-    String? foto,
-  ) {
+  Widget _buildTripCard(dynamic viaje) {
+    if (viaje == null) return const SizedBox.shrink();
+
+    String estado = viaje['estado']?.toString().toLowerCase() ?? '';
+    String statusText = 'Desconocido';
+    Color statusColor = AppColors.primary;
+    bool esFinalizado = false;
+
+    if (estado == 'en_curso') {
+      statusText = 'En Curso';
+      statusColor = AppColors.primary;
+    } else if (estado == 'agendado') {
+      statusText = 'Agendado';
+      statusColor = Colors.blue;
+    } else if (estado == 'pendiente') {
+      statusText = 'Pendiente';
+      statusColor = Colors.orange;
+    } else if (estado == 'finalizado' || estado == 'aceptado') {
+      statusText = 'Finalizado';
+      statusColor = const Color(0xFF16A34A);
+      esFinalizado = true;
+    } else if (estado == 'cancelado' || estado == 'rechazado') {
+      statusText = 'Cancelado';
+      statusColor = AppColors.error;
+    }
+
+    String origen =
+        viaje['punto_inicio']?.toString() ??
+        viaje['origen']?.toString() ??
+        'Origen desconocido';
+    String destino = viaje['destino']?.toString() ?? 'Destino desconocido';
+    String date =
+        viaje['fecha_inicio']?.toString() ??
+        viaje['fecha']?.toString() ??
+        '---';
+    String conductor =
+        viaje['nombre_conductor']?.toString() ??
+        viaje['conductor']?.toString() ??
+        'Buscando conductor...';
+
+    // Obtenemos el texto en Base64
+    String? fotoBase64 =
+        viaje['foto_conductor']?.toString() ?? viaje['foto']?.toString();
+
+    String idViaje =
+        viaje['id_viaje']?.toString() ?? viaje['id']?.toString() ?? '';
+
     return Container(
       margin: const EdgeInsets.only(bottom: 20),
       decoration: BoxDecoration(
@@ -233,7 +261,6 @@ class _HistorialViajesPasajero extends State<HistorialViajesPasajero> {
       ),
       child: Stack(
         children: [
-          // Badge de estado
           Positioned(
             right: 20,
             top: 45,
@@ -244,7 +271,7 @@ class _HistorialViajesPasajero extends State<HistorialViajesPasajero> {
                 borderRadius: BorderRadius.circular(15),
               ),
               child: Text(
-                status,
+                statusText,
                 style: mFont(
                   color: AppColors.white,
                   size: 11,
@@ -260,8 +287,6 @@ class _HistorialViajesPasajero extends State<HistorialViajesPasajero> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 10),
-
-                // Sección de Origen y Destino (Datos de HEAD, Layout limpio)
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -313,77 +338,130 @@ class _HistorialViajesPasajero extends State<HistorialViajesPasajero> {
                 const Divider(height: 1, color: AppColors.border),
                 const SizedBox(height: 15),
 
-                // Sección Conductor (Datos de HEAD + UI de Main)
                 Row(
                   children: [
+                    // 🚀 APLICACIÓN DE LA IMAGEN EN BASE64
                     CircleAvatar(
                       radius: 25,
                       backgroundColor: AppColors.primaryLight,
-                      backgroundImage: (foto != null && foto.isNotEmpty)
-                          ? NetworkImage(foto) as ImageProvider
-                          : const AssetImage('assets/conductor.png'),
+                      backgroundImage: _getProfileImage(fotoBase64),
                     ),
                     const SizedBox(width: 15),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          conductor ?? 'Buscando conductor...',
-                          style: mFont(
-                            size: 14,
-                            color: AppColors.textPrimary,
-                            weight: FontWeight.w600,
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            conductor,
+                            style: mFont(
+                              size: 14,
+                              color: AppColors.textPrimary,
+                              weight: FontWeight.w600,
+                            ),
+                            overflow: TextOverflow.ellipsis,
                           ),
-                        ),
-                        const SizedBox(height: 4),
-                        // Estrellas y Verificado (UI de Main)
-                        Row(
-                          children: [
-                            Row(
-                              children: List.generate(
-                                5,
-                                (index) => const Icon(
-                                  Icons.star,
-                                  color: Colors.orange,
-                                  size: 12,
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              Row(
+                                children: List.generate(
+                                  5,
+                                  (index) => const Icon(
+                                    Icons.star,
+                                    color: Colors.orange,
+                                    size: 12,
+                                  ),
                                 ),
                               ),
-                            ),
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 6,
-                                vertical: 2,
-                              ),
-                              decoration: BoxDecoration(
-                                color: AppColors.primary,
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Row(
-                                children: [
-                                  const Icon(
-                                    Icons.check_circle,
-                                    color: AppColors.white,
-                                    size: 10,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    'Verificado',
-                                    style: mFont(
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primary,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.check_circle,
                                       color: AppColors.white,
-                                      size: 9,
-                                      weight: FontWeight.w600,
+                                      size: 10,
                                     ),
-                                  ),
-                                ],
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      'Verificado',
+                                      style: mFont(
+                                        color: AppColors.white,
+                                        size: 9,
+                                        weight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
-                            ),
-                          ],
-                        ),
-                      ],
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
+
+                if (esFinalizado) ...[
+                  const SizedBox(height: 12),
+                  const Divider(height: 1, color: AppColors.border),
+                  const SizedBox(height: 6),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton.icon(
+                      onPressed: () {
+                        if (idViaje.isNotEmpty) {
+                          Navigator.pushNamed(
+                            context,
+                            '/reporte_incidencia_pasajero',
+                            arguments: idViaje,
+                          );
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Error: Viaje sin ID válido.'),
+                            ),
+                          );
+                        }
+                      },
+                      icon: const Icon(
+                        Icons.flag_rounded,
+                        color: AppColors.error,
+                        size: 16,
+                      ),
+                      label: Text(
+                        'Reportar incidencia',
+                        style: mFont(
+                          color: AppColors.error,
+                          size: 12,
+                          weight: FontWeight.w600,
+                        ),
+                      ),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        backgroundColor: AppColors.error.withValues(
+                          alpha: 0.05,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -391,7 +469,6 @@ class _HistorialViajesPasajero extends State<HistorialViajesPasajero> {
       ),
     );
   }
-
 }
 
 class _HeaderDelegate extends SliverPersistentHeaderDelegate {
@@ -401,7 +478,11 @@ class _HeaderDelegate extends SliverPersistentHeaderDelegate {
   _HeaderDelegate({required this.isVoiceActive, required this.onVoiceTap});
 
   @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
     return Stack(
       clipBehavior: Clip.none,
       children: [
@@ -424,15 +505,22 @@ class _HeaderDelegate extends SliverPersistentHeaderDelegate {
           left: 10,
           bottom: 20,
           child: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new,
-                color: AppColors.primary, size: 20),
+            icon: const Icon(
+              Icons.arrow_back_ios_new,
+              color: AppColors.primary,
+              size: 20,
+            ),
             onPressed: () => Navigator.of(context).pop(),
           ),
         ),
         Positioned(
           right: 15,
           bottom: -20,
-          child: MicButton(isActive: isVoiceActive, onTap: onVoiceTap, size: 42),
+          child: MicButton(
+            isActive: isVoiceActive,
+            onTap: onVoiceTap,
+            size: 42,
+          ),
         ),
       ],
     );

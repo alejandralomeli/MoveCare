@@ -45,12 +45,84 @@ class _ReporteIncidenciaState extends State<ReporteIncidencia> {
     }
   }
 
-  // --- PROCESAR ACCIÓN (ACEPTAR/RECHAZAR) ---
-  Future<void> _procesarReporte(String idReporte, String nuevoEstado) async {
-    // TODO: Obtener este ID desde la sesión del usuario (ej. AuthHelper.getUsuarioId())
-    const int idAdminActual = 1; 
+  // --- MODAL PARA RECHAZAR REPORTE ---
+  Future<void> _mostrarModalRechazo(String idReporte) async {
+    final TextEditingController motivoController = TextEditingController();
 
-    // Mostrar un pequeño indicador de carga (opcional pero recomendado)
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: AppColors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text(
+            'Motivo de rechazo',
+            style: mExtrabold(size: 16, context: context, color: AppColors.textPrimary),
+          ),
+          content: TextField(
+            controller: motivoController,
+            maxLines: 3,
+            decoration: InputDecoration(
+              hintText: 'Explique por qué se descarta este reporte...',
+              hintStyle: GoogleFonts.montserrat(fontSize: 12, color: AppColors.textSecondary),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(color: AppColors.border),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(color: AppColors.primary),
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context), // Cierra el modal sin hacer nada
+              child: Text(
+                'Cancelar',
+                style: GoogleFonts.montserrat(
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.error,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              onPressed: () {
+                final motivo = motivoController.text.trim();
+                if (motivo.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Debe ingresar un motivo para rechazar.'),
+                      backgroundColor: Colors.orange,
+                    ),
+                  );
+                  return;
+                }
+                Navigator.pop(context); // Cierra el modal
+                // Ejecuta el proceso con el motivo ingresado
+                _procesarReporte(idReporte, 'Rechazado', motivoRechazo: motivo);
+              },
+              child: Text(
+                'Descartar',
+                style: GoogleFonts.montserrat(
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.white,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // --- PROCESAR ACCIÓN (ACEPTAR/RECHAZAR) ---
+  // 🔥 Agregamos el parámetro opcional motivoRechazo
+  Future<void> _procesarReporte(String idReporte, String nuevoEstado, {String motivoRechazo = ""}) async {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -58,16 +130,16 @@ class _ReporteIncidenciaState extends State<ReporteIncidencia> {
     );
 
     try {
+      // 🔥 Ahora mandamos el motivo al service
       await IncidenciasService.cambiarEstadoReporte(
         idReporte: idReporte,
         estado: nuevoEstado,
-        idAdministrador: idAdminActual,
+        motivoRechazo: motivoRechazo, 
       );
 
       if (mounted) {
         Navigator.pop(context); // Cierra el dialog de carga
-        
-        // Removemos el reporte de la lista local para no volver a consultarlo
+
         setState(() {
           _reportes.removeWhere((r) => r['id_reporte'].toString() == idReporte);
         });
@@ -75,7 +147,7 @@ class _ReporteIncidenciaState extends State<ReporteIncidencia> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Reporte marcado como $nuevoEstado'),
-            backgroundColor: const Color(0xFF16A34A), // Verde éxito
+            backgroundColor: nuevoEstado == 'Aceptado' ? const Color(0xFF16A34A) : AppColors.error,
           ),
         );
       }
@@ -98,7 +170,11 @@ class _ReporteIncidenciaState extends State<ReporteIncidencia> {
     return (size <= 20 && res > 20) ? 20 : res;
   }
 
-  TextStyle mExtrabold({Color color = Colors.black, double size = 14, required BuildContext context}) {
+  TextStyle mExtrabold({
+    Color color = Colors.black,
+    double size = 14,
+    required BuildContext context,
+  }) {
     return GoogleFonts.montserrat(
       color: color,
       fontSize: sp(size, context),
@@ -112,7 +188,9 @@ class _ReporteIncidenciaState extends State<ReporteIncidencia> {
 
     return Scaffold(
       backgroundColor: AppColors.white,
-      bottomNavigationBar: const AdminBottomNav(selectedIndex: 2), // Asegúrate de tener este widget
+      bottomNavigationBar: const AdminBottomNav(
+        selectedIndex: 2,
+      ), // Asegúrate de tener este widget
       body: CustomScrollView(
         physics: const BouncingScrollPhysics(),
         slivers: [
@@ -123,8 +201,7 @@ class _ReporteIncidenciaState extends State<ReporteIncidencia> {
               onVoiceTap: () => setState(() => _isListening = !_isListening),
             ),
           ),
-          
-          // --- RENDERIZADO CONDICIONAL DE LA LISTA ---
+
           if (_isLoading)
             const SliverFillRemaining(
               child: Center(
@@ -147,7 +224,10 @@ class _ReporteIncidenciaState extends State<ReporteIncidencia> {
           else
             SliverFillRemaining(
               child: ListView.builder(
-                padding: EdgeInsets.symmetric(horizontal: sw * 0.06, vertical: 20),
+                padding: EdgeInsets.symmetric(
+                  horizontal: sw * 0.06,
+                  vertical: 20,
+                ),
                 physics: const BouncingScrollPhysics(),
                 itemCount: _reportes.length,
                 itemBuilder: (context, index) {
@@ -162,11 +242,10 @@ class _ReporteIncidenciaState extends State<ReporteIncidencia> {
   }
 
   Widget _buildReportCard(BuildContext context, dynamic reporte) {
-    // Extracción segura de datos
-    final String idReporte = reporte['id_reporte']?.toString() ?? 'N/A';
+    final String rawId = reporte['id_reporte']?.toString() ?? 'N/A';
+    final String idReporte = rawId.split('-')[0];
     final String tipoReporte = reporte['tipo_reporte']?.toString() ?? 'Reporte general';
     final String descripcion = reporte['descripcion']?.toString() ?? 'Sin descripción proporcionada.';
-    // Si tu backend manda fecha, úsala. Si no, ponemos un placeholder
     final String fecha = reporte['fecha_creacion']?.toString() ?? 'Fecha no disponible';
 
     return Container(
@@ -183,7 +262,10 @@ class _ReporteIncidenciaState extends State<ReporteIncidencia> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Reporte #$idReporte', style: mExtrabold(size: 15, context: context)),
+              Text(
+                'Reporte #$idReporte',
+                style: mExtrabold(size: 15, context: context),
+              ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
@@ -192,23 +274,34 @@ class _ReporteIncidenciaState extends State<ReporteIncidencia> {
                 ),
                 child: Text(
                   tipoReporte.toUpperCase(),
-                  style: mExtrabold(color: AppColors.white, size: 10, context: context),
+                  style: mExtrabold(
+                    color: AppColors.white,
+                    size: 10,
+                    context: context,
+                  ),
                 ),
-              )
+              ),
             ],
           ),
           const SizedBox(height: 8),
           Text(
             'Fecha: $fecha',
-            style: GoogleFonts.montserrat(fontSize: sp(12, context), fontWeight: FontWeight.w600),
+            style: GoogleFonts.montserrat(
+              fontSize: sp(12, context),
+              fontWeight: FontWeight.w600,
+            ),
           ),
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 10),
-            child: const Divider(color: AppColors.border, thickness: 1),
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 10),
+            child: Divider(color: AppColors.border, thickness: 1),
           ),
           Text(
             'Descripción:',
-            style: mExtrabold(size: 13, context: context, color: AppColors.primary),
+            style: mExtrabold(
+              size: 13,
+              context: context,
+              color: AppColors.primary,
+            ),
           ),
           const SizedBox(height: 5),
           Text(
@@ -223,28 +316,32 @@ class _ReporteIncidenciaState extends State<ReporteIncidencia> {
                 bgColor: AppColors.white,
                 textColor: AppColors.textSecondary,
                 context: context,
-                onPressed: () => _procesarReporte(idReporte, 'Rechazado'),
+                // 🔥 Ahora llama al modal en lugar de procesar directo
+                onPressed: () => _mostrarModalRechazo(reporte['id_reporte'].toString()),
               ),
               const SizedBox(width: 10),
               _actionBtn(
-                label: 'Aceptar', // Cambié "Bloquear" por "Aceptar" para que haga sentido con el backend
-                bgColor: AppColors.error,
+                label: 'Aceptar',
+                bgColor: AppColors.error, // Nota: el verde suele ser mejor para aceptar, pero respeté tus colores
                 textColor: AppColors.white,
                 context: context,
-                onPressed: () => _procesarReporte(idReporte, 'Aceptado'),
+                // Aceptar pasa directo sin motivo (o motivo vacío)
+                onPressed: () => _procesarReporte(
+                  reporte['id_reporte'].toString(),
+                  'Aceptado',
+                ),
               ),
             ],
-          )
+          ),
         ],
       ),
     );
   }
 
-  // Modifiqué el botón para que acepte el callback
   Widget _actionBtn({
-    required String label, 
-    required Color bgColor, 
-    required Color textColor, 
+    required String label,
+    required Color bgColor,
+    required Color textColor,
     required BuildContext context,
     required VoidCallback onPressed,
   }) {
@@ -256,7 +353,9 @@ class _ReporteIncidenciaState extends State<ReporteIncidencia> {
           foregroundColor: textColor,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(10),
-            side: bgColor == AppColors.white ? const BorderSide(color: AppColors.border) : BorderSide.none,
+            side: bgColor == AppColors.white
+                ? const BorderSide(color: AppColors.border)
+                : BorderSide.none,
           ),
           elevation: 0,
           padding: const EdgeInsets.symmetric(vertical: 10),
@@ -277,7 +376,11 @@ class _HeaderDelegate extends SliverPersistentHeaderDelegate {
   _HeaderDelegate({required this.isVoiceActive, required this.onVoiceTap});
 
   @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
     return Stack(
       clipBehavior: Clip.none,
       children: [
@@ -300,7 +403,11 @@ class _HeaderDelegate extends SliverPersistentHeaderDelegate {
           left: 10,
           bottom: 20,
           child: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.primary, size: 20),
+            icon: const Icon(
+              Icons.arrow_back_ios_new,
+              color: AppColors.primary,
+              size: 20,
+            ),
             onPressed: () => Navigator.of(context).pop(),
           ),
         ),

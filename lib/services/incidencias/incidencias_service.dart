@@ -47,27 +47,25 @@ class IncidenciasService {
     throw Exception(bodyResponse["detail"] ?? "Error al cargar los reportes pendientes");
   }
 
-  // 🔥 NUEVO: CAMBIAR ESTADO DEL REPORTE (Aceptar/Rechazar)
   static Future<bool> cambiarEstadoReporte({
     required String idReporte,
     required String estado,        // "Aceptado" o "Rechazado"
-    required int idAdministrador,  // Enviamos el ID del admin que gestiona
+    String motivoRechazo = "",     // 🔥 Nuevo parámetro opcional (por defecto vacío)
   }) async {
     final Map<String, dynamic> body = {
       "estado": estado,
-      "id_administrador": idAdministrador,
+      "motivo_rechazo": motivoRechazo, // 🔥 Se envía al backend
     };
 
-    // Asegúrate de que HttpClient tenga el método .patch() 
-    // Si usas HTTP puro en tu client: http.patch(url, body: jsonEncode(body), ...)
+    // Usamos .put como acordamos para evitar el error 405
     final response = await HttpClient.put("/api/reportes/$idReporte/estado", body);
 
     if (response.statusCode == 200) {
       return true;
     }
 
-    if (response.statusCode == 401) {
-      throw Exception('TOKEN_INVALIDO');
+    if (response.statusCode == 401 || response.statusCode == 403) {
+      throw Exception('TOKEN_INVALIDO_O_SIN_PERMISOS');
     }
 
     final bodyResponse = jsonDecode(response.body);

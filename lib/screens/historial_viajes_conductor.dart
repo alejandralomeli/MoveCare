@@ -19,11 +19,11 @@ class _HistorialViajesConductorState extends State<HistorialViajesConductor> {
   List<dynamic> _viajesCompletos = [];
   List<dynamic> _viajesFiltrados = [];
 
-  // Filtros originales restaurados
   final List<String> filters = [
     'Todos',
     'En curso',
     'Pendiente',
+    'Agendado', // 🔥 NUEVO ESTADO AQUÍ
     'Finalizado',
     'Cancelado',
   ];
@@ -169,6 +169,11 @@ class _HistorialViajesConductorState extends State<HistorialViajesConductor> {
     if (estado == 'en_curso') {
       statusText = 'En Curso';
       statusColor = AppColors.primary;
+    } else if (estado == 'agendado') {
+      // 🔥 NUEVA CONDICIÓN PARA AGENDADO
+      statusText = 'Agendado';
+      statusColor =
+          Colors.blue; // Puedes usar un azul de tu AppColors si lo prefieres
     } else if (estado == 'pendiente') {
       statusText = 'Pendiente';
       statusColor = Colors.orange;

@@ -195,6 +195,24 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
     return days[d.weekday - 1];
   }
 
+    String _monthName(int m) {
+    const months = [
+      'Enero',
+      'Febrero',
+      'Marzo',
+      'Abril',
+      'Mayo',
+      'Junio',
+      'Julio',
+      'Agosto',
+      'Septiembre',
+      'Octubre',
+      'Noviembre',
+      'Diciembre',
+    ];
+    return months[m - 1];
+  }
+
   // --- INTERFAZ DE VOZ ---
   Future<void> _toggleListening() async {
     if (!_speechDisponible) {
@@ -498,8 +516,8 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
                         _buildContactarConductorButton(),
                         const SizedBox(height: 12),
                       ],
-                      _buildReportButton(),
-                      const SizedBox(height: 30),
+                      // _buildReportButton(),
+                      // const SizedBox(height: 30),
                     ],
                   ),
                 ),
@@ -740,38 +758,105 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
     );
   }
 
-  Widget _buildTripHistory() {
+Widget _buildTripHistory() {
     if (_historialViajes.isEmpty) return const Text("Sin historial");
+    
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.border, width: 1),
       ),
+      // Mapeamos los viajes y usamos .asMap() para no poner Divider en el último
       child: Column(
-        children: _historialViajes.take(3).map((v) => _historyItem(v)).toList(),
+        children: _historialViajes.take(3).toList().asMap().entries.map((entry) {
+          int index = entry.key;
+          dynamic viaje = entry.value;
+          bool isLast = index == (_historialViajes.take(3).length - 1);
+          
+          return Column(
+            children: [
+              _historyItem(viaje),
+              if (!isLast) 
+                const Divider(height: 1, thickness: 1, color: AppColors.border),
+            ],
+          );
+        }).toList(),
       ),
     );
   }
 
   Widget _historyItem(dynamic viaje) {
+    // 1. Formatear la fecha dinámicamente igual que en el conductor
+    String fechaTexto = "Fecha N/A";
+    if (viaje['fecha_hora_inicio'] != null) {
+      try {
+        final f = DateTime.parse(viaje['fecha_hora_inicio']);
+        // Asegúrate de tener el método _monthName disponible en esta clase también
+        fechaTexto = "${_monthName(f.month).substring(0, 3)} ${f.day}";
+      } catch (e) {
+        fechaTexto = "Fecha N/A";
+      }
+    }
+
     return Padding(
       padding: const EdgeInsets.all(12),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            "Oct 28",
-            style: mExtrabold(size: 12),
+          Row(
+            children: [
+              Text(
+                fechaTexto, // 👈 Fecha real extraída del backend
+                style: mExtrabold(size: 12),
+              ),
+              const SizedBox(width: 15),
+              Expanded(
+                child: Text(
+                  viaje['destino'] ?? 'Viaje sin destino',
+                  style: mExtrabold(color: AppColors.primary, size: 13),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis, // Para que no se desborde si es muy largo
+                ),
+              ),
+              Text(
+                viaje['estado'] ?? 'Finalizado',
+                style: mExtrabold(color: AppColors.error, size: 10),
+              ),
+            ],
           ),
-          const SizedBox(width: 15),
-          Expanded(
-            child: Text(
-              viaje['destino'] ?? 'Viaje',
-              style: mExtrabold(color: AppColors.primary, size: 13),
+          const SizedBox(height: 8),
+          
+          // 🚀 AQUÍ ESTÁ EL BOTÓN DE REPORTE CON TODA LA LÓGICA
+          GestureDetector(
+            onTap: () {
+              if (viaje['id_viaje'] != null) {
+                Navigator.pushNamed(
+                  context,
+                  '/reporte_incidencia_pasajero', // 👈 Tu ruta de pasajero
+                  arguments: viaje['id_viaje'],   // 👈 Se envía el ID del viaje
+                );
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text("Error: Este viaje no tiene ID asociado"),
+                  ),
+                );
+              }
+            },
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.error_outline,
+                  color: AppColors.error,
+                  size: 14,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  'Reportar incidencia',
+                  style: mExtrabold(color: AppColors.error, size: 11),
+                ),
+              ],
             ),
-          ),
-          Text(
-            viaje['estado'] ?? 'Finalizado',
-            style: mExtrabold(color: AppColors.error ?? const Color.fromARGB(255, 219, 26, 26), size: 10),
           ),
         ],
       ),
@@ -836,23 +921,23 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
     );
   }
 
-  Widget _buildReportButton() {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton.icon(
-        onPressed: () => Navigator.pushNamed(context, '/reporte_incidencia_pasajero'),
-        icon: const Icon(Icons.error, color: AppColors.white),
-        label: Text(
-          'Reportar incidencia',
-          style: mExtrabold(color: AppColors.white, size: 15),
-        ),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color.fromARGB(255, 219, 26, 26),
-          padding: const EdgeInsets.symmetric(vertical: 12),
-        ),
-      ),
-    );
-  }
+  // Widget _buildReportButton() {
+  //   return SizedBox(
+  //     width: double.infinity,
+  //     child: ElevatedButton.icon(
+  //       onPressed: () => Navigator.pushNamed(context, '/reporte_incidencia_pasajero'),
+  //       icon: const Icon(Icons.error, color: AppColors.white),
+  //       label: Text(
+  //         'Reportar incidencia',
+  //         style: mExtrabold(color: AppColors.white, size: 15),
+  //       ),
+  //       style: ElevatedButton.styleFrom(
+  //         backgroundColor: const Color.fromARGB(255, 219, 26, 26),
+  //         padding: const EdgeInsets.symmetric(vertical: 12),
+  //       ),
+  //     ),
+  //   );
+  // }
 
   Widget _bottomSheetContent(BuildContext context) {
     return Container(

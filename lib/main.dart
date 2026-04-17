@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart'; 
+import 'package:flutter_stripe/flutter_stripe.dart'; 
 import 'package:movecare/providers/font_size_provider.dart' show FontSizeProvider;
 import './providers/user_provider.dart';
 import 'app_theme.dart';
@@ -15,6 +17,7 @@ import 'screens/nueva_contrasena.dart';
 import 'screens/menu_vistas.dart';
 
 // Screens Pasajero
+// ... (Tus imports actuales se mantienen igual)
 import 'screens/registro_pasajero.dart';
 import 'screens/principal_pasajero.dart';
 import 'screens/completar_perfil_pasajero.dart';
@@ -32,6 +35,7 @@ import 'screens/estimacion_costo.dart';
 import 'screens/metodos_pago_vista.dart';
 
 // Screens Conductor
+// ... (Tus imports actuales se mantienen igual)
 import 'screens/registro_conductor.dart';
 import 'screens/continuar_registro_conductor.dart';
 import 'screens/principal_conductor.dart';
@@ -54,7 +58,23 @@ import 'screens/historial_auditoria.dart';
 const Color primaryColor = Color(0xFF2E6FFC);
 const Color cardBackgroundColor = Color(0xFFE3F2FD);
 
-void main() {
+// 🔥 CAMBIO: El main ahora es Future y async
+Future<void> main() async {
+  // 1. Asegurar que los bindings de Flutter estén listos
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // 2. Cargar variables de entorno desde el archivo .env
+  try {
+    await dotenv.load(fileName: ".env");
+    
+    // 3. Configurar Stripe con la llave pública del .env
+    Stripe.publishableKey = dotenv.env['STRIPE_PUBLISHABLE_KEY'] ?? '';
+    // Opcional: Stripe.merchantId = 'any_string'; // Requerido para Apple Pay
+    
+  } catch (e) {
+    debugPrint("Error cargando .env o inicializando Stripe: $e");
+  }
+
   runApp(
     MultiProvider(
       providers: [
@@ -71,6 +91,7 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // ... (El resto de tu código de MyApp se mantiene exactamente igual)
     return MaterialApp(
       title: 'MoveCare App',
       debugShowCheckedModeBanner: false,
@@ -84,19 +105,15 @@ class MyApp extends StatelessWidget {
           child: child!,
         );
       },
-
-      // Mantenemos la lógica del Splash como entrada
       home: const SplashScreen(),
-
       routes: {
         // Rutas de Autenticación y Sistema
         '/bienvenido': (context) => const Bienvenido(),
-        '/menu_vistas': (context) => const MenuVistas(),
+        // '/menu_vistas': (context) => const MenuVistas(),
         '/iniciar_sesion': (context) => const IniciarSesion(),
         '/olvide_contrasena': (context) => const OlvideContrasena(),
         '/nueva_contrasena': (context) => const NuevaContrasena(),
         '/confirmar-correo': (context) => const ConfirmarCorreoScreen(), 
-        //'/menu_vistas': (context) => const MenuVistas(),
         '/registro': (context) => const Registro(),
 
         // Módulo Pasajero
@@ -104,15 +121,15 @@ class MyApp extends StatelessWidget {
         '/principal_pasajero': (context) => const PrincipalPasajero(),
         '/completar_perfil_pasajero': (context) => const CompletarPerfilPasajero(),
         '/perfil_pasajero': (context) => const PerfilPasajero(),
-        '/agendar_viaje': (context) => const AgendarViaje(), //FALTA LA IA
-        '/agendar_varios_destinos': (context) => const AgendarVariosDestinos(), //FALTA LA IA
-        '/pago_tarjeta': (context) => const PagoTarjetaScreen(), //FALTA STRIPE
+        '/agendar_viaje': (context) => const AgendarViaje(), //Falta IA
+        '/agendar_varios_destinos': (context) => const AgendarVariosDestinos(), //Falta IA
+        '/pago_tarjeta': (context) => const PagoTarjetaScreen(), // Configurar con Stripe
         '/registro_tarjeta': (context) => const RegistroTarjetaScreen(),
         '/registro_acompanante': (context) => const RegistrarAcompanante(),
         '/historial_viajes_pasajero': (context) => const HistorialViajesPasajero(),
-        '/reporte_incidencia_pasajero': (context) => const ReporteIncidenciaPasajero(), // ESTA ME QUEDA POR CONECTAR
-        '/viaje_confirmado': (context) => const ViajeConfirmado(), // ESTA ME QUEDA POR CONECTAR
-        '/estimacion_costo': (context) => const EstimacionViaje(), // ESTA ME QUEDA POR CONECTAR
+        '/reporte_incidencia_pasajero': (context) => const ReporteIncidenciaPasajero(),
+        '/viaje_confirmado': (context) => const ViajeConfirmado(), //Falta
+        '/estimacion_costo': (context) => const EstimacionViaje(), //Falta
         '/metodos_pago_lista': (context) => const MetodosPagoVista(),
 
         // Módulo Conductor
@@ -125,7 +142,7 @@ class MyApp extends StatelessWidget {
         '/viajes_conductor': (context) => const SolicitudesViajesConductor(),
         '/historial_viajes_conductor': (context) => const HistorialViajesConductor(),
         '/completar_perfil_conductor': (context) => const CompletarPerfilConductor(),
-        '/reporte_incidencia_conductor': (context) => const ReporteIncidenciaConductor(), //ESTO ES NUEVO
+        '/reporte_incidencia_conductor': (context) => const ReporteIncidenciaConductor(),
         '/metricas_conductor': (context) => const MetricasConductor(),
 
         // Módulo Administrativo
