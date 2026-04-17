@@ -33,6 +33,7 @@ import 'screens/reporte_incidencia_conductor.dart';
 import 'screens/viaje_confirmado.dart';
 import 'screens/estimacion_costo.dart';
 import 'screens/metodos_pago_vista.dart';
+import 'screens/terminos_vista.dart';
 
 // Screens Conductor
 // ... (Tus imports actuales se mantienen igual)
@@ -131,6 +132,8 @@ class MyApp extends StatelessWidget {
         '/viaje_confirmado': (context) => const ViajeConfirmado(), //Falta
         '/estimacion_costo': (context) => const EstimacionViaje(), //Falta
         '/metodos_pago_lista': (context) => const MetodosPagoVista(),
+        '/terminos_condiciones': (context) => const TerminosVista(),
+        '/aviso_privacidad': (context) => const PrivacidadVista(),
 
         // Módulo Conductor
         '/registro_conductor': (context) => const RegistroConductor(),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../app_theme.dart';
+import '../services/combustible/combustible_service.dart';
 
 class MetricasConductor extends StatefulWidget {
   const MetricasConductor({super.key});
@@ -37,6 +38,12 @@ class _MetricasConductorState extends State<MetricasConductor>
     'mejor_dia': 'Sábado',
   };
 
+  // ── Datos gasolina (desde backend) ───────────────────────────────────────
+  Map<String, dynamic>? _nivelData;
+  List<Map<String, dynamic>> _historialCargas = [];
+  bool _cargandoCombustible = false;
+  String? _errorCombustible;
+
   // ── Estáticos ─────────────────────────────────────────────────────────────
   final List<String> _diasSemana = ['L', 'M', 'Mi', 'J', 'V', 'S', 'D'];
   final List<String> _semanasMes = ['S1', 'S2', 'S3', 'S4', 'S5'];
@@ -59,6 +66,33 @@ class _MetricasConductorState extends State<MetricasConductor>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _cargarDatosCombustible();
+  }
+
+  Future<void> _cargarDatosCombustible() async {
+    setState(() {
+      _cargandoCombustible = true;
+      _errorCombustible = null;
+    });
+    try {
+      final kmActuales = (_kpis['km_totales'] as num).toDouble();
+      final results = await Future.wait([
+        CombustibleService.obtenerNivel(kmActuales),
+        CombustibleService.obtenerHistorial(limite: 5),
+      ]);
+      if (!mounted) return;
+      setState(() {
+        _nivelData         = results[0] as Map<String, dynamic>;
+        _historialCargas   = results[1] as List<Map<String, dynamic>>;
+        _cargandoCombustible = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _cargandoCombustible = false;
+        _errorCombustible    = 'Sin conexión al servidor';
+      });
+    }
   }
 
   @override
@@ -102,6 +136,10 @@ class _MetricasConductorState extends State<MetricasConductor>
                             _buildSectionTitle('Resumen del mes', Icons.table_chart_rounded),
                             const SizedBox(height: 14),
                             _buildResumenTable(),
+                            const SizedBox(height: 28),
+                            _buildSectionTitle('Control de gasolina', Icons.local_gas_station_rounded),
+                            const SizedBox(height: 14),
+                            _buildFuelSection(),
                             const SizedBox(height: 30),
                           ],
                         ),
@@ -386,6 +424,451 @@ class _MetricasConductorState extends State<MetricasConductor>
           ),
         ],
       ),
+    );
+  }
+
+  // ── CONTROL GASOLINA ──────────────────────────────────────────────────────
+
+  Color _fuelColor(double nivel) {
+    if (nivel > 0.5) return AppColors.success;
+    if (nivel > 0.25) return const Color(0xFFF59E0B);
+    return AppColors.error;
+  }
+
+  Widget _buildFuelSection() {
+    if (_cargandoCombustible) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: 32),
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    if (_errorCombustible != null) {
+      return Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.cloud_off_rounded, color: AppColors.error, size: 20),
+                const SizedBox(width: 8),
+                Text(_errorCombustible!, style: mBold(color: AppColors.error, size: 13)),
+              ],
+            ),
+            const SizedBox(height: 14),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                icon: const Icon(Icons.refresh_rounded, color: AppColors.white, size: 18),
+                label: Text('Reintentar', style: mBold(color: AppColors.white, size: 13)),
+                onPressed: _cargarDatosCombustible,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final sinRegistros = _nivelData == null ||
+        (_nivelData!['sin_registros'] == true);
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (sinRegistros) ...[
+            // ── Sin registros ─────────────────────────────────────────────
+            Center(
+              child: Column(
+                children: [
+                  const Icon(Icons.local_gas_station_outlined,
+                      size: 48, color: AppColors.textSecondary),
+                  const SizedBox(height: 10),
+                  Text(
+                    'Sin cargas registradas',
+                    style: mBold(color: AppColors.textSecondary, size: 14),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Registra tu primera carga para ver el nivel estimado',
+                    style: mBold(color: AppColors.textSecondary, size: 11),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          ] else ...[
+            // ── Indicador nivel ───────────────────────────────────────────
+            Builder(builder: (_) {
+              final nivel     = (_nivelData!['nivel'] as num).toDouble();
+              final porcentaje = (_nivelData!['porcentaje'] as num).toStringAsFixed(1);
+              final litros    = (_nivelData!['litros_actuales'] as num).toStringAsFixed(1);
+              final capacidad = (_nivelData!['capacidad_tanque'] as num).toStringAsFixed(0);
+              final color     = _fuelColor(nivel);
+
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.local_gas_station_rounded, color: color, size: 22),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text('Nivel estimado', style: mBold(color: AppColors.textSecondary, size: 12)),
+                                Text('$litros / $capacidad L  ($porcentaje%)',
+                                    style: mBold(color: color, size: 13)),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: LinearProgressIndicator(
+                                value: nivel,
+                                minHeight: 14,
+                                backgroundColor: color.withValues(alpha: 0.15),
+                                valueColor: AlwaysStoppedAnimation<Color>(color),
+                              ),
+                            ),
+                            if (nivel <= 0.25)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 6),
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.warning_amber_rounded,
+                                        color: AppColors.error, size: 14),
+                                    const SizedBox(width: 4),
+                                    Text('Nivel bajo — recarga pronto',
+                                        style: mBold(color: AppColors.error, size: 11)),
+                                  ],
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  Row(
+                    children: [
+                      Expanded(child: _buildFuelStat(
+                          Icons.speed_rounded, 'Rendimiento',
+                          '${(_nivelData!['rendimiento_kmL'] as num).toStringAsFixed(1)} km/L',
+                          const Color(0xFFF59E0B))),
+                      const SizedBox(width: 12),
+                      Expanded(child: _buildFuelStat(
+                          Icons.route_rounded, 'Km desde carga',
+                          '${(_nivelData!['km_desde_carga'] as num).toStringAsFixed(1)} km',
+                          AppColors.primary)),
+                    ],
+                  ),
+                ],
+              );
+            }),
+          ],
+
+          const Divider(height: 28, color: AppColors.border),
+
+          // ── Botón registrar carga ─────────────────────────────────────────
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+                padding: const EdgeInsets.symmetric(vertical: 13),
+              ),
+              icon: const Icon(Icons.add_rounded, color: AppColors.white, size: 18),
+              label: Text('Registré gasolina',
+                  style: mBold(color: AppColors.white, size: 14)),
+              onPressed: _mostrarModalRegistrarCarga,
+            ),
+          ),
+
+          // ── Historial ─────────────────────────────────────────────────────
+          if (_historialCargas.isNotEmpty) ...[
+            const SizedBox(height: 20),
+            Text('Últimas cargas', style: mBold(size: 14)),
+            const SizedBox(height: 10),
+            ..._historialCargas.map((c) => _buildHistorialItem(c)),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFuelStat(IconData icon, String label, String value, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.07),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: color, size: 18),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: mBold(color: AppColors.textSecondary, size: 10)),
+                const SizedBox(height: 2),
+                Text(value, style: mBold(color: AppColors.textPrimary, size: 13)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHistorialItem(Map<String, dynamic> carga) {
+    final litros  = (carga['litros_en_tanque'] as num).toStringAsFixed(1);
+    final costo   = (carga['costo'] as num).toStringAsFixed(0);
+    final fecha   = (carga['fecha'] as String?) ?? '';
+    final fechaCorta = fecha.length >= 10 ? fecha.substring(0, 10) : fecha;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.local_gas_station_rounded,
+              color: AppColors.primary, size: 18),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text('$litros L en tanque',
+                style: mBold(size: 13)),
+          ),
+          Text('\$$costo', style: mBold(color: AppColors.success, size: 13)),
+          const SizedBox(width: 12),
+          Text(fechaCorta,
+              style: mBold(color: AppColors.textSecondary, size: 11)),
+        ],
+      ),
+    );
+  }
+
+  void _mostrarModalRegistrarCarga() {
+    final ctrlLitros     = TextEditingController(text: '45');
+    final ctrlCapacidad  = TextEditingController(
+        text: _historialCargas.isNotEmpty
+            ? (_historialCargas.first['capacidad_tanque'] as num).toStringAsFixed(0)
+            : '50');
+    final ctrlCosto      = TextEditingController();
+    final ctrlRendimiento = TextEditingController(
+        text: _historialCargas.isNotEmpty
+            ? (_historialCargas.first['rendimiento_kmL'] as num).toStringAsFixed(1)
+            : '10.0');
+    final ctrlNotas      = TextEditingController();
+    bool guardando       = false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.white,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModal) => Padding(
+          padding: EdgeInsets.only(
+            left: 24, right: 24, top: 24,
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // ── Handle ───────────────────────────────────────────────────
+              Center(
+                child: Container(
+                  width: 40, height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.border,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 18),
+              Text('Registrar carga de gasolina', style: mBold(size: 17)),
+              const SizedBox(height: 20),
+
+              // ── Campos ───────────────────────────────────────────────────
+              Row(
+                children: [
+                  Expanded(child: _modalField(
+                    ctrl: ctrlLitros,
+                    label: 'Litros en tanque después de cargar',
+                    hint: 'ej. 45',
+                    suffix: 'L',
+                  )),
+                  const SizedBox(width: 12),
+                  Expanded(child: _modalField(
+                    ctrl: ctrlCapacidad,
+                    label: 'Capacidad total del tanque',
+                    hint: 'ej. 50',
+                    suffix: 'L',
+                  )),
+                ],
+              ),
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  Expanded(child: _modalField(
+                    ctrl: ctrlCosto,
+                    label: 'Costo pagado',
+                    hint: 'ej. 600',
+                    prefix: '\$',
+                  )),
+                  const SizedBox(width: 12),
+                  Expanded(child: _modalField(
+                    ctrl: ctrlRendimiento,
+                    label: 'Rendimiento esperado',
+                    hint: 'ej. 10.5',
+                    suffix: 'km/L',
+                  )),
+                ],
+              ),
+              const SizedBox(height: 14),
+              _modalField(
+                ctrl: ctrlNotas,
+                label: 'Notas (opcional)',
+                hint: 'ej. Carga en gasolinera del centro',
+              ),
+              const SizedBox(height: 22),
+
+              // ── Guardar ──────────────────────────────────────────────────
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  onPressed: guardando
+                      ? null
+                      : () async {
+                          final litros    = double.tryParse(ctrlLitros.text);
+                          final capacidad = double.tryParse(ctrlCapacidad.text);
+                          final costo     = double.tryParse(ctrlCosto.text);
+                          final rend      = double.tryParse(ctrlRendimiento.text);
+
+                          if (litros == null || capacidad == null ||
+                              costo == null || rend == null) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                  content: Text('Llena todos los campos requeridos')),
+                            );
+                            return;
+                          }
+
+                          setModal(() => guardando = true);
+                          final messenger = ScaffoldMessenger.of(context);
+                          try {
+                            final kmActuales =
+                                (_kpis['km_totales'] as num).toDouble();
+                            await CombustibleService.registrarCarga(
+                              litrosEnTanque: litros,
+                              capacidadTanque: capacidad,
+                              rendimientoKmL: rend,
+                              costo: costo,
+                              kmAlCargar: kmActuales,
+                              notas: ctrlNotas.text.trim().isEmpty
+                                  ? null
+                                  : ctrlNotas.text.trim(),
+                            );
+                            if (ctx.mounted) Navigator.pop(ctx);
+                            await _cargarDatosCombustible();
+                          } catch (e) {
+                            setModal(() => guardando = false);
+                            messenger.showSnackBar(
+                              SnackBar(content: Text('Error: $e')),
+                            );
+                          }
+                        },
+                  child: guardando
+                      ? const SizedBox(
+                          width: 20, height: 20,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: AppColors.white))
+                      : Text('Guardar carga',
+                          style: mBold(color: AppColors.white, size: 14)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _modalField({
+    required TextEditingController ctrl,
+    required String label,
+    required String hint,
+    String? suffix,
+    String? prefix,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: mBold(color: AppColors.textSecondary, size: 11)),
+        const SizedBox(height: 6),
+        TextField(
+          controller: ctrl,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          decoration: InputDecoration(
+            hintText: hint,
+            suffixText: suffix,
+            prefixText: prefix,
+            hintStyle: GoogleFonts.montserrat(
+                color: AppColors.textSecondary, fontSize: 13),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            filled: true,
+            fillColor: AppColors.surface,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: AppColors.border),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: AppColors.border),
+            ),
+          ),
+        ),
+      ],
     );
   }
 

@@ -67,8 +67,8 @@ class _AgendarViajeState extends State<AgendarViaje> {
     (index) => index.toString().padLeft(2, '0'),
   );
   final List<String> minutesList = List.generate(
-    60,
-    (index) => index.toString().padLeft(2, '0'),
+    12,
+    (index) => (index * 5).toString().padLeft(2, '0'),
   );
   final List<String> zmgLocations = [
     'Guadalajara Centro',
@@ -638,6 +638,7 @@ class _AgendarViajeState extends State<AgendarViaje> {
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
           value: val,
+          style: mSemibold(sw, color: AppColors.primary),
           hint: Text(
             hint,
             style: mSemibold(sw, color: AppColors.textSecondary, size: 12),
@@ -678,6 +679,7 @@ class _AgendarViajeState extends State<AgendarViaje> {
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
           value: val,
+          style: mSemibold(sw, color: AppColors.primary),
           hint: Row(
             children: [
               Icon(icon, color: AppColors.primary, size: 20),
