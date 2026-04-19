@@ -22,4 +22,12 @@ class VozSingleton {
     }
     return ok;
   }
+
+  /// Fuerza reinicialización del reconocimiento de voz.
+  /// Útil para recuperarse de errores del SpeechRecognition del navegador.
+  static Future<bool> reinicializar() async {
+    _inicializado = false;
+    if (speech.isListening) await speech.stop();
+    return inicializar();
+  }
 }

@@ -51,14 +51,6 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
 
   Future<void> _inicializarVoz() async {
     await VozSingleton.inicializar();
-    VozSingleton.speech.statusListener = (status) {
-      if (status == 'done' || status == 'notListening') {
-        if (mounted) setState(() => _isListening = false);
-      }
-    };
-    VozSingleton.speech.errorListener = (_) {
-      if (mounted) setState(() => _isListening = false);
-    };
   }
 
   // --- LÓGICA DE DATOS ---
@@ -226,38 +218,44 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
 
     setState(() => _isListening = true);
 
-    await speech.listen(
-      localeId: 'es_MX',
-      listenFor: const Duration(seconds: 8),
-      pauseFor: const Duration(seconds: 2),
-      onResult: (result) async {
-        if (!result.finalResult) return;
+    try {
+      await speech.listen(
+        localeId: 'es_MX',
+        listenFor: const Duration(seconds: 8),
+        pauseFor: const Duration(seconds: 2),
+        onResult: (result) async {
+          if (!result.finalResult) return;
 
-        final texto = result.recognizedWords.trim();
-        if (texto.isEmpty) {
-          setState(() => _isListening = false);
-          return;
-        }
+          final texto = result.recognizedWords.trim();
+          if (texto.isEmpty) {
+            setState(() => _isListening = false);
+            return;
+          }
 
-        setState(() {
-          _isListening = false;
-          _procesandoVoz = true;
-        });
+          setState(() {
+            _isListening = false;
+            _procesandoVoz = true;
+          });
 
-        try {
-          final respuesta = await VozService.interpretarComando(texto);
-          if (!mounted) return;
-          setState(() => _procesandoVoz = false);
+          try {
+            final respuesta = await VozService.interpretarComando(texto);
+            if (!mounted) return;
+            setState(() => _procesandoVoz = false);
 
-          await tts.speak(respuesta['respuesta_voz'] ?? '');
-          _manejarAccionVoz(respuesta);
-        } catch (_) {
-          if (!mounted) return;
-          setState(() => _procesandoVoz = false);
-          await tts.speak('Lo siento, no pude conectar con el servidor');
-        }
-      },
-    );
+            await tts.speak(respuesta['respuesta_voz'] ?? '');
+            _manejarAccionVoz(respuesta);
+          } catch (_) {
+            if (!mounted) return;
+            setState(() => _procesandoVoz = false);
+            await tts.speak('Lo siento, no pude conectar con el servidor');
+          }
+        },
+      );
+    } catch (e) {
+      if (mounted) setState(() => _isListening = false);
+      debugPrint('Voz: error al escuchar — $e');
+      await VozSingleton.reinicializar();
+    }
   }
 
   void _manejarAccionVoz(Map<String, dynamic> respuesta) {

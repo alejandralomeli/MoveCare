@@ -54,35 +54,43 @@ mixin VozMixin<T extends StatefulWidget> on State<T> {
 
     if (mounted) setState(() => vozEscuchando = true);
 
-    await speech.listen(
-      localeId: 'es_MX',
-      listenFor: const Duration(seconds: 8),
-      pauseFor: const Duration(seconds: 2),
-      onResult: (result) async {
-        if (!result.finalResult) return;
+    try {
+      await speech.listen(
+        localeId: 'es_MX',
+        listenFor: const Duration(seconds: 8),
+        pauseFor: const Duration(seconds: 2),
+        onResult: (result) async {
+          if (!result.finalResult) return;
 
-        final texto = result.recognizedWords.trim();
-        if (mounted) setState(() => vozEscuchando = false);
-        if (texto.isEmpty) return;
+          final texto = result.recognizedWords.trim();
+          if (mounted) setState(() => vozEscuchando = false);
+          if (texto.isEmpty) return;
 
-        if (mounted) setState(() => vozProcesando = true);
+          if (mounted) setState(() => vozProcesando = true);
 
-        try {
-          final respuesta = await VozService.interpretarComando(texto);
-          if (!mounted) return;
-          if (mounted) setState(() => vozProcesando = false);
+          try {
+            final respuesta = await VozService.interpretarComando(texto);
+            if (!mounted) return;
+            if (mounted) setState(() => vozProcesando = false);
 
-          final voz = respuesta['respuesta_voz'] as String? ?? '';
-          if (voz.isNotEmpty) await tts.speak(voz);
+            final voz = respuesta['respuesta_voz'] as String? ?? '';
+            if (voz.isNotEmpty) await tts.speak(voz);
 
-          _despacharAccion(respuesta, acciones);
-        } catch (_) {
-          if (!mounted) return;
-          if (mounted) setState(() => vozProcesando = false);
-          await tts.speak('Lo siento, no pude conectar con el servidor');
-        }
-      },
-    );
+            _despacharAccion(respuesta, acciones);
+          } catch (_) {
+            if (!mounted) return;
+            if (mounted) setState(() => vozProcesando = false);
+            await tts.speak('Lo siento, no pude conectar con el servidor');
+          }
+        },
+      );
+    } catch (e) {
+      // Reinicia el estado visual si listen() falla
+      if (mounted) setState(() => vozEscuchando = false);
+      debugPrint('VozMixin: error al escuchar — $e');
+      // Reinicializar el singleton para recuperar el objeto de reconocimiento
+      await VozSingleton.reinicializar();
+    }
   }
 
   /// Habla un texto directamente (útil para confirmaciones manuales).
