@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:speech_to_text/speech_to_text.dart';
-import 'package:flutter_tts/flutter_tts.dart';
 import 'voz_service.dart';
+import 'voz_singleton.dart';
 
 /// Mixin de control por voz para pantallas de pasajero.
 ///
@@ -18,29 +17,13 @@ import 'voz_service.dart';
 /// El mixin expone [vozEscuchando] y [vozProcesando] para reflejar
 /// el estado en el MicButton: isActive: vozEscuchando || vozProcesando
 mixin VozMixin<T extends StatefulWidget> on State<T> {
-  final SpeechToText _vozSpeech = SpeechToText();
-  final FlutterTts _vozTts = FlutterTts();
-
   bool vozEscuchando = false;
   bool vozProcesando = false;
-  bool _vozDisponible = false;
 
   // ── Inicialización ──────────────────────────────────────────────────────
 
   Future<void> inicializarVoz() async {
-    _vozDisponible = await _vozSpeech.initialize(
-      onError: (e) {
-        if (mounted) setState(() => vozEscuchando = false);
-      },
-      onStatus: (s) {
-        if (s == 'done' || s == 'notListening') {
-          if (mounted) setState(() => vozEscuchando = false);
-        }
-      },
-    );
-    await _vozTts.setLanguage('es-MX');
-    await _vozTts.setSpeechRate(0.45);
-    await _vozTts.setVolume(1.0);
+    await VozSingleton.inicializar();
   }
 
   // ── API pública ─────────────────────────────────────────────────────────
@@ -52,22 +35,26 @@ mixin VozMixin<T extends StatefulWidget> on State<T> {
   Future<void> escucharComando(
     Map<String, Function(Map<String, dynamic> entidades)> acciones,
   ) async {
-    if (!_vozDisponible) {
+    final speech = VozSingleton.speech;
+    final tts = VozSingleton.tts;
+
+    if (!VozSingleton.speech.isAvailable) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Micrófono no disponible')),
       );
       return;
     }
 
-    if (vozEscuchando) {
-      await _vozSpeech.stop();
+    // Si ya está escuchando (esta u otra pantalla), detener primero
+    if (speech.isListening) {
+      await speech.stop();
       if (mounted) setState(() => vozEscuchando = false);
       return;
     }
 
     if (mounted) setState(() => vozEscuchando = true);
 
-    await _vozSpeech.listen(
+    await speech.listen(
       localeId: 'es_MX',
       listenFor: const Duration(seconds: 8),
       pauseFor: const Duration(seconds: 2),
@@ -86,20 +73,20 @@ mixin VozMixin<T extends StatefulWidget> on State<T> {
           if (mounted) setState(() => vozProcesando = false);
 
           final voz = respuesta['respuesta_voz'] as String? ?? '';
-          if (voz.isNotEmpty) await _vozTts.speak(voz);
+          if (voz.isNotEmpty) await tts.speak(voz);
 
           _despacharAccion(respuesta, acciones);
         } catch (_) {
           if (!mounted) return;
           if (mounted) setState(() => vozProcesando = false);
-          await _vozTts.speak('Lo siento, no pude conectar con el servidor');
+          await tts.speak('Lo siento, no pude conectar con el servidor');
         }
       },
     );
   }
 
   /// Habla un texto directamente (útil para confirmaciones manuales).
-  Future<void> hablar(String texto) => _vozTts.speak(texto);
+  Future<void> hablar(String texto) => VozSingleton.tts.speak(texto);
 
   // ── Despacho ────────────────────────────────────────────────────────────
 
@@ -160,15 +147,11 @@ mixin VozMixin<T extends StatefulWidget> on State<T> {
         _mostrarNoReconocido();
         break;
       default:
-        // Intent reconocido pero sin acción en esta pantalla: snackbar suave
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Ese comando no está disponible en esta pantalla',
-              style: const TextStyle(color: Colors.white),
-            ),
+          const SnackBar(
+            content: Text('Ese comando no está disponible en esta pantalla'),
             backgroundColor: Colors.black54,
-            duration: const Duration(seconds: 2),
+            duration: Duration(seconds: 2),
           ),
         );
     }

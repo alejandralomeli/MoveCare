@@ -3,8 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:latlong2/latlong.dart'; // Restaurado para las rutas
-import 'package:speech_to_text/speech_to_text.dart';
-import 'package:flutter_tts/flutter_tts.dart';
+import '../services/voz/voz_singleton.dart';
 
 import 'chat_viaje.dart';
 import 'widgets/map_widget.dart';
@@ -32,10 +31,7 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
   bool _procesandoVoz = false;
   String _selectedDateNum = '';
 
-  // Voz
-  final SpeechToText _speech = SpeechToText();
-  final FlutterTts _tts = FlutterTts();
-  bool _speechDisponible = false;
+  // Voz (instancia compartida via singleton)
 
   DateTime _weekStart = DateTime.now();
   Map<String, dynamic>? _viajeProximo;
@@ -54,18 +50,15 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
   }
 
   Future<void> _inicializarVoz() async {
-    _speechDisponible = await _speech.initialize(
-      onStatus: (status) {
-        if (status == 'done' || status == 'notListening') {
-          if (mounted) setState(() => _isListening = false);
-        }
-      },
-      onError: (_) {
+    await VozSingleton.inicializar();
+    VozSingleton.speech.statusListener = (status) {
+      if (status == 'done' || status == 'notListening') {
         if (mounted) setState(() => _isListening = false);
-      },
-    );
-    await _tts.setLanguage('es-MX');
-    await _tts.setSpeechRate(0.45);
+      }
+    };
+    VozSingleton.speech.errorListener = (_) {
+      if (mounted) setState(() => _isListening = false);
+    };
   }
 
   // --- LÓGICA DE DATOS ---
@@ -215,22 +208,25 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
 
   // --- INTERFAZ DE VOZ ---
   Future<void> _toggleListening() async {
-    if (!_speechDisponible) {
+    final speech = VozSingleton.speech;
+    final tts = VozSingleton.tts;
+
+    if (!speech.isAvailable) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Micrófono no disponible en este dispositivo')),
       );
       return;
     }
 
-    if (_isListening) {
-      await _speech.stop();
+    if (speech.isListening) {
+      await speech.stop();
       setState(() => _isListening = false);
       return;
     }
 
     setState(() => _isListening = true);
 
-    await _speech.listen(
+    await speech.listen(
       localeId: 'es_MX',
       listenFor: const Duration(seconds: 8),
       pauseFor: const Duration(seconds: 2),
@@ -253,12 +249,12 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
           if (!mounted) return;
           setState(() => _procesandoVoz = false);
 
-          await _tts.speak(respuesta['respuesta_voz'] ?? '');
+          await tts.speak(respuesta['respuesta_voz'] ?? '');
           _manejarAccionVoz(respuesta);
         } catch (_) {
           if (!mounted) return;
           setState(() => _procesandoVoz = false);
-          await _tts.speak('Lo siento, no pude conectar con el servidor');
+          await tts.speak('Lo siento, no pude conectar con el servidor');
         }
       },
     );
