@@ -52,7 +52,7 @@ mixin VozMixin<T extends StatefulWidget> on State<T> {
       if (mounted) setState(() => vozEscuchando = false);
       if (eraEstaEscuchando) return; // el usuario quiso detener
       // Otra pantalla tenía la sesión: esperar y abrir nueva
-      await Future.delayed(const Duration(milliseconds: 300));
+      await Future.delayed(const Duration(milliseconds: 800));
     }
 
     if (mounted) setState(() => vozEscuchando = true);
@@ -65,8 +65,8 @@ mixin VozMixin<T extends StatefulWidget> on State<T> {
     try {
       await speech.listen(
         localeId: 'es_MX',
-        listenFor: const Duration(seconds: 8),
-        pauseFor: const Duration(seconds: 2),
+        listenFor: const Duration(seconds: 10),
+        pauseFor: const Duration(milliseconds: 1500),
         onResult: (result) async {
           if (!result.finalResult) return;
 
