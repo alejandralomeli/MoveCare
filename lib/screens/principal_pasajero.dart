@@ -210,13 +210,22 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
       return;
     }
 
+    // Si ERA esta pantalla la que estaba escuchando → toggle off
+    final eraEstaEscuchando = _isListening;
     if (speech.isListening) {
       await speech.stop();
-      setState(() => _isListening = false);
-      return;
+      if (mounted) setState(() => _isListening = false);
+      if (eraEstaEscuchando) return; // el usuario quiso detener
+      // Otra pantalla tenía la sesión: esperar y abrir nueva
+      await Future.delayed(const Duration(milliseconds: 300));
     }
 
-    setState(() => _isListening = true);
+    if (mounted) setState(() => _isListening = true);
+
+    // Auto-reset si la sesión termina sin resultado (timeout)
+    Future.delayed(const Duration(seconds: 12), () {
+      if (mounted && _isListening) setState(() => _isListening = false);
+    });
 
     try {
       await speech.listen(

@@ -38,21 +38,29 @@ mixin VozMixin<T extends StatefulWidget> on State<T> {
     final speech = VozSingleton.speech;
     final tts = VozSingleton.tts;
 
-    if (!VozSingleton.speech.isAvailable) {
+    if (!speech.isAvailable) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Micrófono no disponible')),
       );
       return;
     }
 
-    // Si ya está escuchando (esta u otra pantalla), detener primero
+    // Si ERA esta pantalla la que estaba escuchando → toggle off
+    final eraEstaEscuchando = vozEscuchando;
     if (speech.isListening) {
       await speech.stop();
       if (mounted) setState(() => vozEscuchando = false);
-      return;
+      if (eraEstaEscuchando) return; // el usuario quiso detener
+      // Otra pantalla tenía la sesión: esperar y abrir nueva
+      await Future.delayed(const Duration(milliseconds: 300));
     }
 
     if (mounted) setState(() => vozEscuchando = true);
+
+    // Auto-reset si la sesión termina sin resultado (timeout)
+    Future.delayed(const Duration(seconds: 12), () {
+      if (mounted && vozEscuchando) setState(() => vozEscuchando = false);
+    });
 
     try {
       await speech.listen(
