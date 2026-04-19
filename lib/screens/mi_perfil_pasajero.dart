@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../app_theme.dart';
 import '../core/utils/auth_helper.dart';
 import 'widgets/mic_button.dart';
+import '../services/voz/voz_mixin.dart';
 
 class MiPerfilPasajero extends StatefulWidget {
   const MiPerfilPasajero({super.key});
@@ -11,10 +12,12 @@ class MiPerfilPasajero extends StatefulWidget {
   State<MiPerfilPasajero> createState() => MiPerfilPasajeroState();
 }
 
-class MiPerfilPasajeroState extends State<MiPerfilPasajero> {
-  bool _isListening = false;
-
-  void _toggleListening() => setState(() => _isListening = !_isListening);
+class MiPerfilPasajeroState extends State<MiPerfilPasajero> with VozMixin {
+  @override
+  void initState() {
+    super.initState();
+    inicializarVoz();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -26,8 +29,13 @@ class MiPerfilPasajeroState extends State<MiPerfilPasajero> {
           SliverPersistentHeader(
             pinned: true,
             delegate: _HeaderDelegate(
-              isVoiceActive: _isListening,
-              onVoiceTap: _toggleListening,
+              isVoiceActive: vozEscuchando || vozProcesando,
+              onVoiceTap: () => escucharComando({
+                'ver_pagos': (_) => Navigator.pushNamed(context, '/metodos_pago_lista'),
+                'ver_acompanantes': (_) => Navigator.pushNamed(context, '/registro_acompanante'),
+                'solicitar_viaje': (_) => Navigator.pushNamed(context, '/agendar_viaje'),
+                'ir_atras': (_) => Navigator.pop(context),
+              }),
             ),
           ),
           SliverToBoxAdapter(

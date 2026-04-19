@@ -5,6 +5,7 @@ import '../app_theme.dart';
 import '../core/utils/auth_helper.dart';
 import '../services/viaje/viaje_service.dart';
 import 'widgets/mic_button.dart';
+import '../services/voz/voz_mixin.dart';
 
 class HistorialViajesPasajero extends StatefulWidget {
   const HistorialViajesPasajero({super.key});
@@ -13,10 +14,9 @@ class HistorialViajesPasajero extends StatefulWidget {
   State<HistorialViajesPasajero> createState() => _HistorialViajesPasajero();
 }
 
-class _HistorialViajesPasajero extends State<HistorialViajesPasajero> {
+class _HistorialViajesPasajero extends State<HistorialViajesPasajero> with VozMixin {
   // Variables de estado
   String _filterSelected = 'Todos';
-  bool _isVoiceActive = false;
   bool _isLoading = true;
 
   // Listas de datos
@@ -36,6 +36,7 @@ class _HistorialViajesPasajero extends State<HistorialViajesPasajero> {
   @override
   void initState() {
     super.initState();
+    inicializarVoz();
     _cargarHistorial();
   }
 
@@ -120,9 +121,13 @@ class _HistorialViajesPasajero extends State<HistorialViajesPasajero> {
           SliverPersistentHeader(
             pinned: true,
             delegate: _HeaderDelegate(
-              isVoiceActive: _isVoiceActive,
-              onVoiceTap: () =>
-                  setState(() => _isVoiceActive = !_isVoiceActive),
+              isVoiceActive: vozEscuchando || vozProcesando,
+              onVoiceTap: () => escucharComando({
+                'filtrar_completados': (_) => _aplicarFiltro('Finalizado'),
+                'filtrar_cancelados': (_) => _aplicarFiltro('Cancelado'),
+                'filtrar_todos': (_) => _aplicarFiltro('Todos'),
+                'ir_atras': (_) => Navigator.pop(context),
+              }),
             ),
           ),
           SliverToBoxAdapter(

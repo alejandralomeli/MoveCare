@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../app_theme.dart';
 import 'widgets/mic_button.dart';
+import '../services/voz/voz_mixin.dart';
 
 class EstimacionViaje extends StatefulWidget {
   const EstimacionViaje({super.key});
@@ -10,8 +11,12 @@ class EstimacionViaje extends StatefulWidget {
   State<EstimacionViaje> createState() => _EstimacionViajeState();
 }
 
-class _EstimacionViajeState extends State<EstimacionViaje> {
-  bool _isVoiceActive = false;
+class _EstimacionViajeState extends State<EstimacionViaje> with VozMixin {
+  @override
+  void initState() {
+    super.initState();
+    inicializarVoz();
+  }
 
   double sp(double size, double sw) => sw * (size / 375);
 
@@ -84,8 +89,11 @@ class _EstimacionViajeState extends State<EstimacionViaje> {
               top: 15,
               right: 15,
               child: MicButton(
-                isActive: _isVoiceActive,
-                onTap: () => setState(() => _isVoiceActive = !_isVoiceActive),
+                isActive: vozEscuchando || vozProcesando,
+                onTap: () => escucharComando({
+                  'ir_atras': (_) => Navigator.pop(context),
+                  'cancelar_accion': (_) => Navigator.pop(context),
+                }),
                 size: sp(42, sw),
               ),
             ),

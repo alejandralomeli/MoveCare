@@ -7,6 +7,7 @@ import '../services/acompanante/acompanante_service.dart';
 import '../services/viaje/viaje_service.dart';
 import '../services/pagos/pagos_service.dart';
 import '../core/utils/auth_helper.dart';
+import '../services/voz/voz_mixin.dart';
 
 // --- IMPORTS DEL MAPA (De viejo.txt) ---
 import 'package:latlong2/latlong.dart';
@@ -20,10 +21,9 @@ class AgendarVariosDestinos extends StatefulWidget {
   State<AgendarVariosDestinos> createState() => _AgendarVariosDestinosState();
 }
 
-class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
+class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> with VozMixin {
   // --- VARIABLES DE ESTADO (LÓGICA ACTUAL) ---
   bool _isCreatingTrip = false;
-  bool _isVoiceActive = false; // Estado para el header dinámico
 
   // Controladores de Texto
   final List<TextEditingController> _destinoControllers = [];
@@ -143,6 +143,7 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
   @override
   void initState() {
     super.initState();
+    inicializarVoz();
     _syncDestinoControllers();
     _cargarDatosIniciales();
   }
@@ -427,9 +428,30 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> {
             delegate: _DynamicHeaderDelegate(
               maxHeight: 80,
               minHeight: 80,
-              isVoiceActive: _isVoiceActive,
-              onVoiceTap: () =>
-                  setState(() => _isVoiceActive = !_isVoiceActive),
+              isVoiceActive: vozEscuchando || vozProcesando,
+              onVoiceTap: () => escucharComando({
+                'agregar_parada': (e) {
+                  final p = e['parada'] as String?;
+                  setState(() {
+                    _cantidadDestinos++;
+                    _syncDestinoControllers();
+                    if (p != null && p.isNotEmpty) {
+                      _destinoControllers.last.text = p;
+                    }
+                  });
+                },
+                'quitar_parada': (_) {
+                  if (_cantidadDestinos > 2) {
+                    setState(() {
+                      _cantidadDestinos--;
+                      _syncDestinoControllers();
+                    });
+                  }
+                },
+                'confirmar': (_) => _crearViaje(),
+                'cancelar_accion': (_) => Navigator.pop(context),
+                'ir_atras': (_) => Navigator.pop(context),
+              }),
               screenWidth: sw,
             ),
           ),

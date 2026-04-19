@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import '../app_theme.dart';
 import 'widgets/mic_button.dart';
+import '../services/voz/voz_mixin.dart';
 
 class ViajeConfirmado extends StatefulWidget {
   const ViajeConfirmado({super.key});
@@ -11,8 +12,12 @@ class ViajeConfirmado extends StatefulWidget {
   State<ViajeConfirmado> createState() => _ViajeConfirmadoState();
 }
 
-class _ViajeConfirmadoState extends State<ViajeConfirmado> {
-  bool _isVoiceActive = false;
+class _ViajeConfirmadoState extends State<ViajeConfirmado> with VozMixin {
+  @override
+  void initState() {
+    super.initState();
+    inicializarVoz();
+  }
 
   TextStyle mBold({Color color = AppColors.primary, double size = 14, FontWeight weight = FontWeight.w800}) {
     return GoogleFonts.montserrat(
@@ -55,8 +60,11 @@ class _ViajeConfirmadoState extends State<ViajeConfirmado> {
               top: 20,
               right: 20,
               child: MicButton(
-                isActive: _isVoiceActive,
-                onTap: () => setState(() => _isVoiceActive = !_isVoiceActive),
+                isActive: vozEscuchando || vozProcesando,
+                onTap: () => escucharComando({
+                  'ir_atras': (_) => Navigator.pop(context),
+                  'cancelar_viaje': (_) => Navigator.pop(context),
+                }),
                 size: 52,
               ),
             ),

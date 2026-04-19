@@ -10,6 +10,7 @@ import '../services/pagos/pagos_service.dart';
 import '../services/map/osm_service.dart';
 import '../core/utils/auth_helper.dart';
 import 'widgets/mic_button.dart';
+import '../services/voz/voz_mixin.dart';
 
 class AgendarViaje extends StatefulWidget {
   const AgendarViaje({super.key});
@@ -18,7 +19,7 @@ class AgendarViaje extends StatefulWidget {
   State<AgendarViaje> createState() => _AgendarViajeState();
 }
 
-class _AgendarViajeState extends State<AgendarViaje> {
+class _AgendarViajeState extends State<AgendarViaje> with VozMixin {
   // --- VARIABLES DE LÓGICA (HEAD) ---
   bool _isCreatingTrip = false;
 
@@ -90,7 +91,6 @@ class _AgendarViajeState extends State<AgendarViaje> {
   ];
 
   // --- VARIABLES DE UI ---
-  bool _isVoiceActive = false;
 
   // --- MÉTODOS DE FECHA ---
   String _dayLetter(DateTime d) {
@@ -110,7 +110,7 @@ class _AgendarViajeState extends State<AgendarViaje> {
   @override
   void initState() {
     super.initState();
-    // Carga de datos
+    inicializarVoz();
     _cargarDatosIniciales();
   }
 
@@ -161,11 +161,19 @@ class _AgendarViajeState extends State<AgendarViaje> {
   }
 
   // --- LÓGICA DE VOZ ---
-  void _toggleVoice() {
-    setState(() {
-      _isVoiceActive = !_isVoiceActive;
-    });
-  }
+  void _toggleVoice() => escucharComando({
+    'establecer_destino': (e) {
+      final d = e['destino'] as String?;
+      if (d != null && d.isNotEmpty) setState(() => destinoController.text = d);
+    },
+    'establecer_origen': (e) {
+      final o = e['origen'] as String?;
+      if (o != null && o.isNotEmpty) setState(() => origenController.text = o);
+    },
+    'confirmar': (_) => _crearViaje(),
+    'cancelar_accion': (_) => Navigator.pop(context),
+    'ir_atras': (_) => Navigator.pop(context),
+  });
 
   // 2. --- FUNCIÓN _calcularRutaYDistancia() ---
   Future<void> _calcularRutaYDistancia() async {
@@ -241,7 +249,7 @@ class _AgendarViajeState extends State<AgendarViaje> {
             delegate: _DynamicHeaderDelegate(
               maxHeight: 80,
               minHeight: 80,
-              isVoiceActive: _isVoiceActive,
+              isVoiceActive: vozEscuchando || vozProcesando,
               onVoiceTap: _toggleVoice,
               screenWidth: sw,
             ),

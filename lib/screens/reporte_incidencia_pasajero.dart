@@ -5,9 +5,10 @@ import 'package:provider/provider.dart';
 // --- TUS DEPENDENCIAS ---
 import '../app_theme.dart';
 import 'widgets/mic_button.dart';
-import '../providers/user_provider.dart'; 
+import '../providers/user_provider.dart';
 import '../services/incidencias/incidencias_service.dart';
-import '../services/viaje/viaje_service.dart'; 
+import '../services/viaje/viaje_service.dart';
+import '../services/voz/voz_mixin.dart';
 
 class ReporteIncidenciaPasajero extends StatefulWidget {
   const ReporteIncidenciaPasajero({super.key});
@@ -16,8 +17,7 @@ class ReporteIncidenciaPasajero extends StatefulWidget {
   State<ReporteIncidenciaPasajero> createState() => _ReporteIncidenciaPasajeroState();
 }
 
-class _ReporteIncidenciaPasajeroState extends State<ReporteIncidenciaPasajero> {
-  bool _isListening = false;
+class _ReporteIncidenciaPasajeroState extends State<ReporteIncidenciaPasajero> with VozMixin {
   bool _isSubmitting = false;
   int? _tipoSeleccionado;
   String? _idViaje; 
@@ -49,6 +49,12 @@ class _ReporteIncidenciaPasajeroState extends State<ReporteIncidenciaPasajero> {
       fontSize: size,
       fontWeight: FontWeight.w600,
     );
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    inicializarVoz();
   }
 
   @override
@@ -218,7 +224,7 @@ class _ReporteIncidenciaPasajeroState extends State<ReporteIncidenciaPasajero> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.white,
-      // bottomNavigationBar: const PassengerBottomNav(selectedIndex: 0), // Si lo usas, descomenta
+      bottomNavigationBar: const PassengerBottomNav(selectedIndex: 0),
       body: Stack(
         children: [
           CustomScrollView(
@@ -227,8 +233,13 @@ class _ReporteIncidenciaPasajeroState extends State<ReporteIncidenciaPasajero> {
               SliverPersistentHeader(
                 pinned: true,
                 delegate: _HeaderDelegate(
-                  isVoiceActive: _isListening,
-                  onVoiceTap: () => setState(() => _isListening = !_isListening),
+                  isVoiceActive: vozEscuchando || vozProcesando,
+                  onVoiceTap: () => escucharComando({
+                    'confirmar': (_) => _enviarReporte(),
+                    'enviar_reporte': (_) => _enviarReporte(),
+                    'cancelar_accion': (_) => Navigator.pop(context),
+                    'ir_atras': (_) => Navigator.pop(context),
+                  }),
                 ),
               ),
               SliverToBoxAdapter(
