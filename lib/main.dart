@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart'; // Agregado para detectar si es Web (kIsWeb)
 import 'package:provider/provider.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart'; 
 import 'package:flutter_stripe/flutter_stripe.dart'; 
@@ -17,7 +18,6 @@ import 'screens/nueva_contrasena.dart';
 import 'screens/menu_vistas.dart';
 
 // Screens Pasajero
-// ... (Tus imports actuales se mantienen igual)
 import 'screens/registro_pasajero.dart';
 import 'screens/principal_pasajero.dart';
 import 'screens/completar_perfil_pasajero.dart';
@@ -36,7 +36,6 @@ import 'screens/metodos_pago_vista.dart';
 import 'screens/terminos_vista.dart';
 
 // Screens Conductor
-// ... (Tus imports actuales se mantienen igual)
 import 'screens/registro_conductor.dart';
 import 'screens/continuar_registro_conductor.dart';
 import 'screens/principal_conductor.dart';
@@ -59,19 +58,19 @@ import 'screens/historial_auditoria.dart';
 const Color primaryColor = Color(0xFF2E6FFC);
 const Color cardBackgroundColor = Color(0xFFE3F2FD);
 
-// 🔥 CAMBIO: El main ahora es Future y async
 Future<void> main() async {
-  // 1. Asegurar que los bindings de Flutter estén listos
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 2. Cargar variables de entorno desde el archivo .env
   try {
     await dotenv.load(fileName: ".env");
     
-    // 3. Configurar Stripe con la llave pública del .env
+    // Configurar Stripe con la llave pública del .env
     Stripe.publishableKey = dotenv.env['STRIPE_PUBLISHABLE_KEY'] ?? '';
-    // Opcional: Stripe.merchantId = 'any_string'; // Requerido para Apple Pay
     
+    // Inicializar el motor nativo de Stripe (SOLO en móviles, en Web daría error)
+    if (!kIsWeb) {
+      await Stripe.instance.applySettings();
+    }
   } catch (e) {
     debugPrint("Error cargando .env o inicializando Stripe: $e");
   }
@@ -92,7 +91,6 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // ... (El resto de tu código de MyApp se mantiene exactamente igual)
     return MaterialApp(
       title: 'MoveCare App',
       debugShowCheckedModeBanner: false,
@@ -110,7 +108,6 @@ class MyApp extends StatelessWidget {
       routes: {
         // Rutas de Autenticación y Sistema
         '/bienvenido': (context) => const Bienvenido(),
-        // '/menu_vistas': (context) => const MenuVistas(),
         '/iniciar_sesion': (context) => const IniciarSesion(),
         '/olvide_contrasena': (context) => const OlvideContrasena(),
         '/nueva_contrasena': (context) => const NuevaContrasena(),
@@ -122,15 +119,15 @@ class MyApp extends StatelessWidget {
         '/principal_pasajero': (context) => const PrincipalPasajero(),
         '/completar_perfil_pasajero': (context) => const CompletarPerfilPasajero(),
         '/perfil_pasajero': (context) => const PerfilPasajero(),
-        '/agendar_viaje': (context) => const AgendarViaje(), //Falta IA
-        '/agendar_varios_destinos': (context) => const AgendarVariosDestinos(), //Falta IA
-        '/pago_tarjeta': (context) => const PagoTarjetaScreen(), // Configurar con Stripe
+        '/agendar_viaje': (context) => const AgendarViaje(), //F IA
+        '/agendar_varios_destinos': (context) => const AgendarVariosDestinos(), //F IA
+        // '/pago_tarjeta': (context) => const PagoTarjetaScreen(),
         '/registro_tarjeta': (context) => const RegistroTarjetaScreen(),
         '/registro_acompanante': (context) => const RegistrarAcompanante(),
         '/historial_viajes_pasajero': (context) => const HistorialViajesPasajero(),
         '/reporte_incidencia_pasajero': (context) => const ReporteIncidenciaPasajero(),
-        '/viaje_confirmado': (context) => const ViajeConfirmado(), //Falta
-        '/estimacion_costo': (context) => const EstimacionViaje(), //Falta
+        '/viaje_confirmado': (context) => const ViajeConfirmado(), //F
+        '/estimacion_costo': (context) => const EstimacionViaje(), //F
         '/metodos_pago_lista': (context) => const MetodosPagoVista(),
         '/terminos_condiciones': (context) => const TerminosVista(),
         '/aviso_privacidad': (context) => const PrivacidadVista(),

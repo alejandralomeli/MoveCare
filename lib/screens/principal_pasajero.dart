@@ -54,6 +54,7 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
   }
 
   // --- LÓGICA DE DATOS ---
+  // --- LÓGICA DE DATOS ---
   Future<void> _loadHome() async {
     try {
       final homeData = await HomeService.getHome(role: "pasajero");
@@ -68,25 +69,52 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
         _viajeProximo = homeData['viaje_proximo'];
         _buildCalendarDates(fechaViaje);
 
-        // Restaurada lógica de decodificación de ruta
+        // Lógica de decodificación de ruta CORREGIDA
         if (_viajeProximo!['ruta'] != null) {
           try {
-            List<dynamic> rutaJson = _viajeProximo!['ruta'];
-            _routePoints = rutaJson.map((punto) {
-              if (punto is Map) {
-                return LatLng(
-                  (punto['lat'] ?? punto[1]) * 1.0,
-                  (punto['lng'] ?? punto['lon'] ?? punto[0]) * 1.0,
-                );
-              } else if (punto is List) {
-                return LatLng(punto[0] * 1.0, punto[1] * 1.0);
-              }
-              return const LatLng(0, 0);
-            }).toList();
+            // Recibimos el objeto completo que manda la BD
+            final Map<String, dynamic> rutaMap = _viajeProximo!['ruta'];
+            _routePoints = [];
 
-            if (_routePoints.isNotEmpty) {
-              _startCoord = _routePoints.first;
-              _endCoord = _routePoints.last;
+            // 1. Extraemos las coordenadas de origen
+            if (rutaMap['origen'] != null) {
+              _startCoord = LatLng(
+                (rutaMap['origen']['lat']).toDouble(),
+                (rutaMap['origen']['lng']).toDouble(),
+              );
+            }
+
+            // 2. Extraemos las coordenadas de destino
+            if (rutaMap['destino'] != null) {
+              _endCoord = LatLng(
+                (rutaMap['destino']['lat']).toDouble(),
+                (rutaMap['destino']['lng']).toDouble(),
+              );
+            }
+
+            // 3. Verificamos si existe una polyline (arreglo de puntos intermedios)
+            if (rutaMap['polyline'] != null && rutaMap['polyline'] is List) {
+              List<dynamic> puntos = rutaMap['polyline'];
+              _routePoints = puntos.map((punto) {
+                if (punto is Map) {
+                  return LatLng(
+                    (punto['lat'] ?? punto[1]) * 1.0,
+                    (punto['lng'] ?? punto['lon'] ?? punto[0]) * 1.0,
+                  );
+                } else if (punto is List) {
+                  return LatLng(punto[0] * 1.0, punto[1] * 1.0);
+                }
+                return const LatLng(0, 0);
+              }).toList();
+            }
+
+            // 4. Si la polyline es null (como en tu ejemplo), pero tenemos origen y destino,
+            // agregamos ambos puntos a la lista para que el widget del mapa no falle
+            // y al menos dibuje una línea recta y los marcadores.
+            if (_routePoints.isEmpty &&
+                _startCoord != null &&
+                _endCoord != null) {
+              _routePoints = [_startCoord!, _endCoord!];
             }
           } catch (e) {
             debugPrint("Error al decodificar la ruta del viaje próximo: $e");
@@ -100,6 +128,9 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
       setState(() => _loadingHome = false);
     } catch (e) {
       if (!mounted) return;
+      setState(
+        () => _loadingHome = false,
+      ); // Aseguramos quitar el loading en caso de error
       AuthHelper.manejarError(context, e);
     }
   }
@@ -120,16 +151,23 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
           ),
           content: Text(
             "¿Desea cancelar el viaje? Esta acción no se puede deshacer.",
-            style: GoogleFonts.montserrat(fontWeight: FontWeight.w500, color: AppColors.textSecondary),
+            style: GoogleFonts.montserrat(
+              fontWeight: FontWeight.w500,
+              color: AppColors.textSecondary,
+            ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(ctx).pop(),
-              child: Text("Volver", style: mExtrabold(color: AppColors.textSecondary)),
+              child: Text(
+                "Volver",
+                style: mExtrabold(color: AppColors.textSecondary),
+              ),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.error ?? const Color.fromARGB(255, 219, 26, 26),
+                backgroundColor:
+                    AppColors.error ?? const Color.fromARGB(255, 219, 26, 26),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
                 ),
@@ -180,7 +218,7 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
     return days[d.weekday - 1];
   }
 
-    String _monthName(int m) {
+  String _monthName(int m) {
     const months = [
       'Enero',
       'Febrero',
@@ -205,7 +243,9 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
 
     if (!speech.isAvailable) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Micrófono no disponible en este dispositivo')),
+        const SnackBar(
+          content: Text('Micrófono no disponible en este dispositivo'),
+        ),
       );
       return;
     }
@@ -276,7 +316,11 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
         Navigator.pushNamed(context, '/agendar_viaje', arguments: entidades);
         break;
       case 'solicitar_viaje_multiple':
-        Navigator.pushNamed(context, '/agendar_varios_destinos', arguments: entidades);
+        Navigator.pushNamed(
+          context,
+          '/agendar_varios_destinos',
+          arguments: entidades,
+        );
         break;
       case 'ver_historial':
         Navigator.pushNamed(context, '/historial_viajes_pasajero');
@@ -288,7 +332,11 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
         Navigator.pushNamed(context, '/viaje_actual');
         break;
       case 'crear_acompanante':
-        Navigator.pushNamed(context, '/registro_acompanante', arguments: entidades);
+        Navigator.pushNamed(
+          context,
+          '/registro_acompanante',
+          arguments: entidades,
+        );
         break;
       case 'ver_acompanantes':
         Navigator.pushNamed(context, '/registro_acompanante');
@@ -309,16 +357,25 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
       context: context,
       builder: (_) => AlertDialog(
         title: Text('Cancelar viaje', style: mExtrabold(size: 16)),
-        content: Text('¿Confirmas cancelar tu viaje actual?', style: mExtrabold(color: AppColors.textSecondary)),
+        content: Text(
+          '¿Confirmas cancelar tu viaje actual?',
+          style: mExtrabold(color: AppColors.textSecondary),
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('No')),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('No'),
+          ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
             onPressed: () {
               Navigator.pop(context);
               Navigator.pushNamed(context, '/viaje_actual');
             },
-            child: Text('Cancelar viaje', style: mExtrabold(color: AppColors.white, size: 13)),
+            child: Text(
+              'Cancelar viaje',
+              style: mExtrabold(color: AppColors.white, size: 13),
+            ),
           ),
         ],
       ),
@@ -350,7 +407,10 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
             const SizedBox(height: 20),
             Text(
               'Puedes decir:\n"Quiero un viaje al hospital"\n"Ver mi historial"\n"Agregar acompañante"',
-              style: GoogleFonts.montserrat(fontSize: 12, color: AppColors.textSecondary),
+              style: GoogleFonts.montserrat(
+                fontSize: 12,
+                color: AppColors.textSecondary,
+              ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 20),
@@ -358,8 +418,13 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: () => Navigator.pop(context),
-                style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
-                child: Text('Entendido', style: mExtrabold(color: AppColors.white)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                ),
+                child: Text(
+                  'Entendido',
+                  style: mExtrabold(color: AppColors.white),
+                ),
               ),
             ),
           ],
@@ -379,7 +444,10 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
   }
 
   // --- HELPERS DE ESTILO ---
-  TextStyle mExtrabold({Color color = AppColors.textPrimary, double size = 14}) {
+  TextStyle mExtrabold({
+    Color color = AppColors.textPrimary,
+    double size = 14,
+  }) {
     return GoogleFonts.montserrat(
       color: color,
       fontSize: size,
@@ -396,8 +464,8 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
     final user = context.watch<UserProvider>().user;
 
     // Restaurada la decodificación de la foto de perfil en Base64
-    ImageProvider imagenPerfil = const AssetImage('assets/pasajero.png'); 
-    
+    ImageProvider imagenPerfil = const AssetImage('assets/pasajero.png');
+
     if (user != null && user.fotoPerfil.isNotEmpty) {
       try {
         String base64String = user.fotoPerfil;
@@ -458,17 +526,27 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text('Seleccionar fecha', style: mExtrabold(size: 16)),
+                          Text(
+                            'Seleccionar fecha',
+                            style: mExtrabold(size: 16),
+                          ),
                           Row(
                             children: [
                               IconButton(
-                                icon: const Icon(Icons.chevron_left, color: AppColors.primary),
+                                icon: const Icon(
+                                  Icons.chevron_left,
+                                  color: AppColors.primary,
+                                ),
                                 padding: EdgeInsets.zero,
                                 constraints: const BoxConstraints(),
                                 onPressed: () {
                                   final now = DateTime.now();
-                                  final currentWeekStart = now.subtract(Duration(days: now.weekday - 1));
-                                  final prev = _weekStart.subtract(const Duration(days: 7));
+                                  final currentWeekStart = now.subtract(
+                                    Duration(days: now.weekday - 1),
+                                  );
+                                  final prev = _weekStart.subtract(
+                                    const Duration(days: 7),
+                                  );
                                   if (!prev.isBefore(currentWeekStart)) {
                                     setState(() => _weekStart = prev);
                                   }
@@ -476,10 +554,17 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
                               ),
                               const SizedBox(width: 10),
                               IconButton(
-                                icon: const Icon(Icons.chevron_right, color: AppColors.primary),
+                                icon: const Icon(
+                                  Icons.chevron_right,
+                                  color: AppColors.primary,
+                                ),
                                 padding: EdgeInsets.zero,
                                 constraints: const BoxConstraints(),
-                                onPressed: () => setState(() => _weekStart = _weekStart.add(const Duration(days: 7))),
+                                onPressed: () => setState(
+                                  () => _weekStart = _weekStart.add(
+                                    const Duration(days: 7),
+                                  ),
+                                ),
                               ),
                             ],
                           ),
@@ -496,7 +581,9 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
                               context: context,
                               initialDate: DateTime.now(),
                               firstDate: DateTime.now(),
-                              lastDate: DateTime.now().add(const Duration(days: 365)),
+                              lastDate: DateTime.now().add(
+                                const Duration(days: 365),
+                              ),
                             );
                             if (picked != null) {
                               setState(() {
@@ -504,9 +591,14 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
                               });
                             }
                           },
-                          icon: const Icon(Icons.calendar_month_outlined, size: 16),
+                          icon: const Icon(
+                            Icons.calendar_month_outlined,
+                            size: 16,
+                          ),
                           label: const Text('Ver más'),
-                          style: TextButton.styleFrom(foregroundColor: AppColors.primary),
+                          style: TextButton.styleFrom(
+                            foregroundColor: AppColors.primary,
+                          ),
                         ),
                       ),
                       Center(child: _buildAgendarButton()),
@@ -540,7 +632,11 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
     return Stack(
       clipBehavior: Clip.none,
       children: [
-        Container(height: 80, width: double.infinity, color: AppColors.primaryLight),
+        Container(
+          height: 80,
+          width: double.infinity,
+          color: AppColors.primaryLight,
+        ),
         Positioned(
           bottom: -50,
           left: 20,
@@ -662,26 +758,40 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
           Row(
             children: [
               // Restaurada la acción Ver Detalles
-              _actionBtn('Ver detalles', onPressed: () {
-                showModalBottomSheet(
-                  context: context,
-                  isScrollControlled: true,
-                  backgroundColor: Colors.transparent,
-                  builder: (context) => ViajeDetallesModal(viaje: _viajeProximo!, esConductor: false),
-                );
-              }),
+              _actionBtn(
+                'Ver detalles',
+                onPressed: () {
+                  showModalBottomSheet(
+                    context: context,
+                    isScrollControlled: true,
+                    backgroundColor: Colors.transparent,
+                    builder: (context) => ViajeDetallesModal(
+                      viaje: _viajeProximo!,
+                      esConductor: false,
+                    ),
+                  );
+                },
+              ),
               const SizedBox(width: 10),
               // Restaurada la acción Cancelar y añadida opción de color
-              _actionBtn('Cancelar', color: AppColors.error ?? const Color.fromARGB(255, 219, 26, 26), onPressed: () {
-                _mostrarDialogoCancelacion(_viajeProximo!['id_viaje'].toString());
-              }),
+              _actionBtn(
+                'Cancelar',
+                color:
+                    AppColors.error ?? const Color.fromARGB(255, 219, 26, 26),
+                onPressed: () {
+                  _mostrarDialogoCancelacion(
+                    _viajeProximo!['id_viaje'].toString(),
+                  );
+                },
+              ),
               const SizedBox(width: 10),
               GestureDetector(
                 onTap: () => Navigator.push(
                   context,
                   MaterialPageRoute(
                     builder: (_) => ChatViaje(
-                      nombreContacto: _viajeProximo!['nombre_conductor'] ?? 'Conductor',
+                      nombreContacto:
+                          _viajeProximo!['nombre_conductor'] ?? 'Conductor',
                       esConductor: false,
                     ),
                   ),
@@ -692,9 +802,15 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
                   decoration: BoxDecoration(
                     color: AppColors.primaryLight,
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+                    border: Border.all(
+                      color: AppColors.primary.withValues(alpha: 0.3),
+                    ),
                   ),
-                  child: const Icon(Icons.message_rounded, color: AppColors.primary, size: 20),
+                  child: const Icon(
+                    Icons.message_rounded,
+                    color: AppColors.primary,
+                    size: 20,
+                  ),
                 ),
               ),
             ],
@@ -706,18 +822,23 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
 
   Widget _buildCalendarRow() {
     return Row(
-      children: List.generate(7, (i) => _weekStart.add(Duration(days: i))).map((date) => Expanded(
-        child: _calendarDay(date),
-      )).toList(),
+      children: List.generate(
+        7,
+        (i) => _weekStart.add(Duration(days: i)),
+      ).map((date) => Expanded(child: _calendarDay(date))).toList(),
     );
   }
 
   Widget _calendarDay(DateTime date) {
-    final isPast = date.isBefore(DateTime.now().subtract(const Duration(days: 1)));
+    final isPast = date.isBefore(
+      DateTime.now().subtract(const Duration(days: 1)),
+    );
     final isSelected = _selectedDateNum == date.day.toString();
 
     return GestureDetector(
-      onTap: isPast ? null : () => setState(() => _selectedDateNum = date.day.toString()),
+      onTap: isPast
+          ? null
+          : () => setState(() => _selectedDateNum = date.day.toString()),
       child: Opacity(
         opacity: isPast ? 0.4 : 1.0,
         child: Container(
@@ -743,7 +864,11 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
                 child: Text(
                   _dayLetter(date),
                   textAlign: TextAlign.center,
-                  style: GoogleFonts.montserrat(color: AppColors.white, fontSize: 10, fontWeight: FontWeight.w600),
+                  style: GoogleFonts.montserrat(
+                    color: AppColors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
               Expanded(
@@ -761,9 +886,9 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
     );
   }
 
-Widget _buildTripHistory() {
+  Widget _buildTripHistory() {
     if (_historialViajes.isEmpty) return const Text("Sin historial");
-    
+
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
@@ -771,15 +896,17 @@ Widget _buildTripHistory() {
       ),
       // Mapeamos los viajes y usamos .asMap() para no poner Divider en el último
       child: Column(
-        children: _historialViajes.take(3).toList().asMap().entries.map((entry) {
+        children: _historialViajes.take(3).toList().asMap().entries.map((
+          entry,
+        ) {
           int index = entry.key;
           dynamic viaje = entry.value;
           bool isLast = index == (_historialViajes.take(3).length - 1);
-          
+
           return Column(
             children: [
               _historyItem(viaje),
-              if (!isLast) 
+              if (!isLast)
                 const Divider(height: 1, thickness: 1, color: AppColors.border),
             ],
           );
@@ -818,7 +945,8 @@ Widget _buildTripHistory() {
                   viaje['destino'] ?? 'Viaje sin destino',
                   style: mExtrabold(color: AppColors.primary, size: 13),
                   maxLines: 1,
-                  overflow: TextOverflow.ellipsis, // Para que no se desborde si es muy largo
+                  overflow: TextOverflow
+                      .ellipsis, // Para que no se desborde si es muy largo
                 ),
               ),
               Text(
@@ -828,7 +956,7 @@ Widget _buildTripHistory() {
             ],
           ),
           const SizedBox(height: 8),
-          
+
           // 🚀 AQUÍ ESTÁ EL BOTÓN DE REPORTE CON TODA LA LÓGICA
           GestureDetector(
             onTap: () {
@@ -836,7 +964,7 @@ Widget _buildTripHistory() {
                 Navigator.pushNamed(
                   context,
                   '/reporte_incidencia_pasajero', // 👈 Tu ruta de pasajero
-                  arguments: viaje['id_viaje'],   // 👈 Se envía el ID del viaje
+                  arguments: viaje['id_viaje'], // 👈 Se envía el ID del viaje
                 );
               } else {
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -867,7 +995,11 @@ Widget _buildTripHistory() {
   }
 
   // Modificado para aceptar onPressed y color opcional
-  Widget _actionBtn(String label, {required VoidCallback onPressed, Color? color}) {
+  Widget _actionBtn(
+    String label, {
+    required VoidCallback onPressed,
+    Color? color,
+  }) {
     return Expanded(
       child: ElevatedButton(
         onPressed: onPressed, // Restaurado
@@ -889,7 +1021,9 @@ Widget _buildTripHistory() {
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.primary,
           elevation: 0,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
         ),
         child: Text('Agendar viaje', style: mExtrabold(color: AppColors.white)),
       ),
@@ -904,10 +1038,8 @@ Widget _buildTripHistory() {
         onPressed: () => Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => ChatViaje(
-              nombreContacto: nombreConductor,
-              esConductor: false,
-            ),
+            builder: (_) =>
+                ChatViaje(nombreContacto: nombreConductor, esConductor: false),
           ),
         ),
         icon: const Icon(Icons.message_rounded, color: AppColors.white),
@@ -993,11 +1125,17 @@ Widget _buildTripHistory() {
                 backgroundColor: AppColors.primary,
                 foregroundColor: AppColors.white,
                 elevation: 0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
               child: Text(
                 'Un destino',
-                style: GoogleFonts.montserrat(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.white),
+                style: GoogleFonts.montserrat(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.white,
+                ),
               ),
             ),
           ),
@@ -1015,11 +1153,17 @@ Widget _buildTripHistory() {
               style: OutlinedButton.styleFrom(
                 foregroundColor: AppColors.primary,
                 side: const BorderSide(color: AppColors.primary, width: 1.5),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
               child: Text(
                 'Dos o más destinos',
-                style: GoogleFonts.montserrat(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.primary),
+                style: GoogleFonts.montserrat(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.primary,
+                ),
               ),
             ),
           ),

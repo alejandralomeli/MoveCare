@@ -1,10 +1,9 @@
 import 'dart:convert';
-import '../http_client.dart';
+import '../http_client.dart'; 
 
 class PagosService {
   
-  /// Registra la tarjeta en el backend.
-  /// En un entorno real, el 'token' te lo da Stripe. 
+  /// Registra la tarjeta en el backend usando el token real de Stripe (pm_...)
   static Future<bool> agregarTarjeta({
     required String token,
     required String ultimosCuatro,
@@ -48,9 +47,8 @@ class PagosService {
     throw Exception("Error al obtener tarjetas");
   }
 
-/// Desactivar (eliminar lógicamente) una tarjeta
+  /// Desactivar (eliminar lógicamente) una tarjeta
   static Future<bool> desactivarTarjeta(String idMetodo) async {
-    // Usamos el método delete de tu HttpClient
     final response = await HttpClient.delete("/pagos/tarjetas/$idMetodo");
 
     if (response.statusCode == 200) {
