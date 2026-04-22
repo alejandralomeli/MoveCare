@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert'; // Restaurado para Base64
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -29,6 +30,9 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
   bool _loadingHome = true;
   bool _isListening = false;
   bool _procesandoVoz = false;
+  String _vozUltimoTexto = '';
+  bool _vozProcesado = false;
+  Timer? _vozTimer;
   String _selectedDateNum = '';
 
   // Voz (instancia compartida via singleton)
@@ -51,6 +55,12 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
 
   Future<void> _inicializarVoz() async {
     await VozSingleton.inicializar();
+  }
+
+  @override
+  void reassemble() {
+    super.reassemble();
+    VozSingleton.reinicializar();
   }
 
   // --- LÓGICA DE DATOS ---
@@ -220,7 +230,14 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
       await Future.delayed(const Duration(milliseconds: 800));
     }
 
+    _vozUltimoTexto = '';
+    _vozProcesado = false;
+    _vozTimer?.cancel();
+
     if (mounted) setState(() => _isListening = true);
+
+    final speech2 = VozSingleton.speech;
+    debugPrint('VOZ [1] isAvailable=${speech2.isAvailable}');
 
     // Auto-reset si la sesión termina sin resultado (timeout)
     Future.delayed(const Duration(seconds: 12), () {
@@ -228,42 +245,62 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
     });
 
     try {
-      await speech.listen(
-        localeId: 'es_MX',
+      debugPrint('VOZ [2] llamando speech.listen()...');
+      await speech2.listen(
         listenFor: const Duration(seconds: 10),
         pauseFor: const Duration(milliseconds: 1500),
         onResult: (result) async {
-          if (!result.finalResult) return;
-
+          debugPrint('VOZ [4] onResult final=${result.finalResult} texto="${result.recognizedWords}"');
           final texto = result.recognizedWords.trim();
-          if (texto.isEmpty) {
-            setState(() => _isListening = false);
+          if (texto.isNotEmpty) _vozUltimoTexto = texto;
+
+          _vozTimer?.cancel();
+
+          if (result.finalResult) {
+            if (!_vozProcesado && _vozUltimoTexto.isNotEmpty) {
+              _vozProcesado = true;
+              await _procesarComandoVoz(_vozUltimoTexto, tts);
+            }
             return;
           }
 
-          setState(() {
-            _isListening = false;
-            _procesandoVoz = true;
+          _vozTimer = Timer(const Duration(milliseconds: 2000), () async {
+            if (!_vozProcesado && _vozUltimoTexto.isNotEmpty) {
+              _vozProcesado = true;
+              await _procesarComandoVoz(_vozUltimoTexto, tts);
+            }
           });
-
-          try {
-            final respuesta = await VozService.interpretarComando(texto);
-            if (!mounted) return;
-            setState(() => _procesandoVoz = false);
-
-            await tts.speak(respuesta['respuesta_voz'] ?? '');
-            _manejarAccionVoz(respuesta);
-          } catch (_) {
-            if (!mounted) return;
-            setState(() => _procesandoVoz = false);
-            await tts.speak('Lo siento, no pude conectar con el servidor');
-          }
         },
       );
+      debugPrint('VOZ [3] speech.listen() completado');
     } catch (e) {
+      debugPrint('VOZ [ERR] excepción en listen(): $e');
       if (mounted) setState(() => _isListening = false);
       debugPrint('Voz: error al escuchar — $e');
       await VozSingleton.reinicializar();
+    }
+  }
+
+  Future<void> _procesarComandoVoz(String texto, dynamic tts) async {
+    if (mounted) setState(() { _isListening = false; _procesandoVoz = true; });
+    try {
+      final respuesta = await VozService.interpretarComando(texto);
+      if (!mounted) return;
+      setState(() => _procesandoVoz = false);
+
+      final dbgIntent = respuesta['intencion'] ?? '?';
+      final dbgTexto = respuesta['transcripcion'] ?? texto;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('[$dbgIntent] "$dbgTexto"'),
+        duration: const Duration(seconds: 5),
+      ));
+
+      await tts.speak(respuesta['respuesta_voz'] ?? '');
+      _manejarAccionVoz(respuesta);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _procesandoVoz = false);
+      await tts.speak('Lo siento, no pude conectar con el servidor');
     }
   }
 
@@ -294,10 +331,26 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
         Navigator.pushNamed(context, '/registro_acompanante');
         break;
       case 'ver_pagos':
-        Navigator.pushNamed(context, '/metodos_pago');
+        Navigator.pushNamed(context, '/metodos_pago_lista');
+        break;
+      case 'ver_perfil':
+        Navigator.pushNamed(context, '/perfil_pasajero');
         break;
       case 'ver_home':
         // Ya estamos en home, no hace nada
+        break;
+      case 'ir_atras':
+        // En home no hay a donde regresar
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Ya estás en la pantalla principal'), duration: Duration(seconds: 2)),
+        );
+        break;
+      case 'confirmar':
+      case 'cancelar_accion':
+        // Sin acción pendiente en home
+        break;
+      case 'no_reconocido':
+        _mostrarNoReconocido(respuesta['transcripcion'] ?? '');
         break;
       default:
         _mostrarNoReconocido(respuesta['transcripcion'] ?? '');

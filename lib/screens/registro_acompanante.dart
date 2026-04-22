@@ -9,6 +9,7 @@ import '../services/acompanante/acompanante_service.dart';
 import '../core/utils/auth_helper.dart';
 import '../app_theme.dart';
 import 'widgets/mic_button.dart';
+import '../services/voz/voz_mixin.dart';
 
 class RegistrarAcompanante extends StatefulWidget {
   const RegistrarAcompanante({super.key});
@@ -17,13 +18,12 @@ class RegistrarAcompanante extends StatefulWidget {
   State<RegistrarAcompanante> createState() => _RegistrarAcompananteState();
 }
 
-class _RegistrarAcompananteState extends State<RegistrarAcompanante> {
+class _RegistrarAcompananteState extends State<RegistrarAcompanante> with VozMixin {
   // --- CONTROLADORES Y ESTADO ---
   final TextEditingController _nombreController = TextEditingController();
   final TextEditingController _otroController = TextEditingController();
   String? selectedParentesco;
   bool _isLoading = false;
-  bool _isVoiceActive = false;
 
   // --- IMÁGENES (XFile para compatibilidad Web/Móvil) ---
   XFile? _imageFrente;
@@ -39,6 +39,12 @@ class _RegistrarAcompananteState extends State<RegistrarAcompanante> {
     'Pareja',
     'Otro',
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    inicializarVoz();
+  }
 
   @override
   void dispose() {
@@ -298,8 +304,11 @@ class _RegistrarAcompananteState extends State<RegistrarAcompanante> {
             right: 20,
             bottom: -26,
             child: MicButton(
-              isActive: _isVoiceActive,
-              onTap: () => setState(() => _isVoiceActive = !_isVoiceActive),
+              isActive: vozEscuchando || vozProcesando,
+              onTap: () => escucharComando({
+                'confirmar': (_) => _registrar(),
+                'ir_atras': (_) => Navigator.pop(context),
+              }),
               size: 52,
             ),
           ),
