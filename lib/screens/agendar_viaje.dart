@@ -452,6 +452,7 @@ class _AgendarViajeState extends State<AgendarViaje> with VozMixin {
           ),
         ],
       ),
+      bottomNavigationBar: const PassengerBottomNav(selectedIndex: 1),
     );
   }
 

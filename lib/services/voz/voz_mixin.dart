@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'voz_service.dart';
 import 'voz_singleton.dart';
@@ -20,10 +21,21 @@ mixin VozMixin<T extends StatefulWidget> on State<T> {
   bool vozEscuchando = false;
   bool vozProcesando = false;
 
+  // Fallback para cuando Android nunca dispara finalResult=true
+  String _ultimoTexto = '';
+  bool _procesado = false;
+  Timer? _vozTimer;
+
   // ── Inicialización ──────────────────────────────────────────────────────
 
   Future<void> inicializarVoz() async {
     await VozSingleton.inicializar();
+  }
+
+  @override
+  void reassemble() {
+    super.reassemble();
+    VozSingleton.reinicializar();
   }
 
   // ── API pública ─────────────────────────────────────────────────────────
@@ -48,12 +60,16 @@ mixin VozMixin<T extends StatefulWidget> on State<T> {
     // Si ERA esta pantalla la que estaba escuchando → toggle off
     final eraEstaEscuchando = vozEscuchando;
     if (speech.isListening) {
-      await speech.stop();
+        await speech.stop();
       if (mounted) setState(() => vozEscuchando = false);
       if (eraEstaEscuchando) return; // el usuario quiso detener
       // Otra pantalla tenía la sesión: esperar y abrir nueva
       await Future.delayed(const Duration(milliseconds: 800));
     }
+
+    _ultimoTexto = '';
+    _procesado = false;
+    _vozTimer?.cancel();
 
     if (mounted) setState(() => vozEscuchando = true);
 
@@ -64,40 +80,71 @@ mixin VozMixin<T extends StatefulWidget> on State<T> {
 
     try {
       await speech.listen(
-        localeId: 'es_MX',
         listenFor: const Duration(seconds: 10),
         pauseFor: const Duration(milliseconds: 1500),
         onResult: (result) async {
-          if (!result.finalResult) return;
-
           final texto = result.recognizedWords.trim();
-          if (mounted) setState(() => vozEscuchando = false);
-          if (texto.isEmpty) return;
+          if (texto.isNotEmpty) _ultimoTexto = texto;
 
-          if (mounted) setState(() => vozProcesando = true);
+          // Cancelar timer anterior — hay texto nuevo llegando
+          _vozTimer?.cancel();
 
-          try {
-            final respuesta = await VozService.interpretarComando(texto);
-            if (!mounted) return;
-            if (mounted) setState(() => vozProcesando = false);
-
-            final voz = respuesta['respuesta_voz'] as String? ?? '';
-            if (voz.isNotEmpty) await tts.speak(voz);
-
-            _despacharAccion(respuesta, acciones);
-          } catch (_) {
-            if (!mounted) return;
-            if (mounted) setState(() => vozProcesando = false);
-            await tts.speak('Lo siento, no pude conectar con el servidor');
+          if (result.finalResult) {
+            // Camino normal: Android sí entregó resultado final
+            if (!_procesado && _ultimoTexto.isNotEmpty) {
+              _procesado = true;
+              await _procesarComando(_ultimoTexto, acciones, tts);
+            }
+            return;
           }
+
+          // Fallback: Android no dispara finalResult=true en algunos dispositivos.
+          // Disparar procesamiento 2 s después del último resultado parcial,
+          // que es cuando el usuario claramente dejó de hablar.
+          _vozTimer = Timer(const Duration(milliseconds: 2000), () async {
+            if (!_procesado && _ultimoTexto.isNotEmpty) {
+              _procesado = true;
+              await _procesarComando(_ultimoTexto, acciones, tts);
+            }
+          });
         },
       );
     } catch (e) {
-      // Reinicia el estado visual si listen() falla
       if (mounted) setState(() => vozEscuchando = false);
       debugPrint('VozMixin: error al escuchar — $e');
-      // Reinicializar el singleton para recuperar el objeto de reconocimiento
       await VozSingleton.reinicializar();
+    }
+  }
+
+  Future<void> _procesarComando(
+    String texto,
+    Map<String, Function(Map<String, dynamic> entidades)> acciones,
+    dynamic tts,
+  ) async {
+    if (mounted) setState(() { vozEscuchando = false; vozProcesando = true; });
+
+    try {
+      final respuesta = await VozService.interpretarComando(texto);
+      if (!mounted) return;
+      if (mounted) setState(() => vozProcesando = false);
+
+      final voz = respuesta['respuesta_voz'] as String? ?? '';
+      if (voz.isNotEmpty) await tts.speak(voz);
+
+      // DEBUG temporal
+      if (!mounted) return;
+      final dbgI = respuesta['intencion'] ?? '?';
+      final dbgT = respuesta['transcripcion'] ?? texto;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('[$dbgI] "$dbgT"'),
+        duration: const Duration(seconds: 5),
+      ));
+
+      _despacharAccion(respuesta, acciones);
+    } catch (_) {
+      if (!mounted) return;
+      if (mounted) setState(() => vozProcesando = false);
+      await tts.speak('Lo siento, no pude conectar con el servidor');
     }
   }
 
@@ -151,6 +198,9 @@ mixin VozMixin<T extends StatefulWidget> on State<T> {
         break;
       case 'ver_pagos':
         Navigator.pushNamed(context, '/metodos_pago_lista');
+        break;
+      case 'ver_perfil':
+        Navigator.pushNamed(context, '/perfil_pasajero');
         break;
       case 'ver_home':
         Navigator.pushNamedAndRemoveUntil(
