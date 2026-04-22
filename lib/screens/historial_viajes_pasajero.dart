@@ -165,6 +165,7 @@ class _HistorialViajesPasajero extends State<HistorialViajesPasajero> with VozMi
             ),
         ],
       ),
+      bottomNavigationBar: const PassengerBottomNav(selectedIndex: 2),
     );
   }
 
