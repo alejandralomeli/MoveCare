@@ -10,8 +10,8 @@ class ViajeService {
     List<Map<String, dynamic>>? destinos,
     bool checkVariosDestinos = false,
     required String fechaHoraInicio,
-    String? metodoPago,
-    String? idMetodo,
+    required String metodoPago, // <--- Agregamos método de pago
+    String? idMetodo, // <--- Mantenemos el ID del método
     String? especificaciones,
     bool checkAcompanante = false,
     String? idAcompanante,
@@ -19,15 +19,13 @@ class ViajeService {
     int? duracionEstimada,
   }) async {
     final Map<String, dynamic> body = {
-      // Extraemos el texto del origen de la ruta si no nos pasan 'puntoInicio' explícitamente
       "punto_inicio":
           puntoInicio ?? (ruta != null ? ruta["origen"]["direccion"] : ""),
-      "ruta": ruta, // <--- AQUÍ MANDAMOS EL JSONB COMPLETO AL BACKEND
+      "ruta": ruta,
       "fecha_hora_inicio": fechaHoraInicio,
-      "metodo_pago": metodoPago,
-      "id_metodo": idMetodo,
+      "metodo_pago": metodoPago, // <--- Lo inyectamos en el JSON
+      "id_metodo": idMetodo, // <--- Se va junto con su ID
       "costo": costo,
-      // Usamos la duración de la ruta si no nos pasan una explícita
       "duracion_estimada":
           duracionEstimada ?? (ruta != null ? ruta["duracion_min"] : null),
       "especificaciones": especificaciones,
@@ -42,10 +40,7 @@ class ViajeService {
     } else {
       body["destino"] =
           destino ?? (ruta != null ? ruta["destino"]["direccion"] : null);
-
-      // ---> ESTA ES LA LÍNEA QUE CAMBIAMOS <---
-      body["destinos"] =
-          []; // Le mandamos una lista vacía en lugar de null para complacer a FastAPI
+      body["destinos"] = [];
     }
 
     final response = await HttpClient.post("/viajes/crear", body);
@@ -79,7 +74,6 @@ class ViajeService {
   }
 
   static Future<List<dynamic>> obtenerHistorialConductor() async {
-    // Apuntamos al nuevo endpoint del back
     final response = await HttpClient.get("/viajes/historial-conductor");
 
     if (response.statusCode == 200) {
@@ -94,11 +88,10 @@ class ViajeService {
   }
 
   static Future<void> cancelarViaje(String idViaje) async {
-    // Llamamos al endpoint que acabamos de crear en el backend
     final response = await HttpClient.put("/viajes/$idViaje/cancelar", {});
 
     if (response.statusCode == 200) {
-      return; // Todo salió bien
+      return;
     }
 
     if (response.statusCode == 401) {
@@ -113,7 +106,6 @@ class ViajeService {
     String idUsuario,
     String estado,
   ) async {
-    // AHORA APUNTA A LA NUEVA RUTA QUE ESPERA EL id_usuario
     final response = await HttpClient.get(
       "/viajes/conductor/usuario/$idUsuario/viajes/$estado",
     );
@@ -191,7 +183,6 @@ class ViajeService {
         int dlng = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
         lng += dlng;
 
-        // OSRM usa precisión de 5 decimales (1E5)
         points.add(LatLng(lat / 1E5, lng / 1E5));
       }
     } catch (e) {
@@ -203,14 +194,14 @@ class ViajeService {
     return points;
   }
 
-  static Future<Map<String, dynamic>> obtenerDetalleViaje(String idViaje) async {
-    // Apuntamos a la nueva ruta RESTful que creamos
+  static Future<Map<String, dynamic>> obtenerDetalleViaje(
+    String idViaje,
+  ) async {
     final response = await HttpClient.get("/viajes/$idViaje/detalle");
 
     if (response.statusCode == 200) {
       final bodyResponse = jsonDecode(response.body);
-      
-      // Extraemos el objeto "data" ya que el back responde con {"ok": true, "data": {...}}
+
       if (bodyResponse["ok"] == true && bodyResponse.containsKey("data")) {
         return bodyResponse["data"] as Map<String, dynamic>;
       }
@@ -222,5 +213,30 @@ class ViajeService {
     }
 
     throw Exception("Error al obtener los detalles del viaje");
+  }
+
+  // ── NUEVO: Método para validar el PIN ingresado por el conductor ──
+  static Future<bool> validarPinViaje(String idViaje, String pin) async {
+    final Map<String, dynamic> body = {"pin": pin};
+
+    final response = await HttpClient.post(
+      "/viajes/$idViaje/validar-pin",
+      body,
+    );
+
+    if (response.statusCode == 200) {
+      return true; // PIN correcto
+    }
+
+    if (response.statusCode == 400) {
+      return false; // PIN incorrecto
+    }
+
+    if (response.statusCode == 401) {
+      throw Exception('TOKEN_INVALIDO');
+    }
+
+    final bodyResponse = jsonDecode(response.body);
+    throw Exception(bodyResponse["detail"] ?? "Error al validar el PIN");
   }
 }

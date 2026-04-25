@@ -15,7 +15,7 @@ import 'screens/registro.dart';
 import 'screens/olvide_contrasena.dart';
 import 'screens/confirmar_correo.dart';
 import 'screens/nueva_contrasena.dart';
-import 'screens/menu_vistas.dart';
+//import 'screens/menu_vistas.dart';
 
 // Screens Pasajero
 import 'screens/registro_pasajero.dart';
@@ -24,7 +24,7 @@ import 'screens/completar_perfil_pasajero.dart';
 import 'screens/perfil_pasajero.dart';
 import 'screens/agendar_viaje.dart';
 import 'screens/agendar_varios_destinos.dart';
-import 'screens/pago_tarjeta.dart';
+//import 'screens/pago_tarjeta.dart';
 import 'screens/registro_tarjeta.dart';
 import 'screens/registro_acompanante.dart';
 import 'screens/historial_viajes_pasajero.dart';
@@ -45,8 +45,8 @@ import 'screens/solicitud_viaje.dart';
 import 'screens/solicitudes_viaje_conductor.dart';
 import 'screens/historial_viajes_conductor.dart';  
 import 'screens/completar_perfil_conductor.dart';
-import 'screens/agregar_ine.dart';
-import 'screens/agregar_licencia.dart';
+//import 'screens/agregar_ine.dart';
+//import 'screens/agregar_licencia.dart';
 import 'screens/metricas_conductor.dart';
 
 // Screens Administrativo
