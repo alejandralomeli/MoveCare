@@ -141,6 +141,10 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> with VozM
 
   // --- MÉTODOS DE CICLO DE VIDA ---
   @override
+  String get vozEjemplos =>
+      '"Agregar parada en la farmacia", "Quitar parada", "Confirmar", "Atrás"';
+
+  @override
   void initState() {
     super.initState();
     inicializarVoz();

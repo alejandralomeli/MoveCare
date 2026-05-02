@@ -1,7 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import '../../app_theme.dart';
 import 'voz_service.dart';
 import 'voz_singleton.dart';
+import 'voz_whisper_service.dart';
 
 /// Mixin de control por voz para pantallas de pasajero.
 ///
@@ -40,11 +43,82 @@ mixin VozMixin<T extends StatefulWidget> on State<T> {
 
   // ── API pública ─────────────────────────────────────────────────────────
 
+  /// Activa o desactiva el control por voz con Whisper.
+  /// true  → primer tap graba, segundo tap sube audio a Whisper y procesa.
+  /// false → usa speech_to_text (flujo original, funciona offline).
+  static bool usarWhisper = false;
+
   /// Escucha, interpreta y ejecuta.
   ///
-  /// [acciones] — mapa de intent → función a ejecutar en esta pantalla.
-  /// Si el intent no está en el mapa, se intenta la navegación global.
+  /// Con Whisper: tap para grabar, tap de nuevo para enviar.
+  /// Sin Whisper: flujo speech_to_text original con timer fallback.
   Future<void> escucharComando(
+    Map<String, Function(Map<String, dynamic> entidades)> acciones,
+  ) async {
+    if (usarWhisper) {
+      await _escucharConWhisper(acciones);
+    } else {
+      await _escucharConSpeechToText(acciones);
+    }
+  }
+
+  // ── Flujo Whisper ────────────────────────────────────────────────────────
+
+  Future<void> _escucharConWhisper(
+    Map<String, Function(Map<String, dynamic> entidades)> acciones,
+  ) async {
+    final tts = VozSingleton.tts;
+
+    // Segundo tap mientras graba → detener y procesar
+    if (vozEscuchando) {
+      if (mounted) setState(() { vozEscuchando = false; vozProcesando = true; });
+      try {
+        final respuesta = await VozWhisperService.detenerYEnviar();
+        if (!mounted) return;
+        setState(() => vozProcesando = false);
+        final voz = respuesta['respuesta_voz'] as String? ?? '';
+        if (voz.isNotEmpty) await tts.speak(voz);
+        if (mounted) {
+          final dbgI = respuesta['intencion'] ?? '?';
+          final dbgT = respuesta['transcripcion'] ?? '';
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('[$dbgI] "$dbgT"'),
+            duration: const Duration(seconds: 5),
+          ));
+        }
+        _despacharAccion(respuesta, acciones);
+      } catch (e) {
+        if (!mounted) return;
+        setState(() => vozProcesando = false);
+        await tts.speak('Lo siento, no pude procesar el audio');
+        debugPrint('VozMixin Whisper: $e');
+      }
+      return;
+    }
+
+    // Primer tap → iniciar grabación
+    final ok = await VozWhisperService.iniciar();
+    if (!ok) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Micrófono no disponible')),
+        );
+      }
+      return;
+    }
+    if (mounted) setState(() => vozEscuchando = true);
+
+    // Auto-stop después de 10s si el usuario no toca de nuevo
+    Future.delayed(const Duration(seconds: 10), () async {
+      if (mounted && vozEscuchando) {
+        await _escucharConWhisper(acciones); // simula segundo tap
+      }
+    });
+  }
+
+  // ── Flujo speech_to_text (original) ──────────────────────────────────────
+
+  Future<void> _escucharConSpeechToText(
     Map<String, Function(Map<String, dynamic> entidades)> acciones,
   ) async {
     final speech = VozSingleton.speech;
@@ -57,13 +131,11 @@ mixin VozMixin<T extends StatefulWidget> on State<T> {
       return;
     }
 
-    // Si ERA esta pantalla la que estaba escuchando → toggle off
     final eraEstaEscuchando = vozEscuchando;
     if (speech.isListening) {
-        await speech.stop();
+      await speech.stop();
       if (mounted) setState(() => vozEscuchando = false);
-      if (eraEstaEscuchando) return; // el usuario quiso detener
-      // Otra pantalla tenía la sesión: esperar y abrir nueva
+      if (eraEstaEscuchando) return;
       await Future.delayed(const Duration(milliseconds: 800));
     }
 
@@ -73,7 +145,6 @@ mixin VozMixin<T extends StatefulWidget> on State<T> {
 
     if (mounted) setState(() => vozEscuchando = true);
 
-    // Auto-reset si la sesión termina sin resultado (timeout)
     Future.delayed(const Duration(seconds: 12), () {
       if (mounted && vozEscuchando) setState(() => vozEscuchando = false);
     });
@@ -85,12 +156,9 @@ mixin VozMixin<T extends StatefulWidget> on State<T> {
         onResult: (result) async {
           final texto = result.recognizedWords.trim();
           if (texto.isNotEmpty) _ultimoTexto = texto;
-
-          // Cancelar timer anterior — hay texto nuevo llegando
           _vozTimer?.cancel();
 
           if (result.finalResult) {
-            // Camino normal: Android sí entregó resultado final
             if (!_procesado && _ultimoTexto.isNotEmpty) {
               _procesado = true;
               await _procesarComando(_ultimoTexto, acciones, tts);
@@ -98,9 +166,6 @@ mixin VozMixin<T extends StatefulWidget> on State<T> {
             return;
           }
 
-          // Fallback: Android no dispara finalResult=true en algunos dispositivos.
-          // Disparar procesamiento 2 s después del último resultado parcial,
-          // que es cuando el usuario claramente dejó de hablar.
           _vozTimer = Timer(const Duration(milliseconds: 2000), () async {
             if (!_procesado && _ultimoTexto.isNotEmpty) {
               _procesado = true;
@@ -151,6 +216,11 @@ mixin VozMixin<T extends StatefulWidget> on State<T> {
   /// Habla un texto directamente (útil para confirmaciones manuales).
   Future<void> hablar(String texto) => VozSingleton.tts.speak(texto);
 
+  /// Ejemplos de comandos que se muestran en el modal de "no reconocido".
+  /// Cada pantalla puede sobreescribir este getter con sus comandos relevantes.
+  String get vozEjemplos =>
+      '"Quiero un viaje", "Historial", "Mi perfil", "Atrás"';
+
   // ── Despacho ────────────────────────────────────────────────────────────
 
   void _despacharAccion(
@@ -158,22 +228,21 @@ mixin VozMixin<T extends StatefulWidget> on State<T> {
     Map<String, Function(Map<String, dynamic>)> acciones,
   ) {
     final intencion = respuesta['intencion'] as String? ?? 'no_reconocido';
-    final entidades =
-        (respuesta['entidades'] as Map<String, dynamic>?) ?? {};
+    final entidades = (respuesta['entidades'] as Map<String, dynamic>?) ?? {};
+    final transcripcion = respuesta['transcripcion'] as String? ?? '';
 
-    // 1. Acción específica de esta pantalla
     if (acciones.containsKey(intencion)) {
       acciones[intencion]!(entidades);
       return;
     }
 
-    // 2. Navegación global (funciona en cualquier pantalla de pasajero)
-    _navegarGlobal(intencion, entidades);
+    _navegarGlobal(intencion, entidades, transcripcion);
   }
 
   void _navegarGlobal(
     String intencion,
     Map<String, dynamic> entidades,
+    String transcripcion,
   ) {
     switch (intencion) {
       case 'solicitar_viaje':
@@ -210,47 +279,72 @@ mixin VozMixin<T extends StatefulWidget> on State<T> {
         if (Navigator.canPop(context)) Navigator.pop(context);
         break;
       case 'no_reconocido':
-        _mostrarNoReconocido();
+        _mostrarNoReconocido(transcripcion);
         break;
       default:
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Ese comando no está disponible en esta pantalla'),
-            backgroundColor: Colors.black54,
-            duration: Duration(seconds: 2),
-          ),
-        );
+        _mostrarNoReconocido(transcripcion);
     }
   }
 
-  void _mostrarNoReconocido() {
+  void _mostrarNoReconocido(String texto) {
     if (!mounted) return;
     showModalBottomSheet(
       context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (_) => Padding(
-        padding: const EdgeInsets.all(24),
+      backgroundColor: Colors.transparent,
+      builder: (_) => Container(
+        padding: const EdgeInsets.all(28),
+        decoration: const BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.mic_off, size: 48, color: Colors.grey),
-            const SizedBox(height: 12),
-            const Text(
-              'No te entendí bien',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 6),
-            const Text(
-              'Intenta con comandos como:\n"Quiero un viaje", "Historial", "Atrás", "Confirmar"',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey),
-            ),
+            Image.asset('assets/rechazado.png', height: 64),
             const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Entendido'),
+            Text(
+              'No entendí el comando',
+              style: GoogleFonts.montserrat(
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              texto.isNotEmpty ? '"$texto"' : 'Intenta de nuevo',
+              style: GoogleFonts.montserrat(
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+                color: AppColors.textSecondary,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'Puedes decir:\n$vozEjemplos',
+              style: GoogleFonts.montserrat(
+                fontSize: 12,
+                color: AppColors.textSecondary,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                ),
+                child: Text(
+                  'Entendido',
+                  style: GoogleFonts.montserrat(
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.white,
+                  ),
+                ),
+              ),
             ),
           ],
         ),

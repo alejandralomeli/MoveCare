@@ -108,6 +108,10 @@ class _AgendarViajeState extends State<AgendarViaje> with VozMixin {
 
   // --- INIT & DISPOSE ---
   @override
+  String get vozEjemplos =>
+      '"Llévame al hospital", "Mi origen es casa", "Confirmar", "Atrás"';
+
+  @override
   void initState() {
     super.initState();
     inicializarVoz();

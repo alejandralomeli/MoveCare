@@ -41,6 +41,9 @@ class _RegistrarAcompananteState extends State<RegistrarAcompanante> with VozMix
   ];
 
   @override
+  String get vozEjemplos => '"Confirmar", "Atrás"';
+
+  @override
   void initState() {
     super.initState();
     inicializarVoz();

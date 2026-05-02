@@ -14,6 +14,9 @@ class ViajeConfirmado extends StatefulWidget {
 
 class _ViajeConfirmadoState extends State<ViajeConfirmado> with VozMixin {
   @override
+  String get vozEjemplos => '"Estado de mi viaje", "Inicio", "Atrás"';
+
+  @override
   void initState() {
     super.initState();
     inicializarVoz();

@@ -52,6 +52,9 @@ class _ReporteIncidenciaPasajeroState extends State<ReporteIncidenciaPasajero> w
   }
 
   @override
+  String get vozEjemplos => '"Enviar reporte", "Atrás"';
+
+  @override
   void initState() {
     super.initState();
     inicializarVoz();
