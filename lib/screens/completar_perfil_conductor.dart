@@ -488,29 +488,19 @@ class _HeaderDelegate extends SliverPersistentHeaderDelegate {
           height: maxExtent,
           width: double.infinity,
           decoration: const BoxDecoration(color: AppColors.primaryLight),
-          child: Row(
-            children: [
-              const SizedBox(width: 60),
-              Expanded(
-                child: Center(
-                  child: Text('Completar Perfil',
-                    style: GoogleFonts.montserrat(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
-                ),
-              ),
-              const SizedBox(width: 60),
-            ],
+          child: Center(
+            child: Text('Completar Perfil',
+              style: GoogleFonts.montserrat(fontSize: 20, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
           ),
         ),
-        // Botón Atrás
         Positioned(
           left: 10,
-          bottom: 15,
+          bottom: 20,
           child: IconButton(
             icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.primary, size: 20),
             onPressed: () => Navigator.of(context).pop(),
           ),
         ),
-        // Foto de Perfil + Lápiz de Edición
         Positioned(
           left: 20,
           top: 10,
@@ -538,30 +528,14 @@ class _HeaderDelegate extends SliverPersistentHeaderDelegate {
             ),
           ),
         ),
-        // Micrófono (Estética Repo)
-        Positioned(
-          right: 15,
-          bottom: 10,
-          child: GestureDetector(
-            onTap: onVoiceTap,
-            child: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: isVoiceActive ? AppColors.error : AppColors.primary,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(isVoiceActive ? Icons.mic : Icons.mic_none, color: AppColors.white, size: 24),
-            ),
-          ),
-        ),
       ],
     );
   }
 
   @override
-  double get maxExtent => 85;
+  double get maxExtent => 80;
   @override
-  double get minExtent => 85;
+  double get minExtent => 80;
   @override
   bool shouldRebuild(covariant _HeaderDelegate oldDelegate) => true;
 }

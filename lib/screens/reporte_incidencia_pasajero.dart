@@ -417,7 +417,7 @@ class _HeaderDelegate extends SliverPersistentHeaderDelegate {
         ),
         // Mantuve tu botón de micrófono original de pasajero por si acaso
         Positioned(
-          right: 16,
+          right: 15,
           bottom: -20,
           child: MicButton(
             isActive: isVoiceActive,

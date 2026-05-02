@@ -284,7 +284,7 @@ class _ViajeActualMapaState extends State<ViajeActualMapa> {
 
             // TODO: Llamar al endpoint para marcar el viaje como FINALIZADO en tu BD general
 
-            Navigator.pop(context); // Vuelve al Home tras acabar todo
+            Navigator.pushReplacementNamed(context, '/principal_conductor');
           },
         );
       }
@@ -386,7 +386,7 @@ class _ViajeActualMapaState extends State<ViajeActualMapa> {
                     GestureDetector(
                       onTap: () {
                         _positionStream?.cancel();
-                        Navigator.pop(context);
+                        Navigator.pushReplacementNamed(context, '/principal_conductor');
                       },
                       child: Container(
                         width: 40,

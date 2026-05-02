@@ -84,7 +84,7 @@ class _GestionUsuariosState extends State<GestionUsuarios> {
       length: 2,
       child: Scaffold(
         backgroundColor: AppColors.white,
-        // bottomNavigationBar: const AdminBottomNav(selectedIndex: 1),
+        bottomNavigationBar: const AdminBottomNav(selectedIndex: 1),
         body: Column(
           children: [
             Container(

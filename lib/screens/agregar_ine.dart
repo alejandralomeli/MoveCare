@@ -3,8 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import '../app_theme.dart';
-import 'widgets/mic_button.dart';
-
 class AgregarIne extends StatefulWidget {
   const AgregarIne({super.key});
 
@@ -13,13 +11,10 @@ class AgregarIne extends StatefulWidget {
 }
 
 class _AgregarIneState extends State<AgregarIne> {
-  bool _isVoiceActive = false;
   File? _ineAnverso;
   File? _ineReverso;
 
   final ImagePicker _picker = ImagePicker();
-
-  void _toggleVoice() => setState(() => _isVoiceActive = !_isVoiceActive);
 
   Future<void> _pickImage(String tipo, ImageSource source) async {
     final XFile? image = await _picker.pickImage(source: source);
@@ -70,11 +65,7 @@ class _AgregarIneState extends State<AgregarIne> {
         slivers: [
           SliverPersistentHeader(
             pinned: true,
-            delegate: _HeaderDelegate(
-              title: 'Agregar INE',
-              isVoiceActive: _isVoiceActive,
-              onVoiceTap: _toggleVoice,
-            ),
+            delegate: _HeaderDelegate(title: 'Agregar INE'),
           ),
           SliverToBoxAdapter(
             child: Padding(
@@ -208,13 +199,8 @@ class _AgregarIneState extends State<AgregarIne> {
 
 class _HeaderDelegate extends SliverPersistentHeaderDelegate {
   final String title;
-  final bool isVoiceActive;
-  final VoidCallback onVoiceTap;
 
-  _HeaderDelegate(
-      {required this.title,
-      required this.isVoiceActive,
-      required this.onVoiceTap});
+  _HeaderDelegate({required this.title});
 
   @override
   Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
@@ -244,11 +230,6 @@ class _HeaderDelegate extends SliverPersistentHeaderDelegate {
                 color: AppColors.primary, size: 20),
             onPressed: () => Navigator.of(context).pop(),
           ),
-        ),
-        Positioned(
-          right: 15,
-          bottom: -20,
-          child: MicButton(isActive: isVoiceActive, onTap: onVoiceTap, size: 42),
         ),
       ],
     );

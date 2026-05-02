@@ -125,7 +125,7 @@ class _PrincipalAdministradorState extends State<PrincipalAdministrador> {
           ],
         ),
       ),
-      // bottomNavigationBar: const AdminBottomNav(selectedIndex: 0),
+      bottomNavigationBar: const AdminBottomNav(selectedIndex: 0),
     );
   }
 

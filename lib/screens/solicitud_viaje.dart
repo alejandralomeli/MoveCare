@@ -625,7 +625,7 @@ class _DynamicHeaderDelegate extends SliverPersistentHeaderDelegate {
             child: Text(
               title,
               style: GoogleFonts.montserrat(
-                fontSize: screenWidth * (16 / 375),
+                fontSize: 20,
                 fontWeight: FontWeight.w700,
                 color: AppColors.textPrimary,
               ),

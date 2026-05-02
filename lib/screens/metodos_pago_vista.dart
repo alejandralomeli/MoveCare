@@ -219,30 +219,29 @@ class _MetodosPagoVistaState extends State<MetodosPagoVista> {
 class _HeaderDelegate extends SliverPersistentHeaderDelegate {
   @override
   Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
-    return Container(
-      color: AppColors.primaryLight,
-      child: Stack(
-        children: [
-          Positioned(
-            left: 10,
-            bottom: 12,
-            child: IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.primary, size: 20),
-              onPressed: () => Navigator.pop(context),
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Container(
+          height: maxExtent,
+          width: double.infinity,
+          decoration: const BoxDecoration(color: AppColors.primaryLight),
+          child: Center(
+            child: Text(
+              'Métodos de pago',
+              style: GoogleFonts.montserrat(fontSize: 20, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
             ),
           ),
-          Align(
-            alignment: Alignment.bottomCenter,
-            child: Padding(
-              padding: const EdgeInsets.only(bottom: 16),
-              child: Text(
-                'Métodos de pago',
-                style: GoogleFonts.montserrat(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
-              ),
-            ),
+        ),
+        Positioned(
+          left: 10,
+          bottom: 20,
+          child: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.primary, size: 20),
+            onPressed: () => Navigator.pop(context),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 

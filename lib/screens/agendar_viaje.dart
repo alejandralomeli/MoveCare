@@ -1073,7 +1073,7 @@ class _DynamicHeaderDelegate extends SliverPersistentHeaderDelegate {
           ),
         ),
         Positioned(
-          right: 20,
+          right: 15,
           bottom: -20,
           child: MicButton(
             isActive: isVoiceActive,
