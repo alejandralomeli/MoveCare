@@ -52,6 +52,9 @@ class _ReporteIncidenciaPasajeroState extends State<ReporteIncidenciaPasajero> w
   }
 
   @override
+  String get vozEjemplos => '"Enviar reporte", "Atrás"';
+
+  @override
   void initState() {
     super.initState();
     inicializarVoz();
@@ -414,7 +417,7 @@ class _HeaderDelegate extends SliverPersistentHeaderDelegate {
         ),
         // Mantuve tu botón de micrófono original de pasajero por si acaso
         Positioned(
-          right: 16,
+          right: 15,
           bottom: -20,
           child: MicButton(
             isActive: isVoiceActive,

@@ -20,6 +20,9 @@ class PerfilPasajero extends StatefulWidget {
 
 class _PerfilPasajeroState extends State<PerfilPasajero> with VozMixin {
   @override
+  String get vozEjemplos => '"Atrás", "Inicio", "Historial"';
+
+  @override
   void initState() {
     super.initState();
     inicializarVoz();

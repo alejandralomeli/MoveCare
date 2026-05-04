@@ -142,6 +142,10 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos>
 
   // --- MÉTODOS DE CICLO DE VIDA ---
   @override
+  String get vozEjemplos =>
+      '"Agregar parada en la farmacia", "Quitar parada", "Confirmar", "Atrás"';
+
+  @override
   void initState() {
     super.initState();
     inicializarVoz();
@@ -1329,7 +1333,7 @@ class _DynamicHeaderDelegate extends SliverPersistentHeaderDelegate {
           ),
         ),
         Positioned(
-          right: 20,
+          right: 15,
           bottom: -20,
           child: MicButton(
             isActive: isVoiceActive,

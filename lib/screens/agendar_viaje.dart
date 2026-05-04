@@ -108,6 +108,10 @@ class _AgendarViajeState extends State<AgendarViaje> with VozMixin {
 
   // --- INIT & DISPOSE ---
   @override
+  String get vozEjemplos =>
+      '"Llévame al hospital", "Mi origen es casa", "Confirmar", "Atrás"';
+
+  @override
   void initState() {
     super.initState();
     inicializarVoz();
@@ -1075,7 +1079,7 @@ class _DynamicHeaderDelegate extends SliverPersistentHeaderDelegate {
           ),
         ),
         Positioned(
-          right: 20,
+          right: 15,
           bottom: -20,
           child: MicButton(
             isActive: isVoiceActive,

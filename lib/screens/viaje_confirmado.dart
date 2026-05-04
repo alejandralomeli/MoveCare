@@ -14,6 +14,9 @@ class ViajeConfirmado extends StatefulWidget {
 
 class _ViajeConfirmadoState extends State<ViajeConfirmado> with VozMixin {
   @override
+  String get vozEjemplos => '"Estado de mi viaje", "Inicio", "Atrás"';
+
+  @override
   void initState() {
     super.initState();
     inicializarVoz();
@@ -61,11 +64,11 @@ class _ViajeConfirmadoState extends State<ViajeConfirmado> with VozMixin {
               right: 20,
               child: MicButton(
                 isActive: vozEscuchando || vozProcesando,
+                size: 42,
                 onTap: () => escucharComando({
                   'ir_atras': (_) => Navigator.pop(context),
                   'cancelar_viaje': (_) => Navigator.pop(context),
                 }),
-                size: 52,
               ),
             ),
 

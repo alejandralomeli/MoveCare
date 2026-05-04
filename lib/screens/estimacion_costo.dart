@@ -13,6 +13,9 @@ class EstimacionViaje extends StatefulWidget {
 
 class _EstimacionViajeState extends State<EstimacionViaje> with VozMixin {
   @override
+  String get vozEjemplos => '"Confirmar viaje", "Atrás"';
+
+  @override
   void initState() {
     super.initState();
     inicializarVoz();

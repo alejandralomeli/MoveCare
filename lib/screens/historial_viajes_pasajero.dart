@@ -34,6 +34,10 @@ class _HistorialViajesPasajero extends State<HistorialViajesPasajero> with VozMi
   ];
 
   @override
+  String get vozEjemplos =>
+      '"Completados", "Cancelados", "Ver todos", "Atrás"';
+
+  @override
   void initState() {
     super.initState();
     inicializarVoz();

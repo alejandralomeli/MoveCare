@@ -41,6 +41,9 @@ class _RegistrarAcompananteState extends State<RegistrarAcompanante> with VozMix
   ];
 
   @override
+  String get vozEjemplos => '"Confirmar", "Atrás"';
+
+  @override
   void initState() {
     super.initState();
     inicializarVoz();
@@ -283,8 +286,8 @@ class _RegistrarAcompananteState extends State<RegistrarAcompanante> with VozMix
         clipBehavior: Clip.none,
         children: [
           Positioned(
-            left: 15,
-            bottom: 10,
+            left: 10,
+            bottom: 20,
             child: IconButton(
               icon: const Icon(
                 Icons.arrow_back_ios_new,
@@ -297,19 +300,19 @@ class _RegistrarAcompananteState extends State<RegistrarAcompanante> with VozMix
           Center(
             child: Text(
               'Registrar acompañante',
-              style: mBold(size: 19, color: AppColors.textPrimary),
+              style: GoogleFonts.montserrat(fontSize: 20, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
             ),
           ),
           Positioned(
-            right: 20,
-            bottom: -26,
+            right: 15,
+            bottom: -20,
             child: MicButton(
               isActive: vozEscuchando || vozProcesando,
               onTap: () => escucharComando({
                 'confirmar': (_) => _registrar(),
                 'ir_atras': (_) => Navigator.pop(context),
               }),
-              size: 52,
+              size: 42,
             ),
           ),
         ],

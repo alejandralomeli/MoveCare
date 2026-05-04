@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../app_theme.dart';
 import '../models/auditoria_model.dart';
 import '../services/auditoria/auditoia_service.dart';
 import 'widgets/modals/detalle_auditoria.dart';
@@ -48,34 +49,30 @@ class HistorialAuditoria extends StatelessWidget {
       body: Column(
         children: [
           Container(
-            height: 110,
+            height: 80,
             width: double.infinity,
-            color: lightBlueBg,
+            color: AppColors.primaryLight,
             child: Stack(
               children: [
                 Positioned(
-                  top: 35,
                   left: 10,
+                  bottom: 20,
                   child: IconButton(
                     icon: const Icon(
                       Icons.arrow_back_ios_new,
-                      color: primaryBlue,
+                      color: AppColors.primary,
                       size: 20,
                     ),
                     onPressed: () => Navigator.pop(context),
                   ),
                 ),
-                Align(
-                  alignment: Alignment.bottomCenter,
-                  child: Padding(
-                    padding: const EdgeInsets.only(bottom: 30),
-                    child: Text(
-                      'Historial de Movimientos',
-                      style: GoogleFonts.montserrat(
-                        fontSize: sp(18, context),
-                        fontWeight: FontWeight.w900,
-                        color: Colors.black,
-                      ),
+                Center(
+                  child: Text(
+                    'Historial de Movimientos',
+                    style: GoogleFonts.montserrat(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary,
                     ),
                   ),
                 ),
