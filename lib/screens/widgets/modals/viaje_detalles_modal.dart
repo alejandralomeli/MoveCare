@@ -6,7 +6,7 @@ class ViajeDetallesModal extends StatelessWidget {
   final bool esConductor; // 🔥 Agregamos el rol
 
   const ViajeDetallesModal({
-    super.key, 
+    super.key,
     required this.viaje,
     this.esConductor = false, // 🔥 Por defecto es falso (lo abre el pasajero)
   });
@@ -34,30 +34,49 @@ class ViajeDetallesModal extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Formateo básico de la fecha (puedes ajustarlo si usas intl)
+    // Formateo básico de la fecha
     DateTime fecha = DateTime.parse(viaje['fecha_hora_inicio']);
-    String fechaStr = "${fecha.day}/${fecha.month}/${fecha.year} a las ${fecha.hour}:${fecha.minute.toString().padLeft(2, '0')}";
+    String fechaStr =
+        "${fecha.day}/${fecha.month}/${fecha.year} a las ${fecha.hour}:${fecha.minute.toString().padLeft(2, '0')}";
+
+    // 🔥 EXTRAER Y FORMATEAR EL PIN
+    // Intenta buscar llaves comunes, si no hay asume "0000"
+    String pinViaje =
+        (viaje['pin'] ??
+                viaje['codigo_pin'] ??
+                viaje['pin_seguridad'] ??
+                '0000')
+            .toString();
+    // Nos aseguramos de que siempre tenga 4 caracteres para no romper la UI
+    if (pinViaje.length > 4) pinViaje = pinViaje.substring(0, 4);
+    if (pinViaje.length < 4) pinViaje = pinViaje.padLeft(4, '0');
 
     // 🔥 LÓGICA DINÁMICA DE TEXTOS E ÍCONOS DEPENDIENDO DEL ROL
     final tituloPersona = esConductor ? "Pasajero" : "Conductor";
-    final nombrePersona = esConductor 
-        ? (viaje['nombre_pasajero'] ?? 'Buscando pasajero...') 
+    final nombrePersona = esConductor
+        ? (viaje['nombre_pasajero'] ?? 'Buscando pasajero...')
         : (viaje['nombre_conductor'] ?? 'Buscando conductor...');
     final iconoPersona = esConductor ? Icons.person : Icons.person_pin;
 
     final tituloExtra = esConductor ? "Necesidades Especiales" : "Vehículo";
-    final contenidoExtra = esConductor 
-        ? (viaje['necesidad_especial'] ?? 'Ninguna especificada') 
+    final contenidoExtra = esConductor
+        ? (viaje['necesidad_especial'] ?? 'Ninguna especificada')
         : "${viaje['vehiculo_marca'] ?? ''} ${viaje['vehiculo_modelo'] ?? ''} - ${viaje['vehiculo_color'] ?? ''}\nPlacas: ${viaje['vehiculo_placas'] ?? ''}";
     final iconoExtra = esConductor ? Icons.accessible : Icons.directions_car;
 
     return Container(
+      // 🔥 AQUÍ ESTÁ LA MAGIA: Limitamos el alto máximo al 85% de la pantalla
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.85,
+      ),
       padding: const EdgeInsets.all(25),
       decoration: const BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
       ),
       child: SingleChildScrollView(
+        physics:
+            const BouncingScrollPhysics(), // Da un efecto de rebote agradable al hacer slide
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -74,9 +93,33 @@ class ViajeDetallesModal extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 20),
-            
-            Text("Detalles de tu viaje", style: mExtrabold(size: 22, color: darkBlue)),
-            const SizedBox(height: 25),
+
+            Text(
+              "Detalles de tu viaje",
+              style: mExtrabold(size: 22, color: darkBlue),
+            ),
+            const SizedBox(height: 20),
+
+            // 🔥 NUEVA SECCIÓN DEL PIN 🔥
+            Center(
+              child: Column(
+                children: [
+                  Text(
+                    "PIN de seguridad",
+                    style: mExtrabold(size: 14, color: Colors.grey[600]!),
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: pinViaje
+                        .split('')
+                        .map((digito) => _buildPinBox(digito))
+                        .toList(),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 35, color: lightBlueBg, thickness: 2),
 
             // Sección Dinámica: Conductor o Pasajero
             _buildSection(
@@ -128,9 +171,9 @@ class ViajeDetallesModal extends StatelessWidget {
                 ),
               ],
             ),
-            
+
             const SizedBox(height: 30),
-            
+
             // Botón para cerrar
             SizedBox(
               width: double.infinity,
@@ -138,22 +181,47 @@ class ViajeDetallesModal extends StatelessWidget {
                 onPressed: () => Navigator.pop(context),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: primaryBlue,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(15),
+                  ),
                   padding: const EdgeInsets.symmetric(vertical: 15),
                 ),
-                child: Text("Cerrar", style: mExtrabold(color: Colors.white, size: 16)),
+                child: Text(
+                  "Cerrar",
+                  style: mExtrabold(color: Colors.white, size: 16),
+                ),
               ),
             ),
             // Espacio extra por si el modal se abre sobre el notch inferior de iOS/Android
-            const SizedBox(height: 10), 
+            const SizedBox(height: 10),
           ],
         ),
       ),
     );
   }
 
+  // 🔥 Helper para los recuadros del PIN
+  Widget _buildPinBox(String digit) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 6),
+      width: 50,
+      height: 55,
+      decoration: BoxDecoration(
+        color: lightBlueBg,
+        border: Border.all(color: primaryBlue.withOpacity(0.5), width: 1.5),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      alignment: Alignment.center,
+      child: Text(digit, style: mExtrabold(size: 24, color: darkBlue)),
+    );
+  }
+
   // Helper para pintar cada fila con su ícono
-  Widget _buildSection({required IconData icon, required String title, required String content}) {
+  Widget _buildSection({
+    required IconData icon,
+    required String title,
+    required String content,
+  }) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -170,7 +238,10 @@ class ViajeDetallesModal extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(title, style: mExtrabold(size: 14, color: Colors.grey[700]!)),
+              Text(
+                title,
+                style: mExtrabold(size: 14, color: Colors.grey[700]!),
+              ),
               const SizedBox(height: 4),
               Text(content, style: mRegular(size: 15)),
             ],

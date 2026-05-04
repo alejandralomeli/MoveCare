@@ -3,9 +3,9 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../app_theme.dart'; // Ajusta la ruta a tu app_theme
 
 class IndicadorFases extends StatelessWidget {
-  final int tripPhase;
+  final String estadoViaje; // <-- Cambiado de int tripPhase a String
 
-  const IndicadorFases({super.key, required this.tripPhase});
+  const IndicadorFases({super.key, required this.estadoViaje});
 
   static const List<Map<String, String>> _phases = [
     {'label': 'En camino', 'sub': 'Dirígete al punto de recogida'},
@@ -23,6 +23,14 @@ class IndicadorFases extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Convertimos el estado en string a un índice numérico para la vista
+    int faseIndex = 0;
+    if (estadoViaje == 'En_curso') {
+      faseIndex = 1;
+    } else if (estadoViaje == 'Finalizado') {
+      faseIndex = 3; // Todas completas
+    }
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
@@ -37,8 +45,8 @@ class IndicadorFases extends StatelessWidget {
       ),
       child: Row(
         children: List.generate(3, (i) {
-          final active = i == tripPhase;
-          final done = i < tripPhase;
+          final active = i == faseIndex;
+          final done = i < faseIndex;
           return Expanded(
             child: Row(
               children: [

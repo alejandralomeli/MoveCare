@@ -109,8 +109,8 @@ class MyApp extends StatelessWidget {
         // Rutas de Autenticación y Sistema
         '/bienvenido': (context) => const Bienvenido(),
         '/iniciar_sesion': (context) => const IniciarSesion(),
-        '/olvide_contrasena': (context) => const OlvideContrasena(),
-        '/nueva_contrasena': (context) => const NuevaContrasena(),
+        '/olvide_contrasena': (context) => const OlvideContrasena(), //F
+        '/nueva_contrasena': (context) => const NuevaContrasena(), //F
         '/confirmar-correo': (context) => const ConfirmarCorreoScreen(), 
         '/registro': (context) => const Registro(),
 
@@ -126,8 +126,8 @@ class MyApp extends StatelessWidget {
         '/registro_acompanante': (context) => const RegistrarAcompanante(),
         '/historial_viajes_pasajero': (context) => const HistorialViajesPasajero(),
         '/reporte_incidencia_pasajero': (context) => const ReporteIncidenciaPasajero(),
-        '/viaje_confirmado': (context) => const ViajeConfirmado(), //F
-        '/estimacion_costo': (context) => const EstimacionViaje(), //F
+        // '/viaje_confirmado': (context) => const ViajeConfirmado(), //F
+        //'/estimacion_costo': (context) => const EstimacionViaje(), //F
         '/metodos_pago_lista': (context) => const MetodosPagoVista(),
         '/terminos_condiciones': (context) => const TerminosVista(),
         '/aviso_privacidad': (context) => const PrivacidadVista(),

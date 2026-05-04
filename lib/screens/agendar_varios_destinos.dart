@@ -21,7 +21,8 @@ class AgendarVariosDestinos extends StatefulWidget {
   State<AgendarVariosDestinos> createState() => _AgendarVariosDestinosState();
 }
 
-class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> with VozMixin {
+class _AgendarVariosDestinosState extends State<AgendarVariosDestinos>
+    with VozMixin {
   // --- VARIABLES DE ESTADO (LÓGICA ACTUAL) ---
   bool _isCreatingTrip = false;
 
@@ -185,8 +186,11 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> with VozM
       final List<dynamic> data = await PagosService.obtenerTarjetas();
       tarjetas = data.map<Map<String, String>>((t) {
         return {
-          "id": t["id_tarjeta"].toString(),
-          "texto": "${t['marca']} •••• ${t['ultimos_cuatro']}",
+          // 1. Cambiamos id_tarjeta por id_metodo (como viene en tu JSON)
+          "id": t["id_metodo"].toString(),
+          // 2. Formateamos el texto en mayúsculas para que se vea como "VISA •••• 4242"
+          "texto":
+              "${t['marca'].toString().toUpperCase()} •••• ${t['ultimos_cuatro']}",
         };
       }).toList();
     } catch (e) {
@@ -482,8 +486,12 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> with VozM
                           IconButton(
                             icon: const Icon(Icons.chevron_left),
                             onPressed: () {
-                              final prev = _weekStart.subtract(const Duration(days: 7));
-                              if (!prev.isBefore(_inicioSemana(DateTime.now()))) {
+                              final prev = _weekStart.subtract(
+                                const Duration(days: 7),
+                              );
+                              if (!prev.isBefore(
+                                _inicioSemana(DateTime.now()),
+                              )) {
                                 setState(() => _weekStart = prev);
                               }
                             },
@@ -911,10 +919,21 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> with VozM
         child: DropdownButton<String>(
           value: v,
           style: mSemibold(sw, color: AppColors.primary),
-          hint: Text(h, style: mSemibold(sw, color: AppColors.textSecondary, size: 12)),
+          hint: Text(
+            h,
+            style: mSemibold(sw, color: AppColors.textSecondary, size: 12),
+          ),
           isExpanded: true,
           items: i
-              .map((e) => DropdownMenuItem(value: e, child: Text(e, style: mSemibold(sw, color: AppColors.primary))))
+              .map(
+                (e) => DropdownMenuItem(
+                  value: e,
+                  child: Text(
+                    e,
+                    style: mSemibold(sw, color: AppColors.primary),
+                  ),
+                ),
+              )
               .toList(),
           onChanged: o,
         ),
@@ -934,10 +953,21 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> with VozM
         child: DropdownButton<String>(
           value: selectedNeed,
           style: mSemibold(sw, color: AppColors.primary),
-          hint: Text('Necesidad especial', style: mSemibold(sw, color: AppColors.textSecondary, size: 13)),
+          hint: Text(
+            'Necesidad especial',
+            style: mSemibold(sw, color: AppColors.textSecondary, size: 13),
+          ),
           isExpanded: true,
           items: needsList
-              .map((e) => DropdownMenuItem(value: e, child: Text(e, style: mSemibold(sw, color: AppColors.primary))))
+              .map(
+                (e) => DropdownMenuItem(
+                  value: e,
+                  child: Text(
+                    e,
+                    style: mSemibold(sw, color: AppColors.primary),
+                  ),
+                ),
+              )
               .toList(),
           onChanged: (v) => setState(() {
             selectedNeed = v;
@@ -971,12 +1001,23 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> with VozM
             children: [
               Icon(i, color: AppColors.primary, size: 20),
               const SizedBox(width: 10),
-              Text(h, style: mSemibold(sw, color: AppColors.textSecondary, size: 13)),
+              Text(
+                h,
+                style: mSemibold(sw, color: AppColors.textSecondary, size: 13),
+              ),
             ],
           ),
           isExpanded: true,
           items: it
-              .map((e) => DropdownMenuItem(value: e, child: Text(e, style: mSemibold(sw, color: AppColors.primary))))
+              .map(
+                (e) => DropdownMenuItem(
+                  value: e,
+                  child: Text(
+                    e,
+                    style: mSemibold(sw, color: AppColors.primary),
+                  ),
+                ),
+              )
               .toList(),
           onChanged: o,
         ),
@@ -998,14 +1039,19 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> with VozM
         child: DropdownButton<String>(
           value: selectedAcompananteId,
           hint: Text(
-            acompanantes.isEmpty ? 'Sin acompañantes' : 'Selecciona acompañante',
+            acompanantes.isEmpty
+                ? 'Sin acompañantes'
+                : 'Selecciona acompañante',
             style: mSemibold(sw, color: AppColors.textSecondary, size: 13),
           ),
           isExpanded: true,
           items: acompanantes.map((a) {
             return DropdownMenuItem(
               value: a["id"],
-              child: Text(a["nombre"]!, style: mSemibold(sw, color: AppColors.primary)),
+              child: Text(
+                a["nombre"]!,
+                style: mSemibold(sw, color: AppColors.primary),
+              ),
             );
           }).toList(),
           onChanged: acompanantes.isEmpty
@@ -1017,8 +1063,11 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> with VozM
   }
 
   Widget _buildTarjetaDropdown(double sw) {
-    if (cargandoTarjetas)
-      return const Center(child: LinearProgressIndicator());
+    if (cargandoTarjetas) return const Center(child: LinearProgressIndicator());
+    String hintText = tarjetas.isEmpty
+        ? 'Registrar Tarjeta'
+        : 'Selecciona tu tarjeta';
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 15),
       decoration: BoxDecoration(
@@ -1034,18 +1083,25 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> with VozM
               const Icon(Icons.credit_card, color: AppColors.primary, size: 20),
               const SizedBox(width: 10),
               Text(
-                tarjetas.isEmpty ? 'Registrar Tarjeta' : 'Selecciona tu tarjeta',
+                hintText,
                 style: mSemibold(sw, color: AppColors.textSecondary, size: 13),
               ),
             ],
           ),
           isExpanded: true,
-          items: tarjetas.map((t) {
-            return DropdownMenuItem(
-              value: t["id"],
-              child: Text(t["texto"]!, style: mSemibold(sw, color: AppColors.primary)),
-            );
-          }).toList(),
+          items: tarjetas
+              .map(
+                (t) => DropdownMenuItem<String>(
+                  // ESTO ES CLAVE: Debe decir t["id"]
+                  value: t["id"],
+                  child: Text(
+                    // ESTO ES CLAVE: Debe decir t["texto"]!
+                    t["texto"]!,
+                    style: mSemibold(sw, color: AppColors.primary),
+                  ),
+                ),
+              )
+              .toList(),
           onChanged: tarjetas.isEmpty
               ? null
               : (v) => setState(() => selectedTarjetaId = v),
@@ -1115,7 +1171,10 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> with VozM
         ),
         const Spacer(),
         if (hasCompanion)
-          Text('* Requerido', style: mSemibold(sw, color: AppColors.error, size: 9)),
+          Text(
+            '* Requerido',
+            style: mSemibold(sw, color: AppColors.error, size: 9),
+          ),
       ],
     );
   }
@@ -1144,21 +1203,21 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos> with VozM
   Widget _buildActionButtons(double sw) {
     return Column(
       children: [
-        ElevatedButton(
-          onPressed: _calcularRutaMultiDestino, // Actualiza el mapa manualmente
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.primary,
-            elevation: 0,
-            minimumSize: Size(sw * 0.55, 44),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
-          ),
-          child: Text(
-            'Mostrar estimación',
-            style: mSemibold(sw, color: AppColors.white, size: 13),
-          ),
-        ),
+        // ElevatedButton(
+        //   onPressed: _calcularRutaMultiDestino, // Actualiza el mapa manualmente
+        //   style: ElevatedButton.styleFrom(
+        //     backgroundColor: AppColors.primary,
+        //     elevation: 0,
+        //     minimumSize: Size(sw * 0.55, 44),
+        //     shape: RoundedRectangleBorder(
+        //       borderRadius: BorderRadius.circular(10),
+        //     ),
+        //   ),
+        //   child: Text(
+        //     'Mostrar estimación',
+        //     style: mSemibold(sw, color: AppColors.white, size: 13),
+        //   ),
+        // ),
         const SizedBox(height: 15),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,

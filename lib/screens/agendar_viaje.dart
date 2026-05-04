@@ -149,10 +149,14 @@ class _AgendarViajeState extends State<AgendarViaje> with VozMixin {
       final List<dynamic> data = await PagosService.obtenerTarjetas();
       tarjetas = data.map<Map<String, String>>((t) {
         return {
-          "id": t["id_tarjeta"].toString(),
-          "texto": "${t['marca']} •••• ${t['ultimos_cuatro']}",
+          "id": t["id_metodo"].toString(),
+          "texto":
+              "${t['marca'].toString().toUpperCase()} •••• ${t['ultimos_cuatro']}",
         };
       }).toList();
+
+      // AGREGA ESTO PARA DEBUGEAR:
+      debugPrint("Tarjetas cargadas: $tarjetas");
     } catch (e) {
       tarjetas = [];
       debugPrint("Error cargando tarjetas: $e");
@@ -782,6 +786,7 @@ class _AgendarViajeState extends State<AgendarViaje> with VozMixin {
     String hintText = tarjetas.isEmpty
         ? 'Registrar Tarjeta'
         : 'Selecciona tu tarjeta';
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 15),
       decoration: BoxDecoration(
@@ -805,9 +810,11 @@ class _AgendarViajeState extends State<AgendarViaje> with VozMixin {
           isExpanded: true,
           items: tarjetas
               .map(
-                (t) => DropdownMenuItem(
+                (t) => DropdownMenuItem<String>(
+                  // ESTO ES CLAVE: Debe decir t["id"]
                   value: t["id"],
                   child: Text(
+                    // ESTO ES CLAVE: Debe decir t["texto"]!
                     t["texto"]!,
                     style: mSemibold(sw, color: AppColors.primary),
                   ),
@@ -827,21 +834,21 @@ class _AgendarViajeState extends State<AgendarViaje> with VozMixin {
     return Column(
       children: [
         // BOTÓN MOSTRAR ESTIMACIÓN (Recuperado del viejo, con diseño del nuevo)
-        ElevatedButton(
-          onPressed: _calcularRutaYDistancia,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.primary,
-            elevation: 0,
-            minimumSize: Size(sw * 0.55, 44),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
-          ),
-          child: Text(
-            'Mostrar estimación',
-            style: mSemibold(sw, color: Colors.white, size: 13),
-          ),
-        ),
+        // ElevatedButton(
+        //   onPressed: _calcularRutaYDistancia,
+        //   style: ElevatedButton.styleFrom(
+        //     backgroundColor: AppColors.primary,
+        //     elevation: 0,
+        //     minimumSize: Size(sw * 0.55, 44),
+        //     shape: RoundedRectangleBorder(
+        //       borderRadius: BorderRadius.circular(10),
+        //     ),
+        //   ),
+        //   child: Text(
+        //     'Mostrar estimación',
+        //     style: mSemibold(sw, color: Colors.white, size: 13),
+        //   ),
+        // ),
         const SizedBox(height: 15),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -1013,7 +1020,6 @@ class _AgendarViajeState extends State<AgendarViaje> with VozMixin {
       if (mounted) setState(() => _isCreatingTrip = false);
     }
   }
-
 }
 
 // --- HEADER DINÁMICO ---

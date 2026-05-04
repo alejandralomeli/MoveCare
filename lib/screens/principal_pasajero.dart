@@ -290,7 +290,9 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
         listenFor: const Duration(seconds: 10),
         pauseFor: const Duration(milliseconds: 1500),
         onResult: (result) async {
-          debugPrint('VOZ [4] onResult final=${result.finalResult} texto="${result.recognizedWords}"');
+          debugPrint(
+            'VOZ [4] onResult final=${result.finalResult} texto="${result.recognizedWords}"',
+          );
           final texto = result.recognizedWords.trim();
           if (texto.isNotEmpty) _vozUltimoTexto = texto;
 
@@ -322,7 +324,11 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
   }
 
   Future<void> _procesarComandoVoz(String texto, dynamic tts) async {
-    if (mounted) setState(() { _isListening = false; _procesandoVoz = true; });
+    if (mounted)
+      setState(() {
+        _isListening = false;
+        _procesandoVoz = true;
+      });
     try {
       final respuesta = await VozService.interpretarComando(texto);
       if (!mounted) return;
@@ -330,10 +336,12 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
 
       final dbgIntent = respuesta['intencion'] ?? '?';
       final dbgTexto = respuesta['transcripcion'] ?? texto;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('[$dbgIntent] "$dbgTexto"'),
-        duration: const Duration(seconds: 5),
-      ));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('[$dbgIntent] "$dbgTexto"'),
+          duration: const Duration(seconds: 5),
+        ),
+      );
 
       await tts.speak(respuesta['respuesta_voz'] ?? '');
       _manejarAccionVoz(respuesta);
@@ -390,7 +398,10 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
       case 'ir_atras':
         // En home no hay a donde regresar
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Ya estás en la pantalla principal'), duration: Duration(seconds: 2)),
+          const SnackBar(
+            content: Text('Ya estás en la pantalla principal'),
+            duration: Duration(seconds: 2),
+          ),
         );
         break;
       case 'confirmar':
@@ -735,7 +746,7 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
 
   Widget _buildMapSection() {
     return Container(
-      height: 150,
+      height: 250,
       width: double.infinity,
       decoration: BoxDecoration(borderRadius: BorderRadius.circular(16)),
       child: ClipRRect(
@@ -760,6 +771,12 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
         style: mExtrabold(color: AppColors.textSecondary),
       );
     }
+
+    // 1. Extraemos el estado del viaje
+    // (Asegúrate de que la llave sea 'estatus' o cámbiala por la que use tu API)
+    final String estado = _viajeProximo!['estatus'] ?? 'Agendado';
+    final bool esEnCurso = estado == 'En_curso';
+
     return Container(
       padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
@@ -801,7 +818,7 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
-                  '9:30 AM',
+                  '9:30 AM', // Aquí podrías poner la hora real si la tienes
                   style: mExtrabold(color: AppColors.white, size: 12),
                 ),
               ),
@@ -810,23 +827,28 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
           const SizedBox(height: 10),
           Row(
             children: [
-              // Restaurada la acción Ver Detalles
+              // 2. BOTÓN DINÁMICO (Ver detalles vs Ver ruta)
               _actionBtn(
-                'Ver detalles',
+                esEnCurso ? 'Ver ruta' : 'Ver detalles',
                 onPressed: () {
-                  showModalBottomSheet(
-                    context: context,
-                    isScrollControlled: true,
-                    backgroundColor: Colors.transparent,
-                    builder: (context) => ViajeDetallesModal(
-                      viaje: _viajeProximo!,
-                      esConductor: false,
-                    ),
-                  );
+                  if (esEnCurso) {
+                    // Acción para viaje En_curso
+                    Navigator.pushNamed(context, '/viaje_actual_pasajero');
+                  } else {
+                    // Acción para viaje Agendado
+                    showModalBottomSheet(
+                      context: context,
+                      isScrollControlled: true,
+                      backgroundColor: Colors.transparent,
+                      builder: (context) => ViajeDetallesModal(
+                        viaje: _viajeProximo!,
+                        esConductor: false,
+                      ),
+                    );
+                  }
                 },
               ),
               const SizedBox(width: 10),
-              // Restaurada la acción Cancelar y añadida opción de color
               _actionBtn(
                 'Cancelar',
                 color:

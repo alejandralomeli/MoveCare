@@ -7,7 +7,8 @@ import '../chat_viaje.dart'; // Ajusta la ruta
 class PanelInferiorViaje extends StatelessWidget {
   final ScrollController scrollController;
   final Map<String, dynamic>? datosViaje;
-  final int tripPhase;
+  final String
+  estadoViaje; // <-- Cambiado de int tripPhase a String estadoViaje
   final VoidCallback onTogglePanel;
   final VoidCallback onAvanzarFase;
 
@@ -15,7 +16,7 @@ class PanelInferiorViaje extends StatelessWidget {
     super.key,
     required this.scrollController,
     required this.datosViaje,
-    required this.tripPhase,
+    required this.estadoViaje, // <-- Actualizado aquí
     required this.onTogglePanel,
     required this.onAvanzarFase,
   });
@@ -96,6 +97,13 @@ class PanelInferiorViaje extends StatelessWidget {
     final distancia = rutaData['distancia_km'] != null
         ? "${rutaData['distancia_km']} km"
         : "-- km";
+
+    // LÓGICA DEL BOTÓN BASADA EN EL ESTADO DEL BACKEND
+    final bool esAgendado = estadoViaje == 'Agendado';
+    final String textoBoton = esAgendado
+        ? 'Confirmar recogida'
+        : 'Finalizar viaje';
+    final Color colorBoton = esAgendado ? AppColors.primary : AppColors.success;
 
     return Container(
       decoration: BoxDecoration(
@@ -264,20 +272,15 @@ class PanelInferiorViaje extends StatelessWidget {
                 child: ElevatedButton(
                   onPressed: onAvanzarFase,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: tripPhase == 2
-                        ? AppColors.success
-                        : AppColors.primary,
+                    backgroundColor:
+                        colorBoton, // <-- Usamos el color calculado
                     elevation: 0,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
                     ),
                   ),
                   child: Text(
-                    tripPhase == 0
-                        ? 'Confirmar recogida'
-                        : tripPhase == 1
-                        ? 'Iniciar ruta'
-                        : 'Finalizar viaje',
+                    textoBoton, // <-- Usamos el texto calculado
                     style: mBold(color: AppColors.white, size: 15),
                   ),
                 ),

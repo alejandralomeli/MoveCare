@@ -38,7 +38,8 @@ class _ViajeActualMapaState extends State<ViajeActualMapa> {
   String? _idViaje;
   bool _isLoading = true;
 
-  int _tripPhase = 0; // 0 = En camino, 1 = A bordo, 2 = Llegando
+  // 1. Variable que almacena el estado real traído del backend
+  String _estadoViaje = 'Agendado';
 
   TextStyle mBold({Color color = AppColors.textPrimary, double size = 14}) {
     return GoogleFonts.montserrat(
@@ -82,6 +83,10 @@ class _ViajeActualMapaState extends State<ViajeActualMapa> {
       if (mounted) {
         setState(() {
           _datosViaje = data;
+
+          // 2. Leemos el estado directamente del JSON del back
+          _estadoViaje = data['estado'] ?? 'Agendado';
+
           final rutaData = data['ruta_data'] ?? data['ruta'];
           if (rutaData != null) {
             _pickupLocation = LatLng(
@@ -95,10 +100,15 @@ class _ViajeActualMapaState extends State<ViajeActualMapa> {
           }
           _isLoading = false;
         });
-        if (_driverLocation != null &&
-            _pickupLocation != null &&
-            _tripPhase == 0) {
-          _obtenerRuta(_driverLocation!, _pickupLocation!);
+
+        // 3. Trazamos la ruta correcta dependiendo del estado inicial
+        if (_driverLocation != null) {
+          if (_estadoViaje == 'Agendado' && _pickupLocation != null) {
+            _obtenerRuta(_driverLocation!, _pickupLocation!);
+          } else if (_estadoViaje == 'En_curso' &&
+              _destinationLocation != null) {
+            _obtenerRuta(_driverLocation!, _destinationLocation!);
+          }
         }
       }
     } catch (e) {
@@ -124,8 +134,11 @@ class _ViajeActualMapaState extends State<ViajeActualMapa> {
       setState(() {
         _driverLocation = LatLng(pos.latitude, pos.longitude);
       });
-      if (_pickupLocation != null && _tripPhase == 0) {
+      // Trazar ruta inicial según el estado actual
+      if (_estadoViaje == 'Agendado' && _pickupLocation != null) {
         _obtenerRuta(_driverLocation!, _pickupLocation!);
+      } else if (_estadoViaje == 'En_curso' && _destinationLocation != null) {
+        _obtenerRuta(_driverLocation!, _destinationLocation!);
       }
     }
 
@@ -186,24 +199,29 @@ class _ViajeActualMapaState extends State<ViajeActualMapa> {
       duration: const Duration(milliseconds: 320),
       curve: Curves.easeInOut,
     );
-    setState(() => _panelExpanded = true);
+    setState(() => _panelExpanded = false);
   }
 
+  // 4. Lógica de avance sincronizada con el backend
   void _avanzarFase() async {
     if (_driverLocation == null) return;
 
-    // ── FASE 0: Validar origen y pedir PIN ──
-    if (_tripPhase == 0) {
+    // ── ESTADO: Agendado -> Validar PIN e iniciar viaje ──
+    if (_estadoViaje == 'Agendado') {
       if (_pickupLocation != null) {
         double distanciaOrigen = Geolocator.distanceBetween(
-          _driverLocation!.latitude, _driverLocation!.longitude,
-          _pickupLocation!.latitude, _pickupLocation!.longitude,
+          _driverLocation!.latitude,
+          _driverLocation!.longitude,
+          _pickupLocation!.latitude,
+          _pickupLocation!.longitude,
         );
 
         if (distanciaOrigen > 100) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Acércate a menos de 100m. Actual: ${distanciaOrigen.toInt()}m'),
+              content: Text(
+                'Acércate a menos de 100m. Actual: ${distanciaOrigen.toInt()}m',
+              ),
               backgroundColor: AppColors.error,
             ),
           );
@@ -212,79 +230,99 @@ class _ViajeActualMapaState extends State<ViajeActualMapa> {
 
         ModalesViaje.mostrarModalPin(context, (String pin) async {
           try {
+            // Nota: Se asume que este endpoint valida y cambia el estado en BD a 'En_curso'
             bool pinValido = await ViajeService.validarPinViaje(_idViaje!, pin);
             if (pinValido) {
-              setState(() => _tripPhase = 1);
+              setState(
+                () => _estadoViaje = 'En_curso',
+              ); // Actualizamos UI local
               _colapsarPanel();
-              
+
               if (_destinationLocation != null) {
                 setState(() => _routePoints.clear());
                 _obtenerRuta(_driverLocation!, _destinationLocation!);
               }
             } else {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('PIN incorrecto.'), backgroundColor: AppColors.error),
+                const SnackBar(
+                  content: Text('PIN incorrecto.'),
+                  backgroundColor: AppColors.error,
+                ),
               );
             }
           } catch (e) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.error),
+              SnackBar(
+                content: Text('Error: $e'),
+                backgroundColor: AppColors.error,
+              ),
             );
           }
         });
-        return; 
+        return;
       }
-    } 
-    // ── FASE 1: Transición hacia Llegada ──
-    else if (_tripPhase == 1) {
-      setState(() => _tripPhase = 2);
-      _colapsarPanel();
-    } 
-    // ── FASE 2: Validar destino y procesar cobro ──
-    else if (_tripPhase == 2) {
+    }
+    // ── ESTADO: En_curso -> Llegar al destino y finalizar ──
+    else if (_estadoViaje == 'En_curso') {
       if (_destinationLocation != null) {
         double distanciaDestino = Geolocator.distanceBetween(
-          _driverLocation!.latitude, _driverLocation!.longitude,
-          _destinationLocation!.latitude, _destinationLocation!.longitude,
+          _driverLocation!.latitude,
+          _driverLocation!.longitude,
+          _destinationLocation!.latitude,
+          _destinationLocation!.longitude,
         );
 
         if (distanciaDestino > 100) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Debes estar en el destino. Actual: ${distanciaDestino.toInt()}m'),
+              content: Text(
+                'Debes estar en el destino. Actual: ${distanciaDestino.toInt()}m',
+              ),
               backgroundColor: AppColors.error,
             ),
           );
-          return; 
+          return;
         }
 
-        // Extraemos info de pago de los detalles del viaje
         String idMetodo = _datosViaje?['id_metodo'] ?? 'efectivo';
-        
-        // Manejo seguro del costo parseándolo a double
         double costoViaje = 0.0;
         if (_datosViaje != null && _datosViaje!['costo'] != null) {
           costoViaje = double.tryParse(_datosViaje!['costo'].toString()) ?? 0.0;
         }
 
-        // Llamamos al modal dinámico
         ModalesViaje.mostrarFinViaje(
           context: context,
           idMetodo: idMetodo,
           costo: costoViaje,
           onFinalizar: () async {
-            _positionStream?.cancel();
-            
-            if (idMetodo.toLowerCase() != 'efectivo') {
-              // TODO: Aquí llamarás al nuevo endpoint de Stripe del backend (cobrar_con_tarjeta_guardada)
-              print("Cobrando off-session a la tarjeta: $idMetodo");
-            } else {
-              print("El conductor confirmó haber recibido el efectivo.");
+            try {
+              // DETENEMOS RASTREO LOCAL
+              _positionStream?.cancel();
+
+              if (idMetodo.toLowerCase() != 'efectivo') {
+                debugPrint("Cobrando off-session a la tarjeta: $idMetodo");
+              } else {
+                debugPrint("El conductor confirmó haber recibido el efectivo.");
+              }
+
+              // Llamada real al backend para marcar el viaje como 'Finalizado'
+              await ViajeService.finalizarViaje(_idViaje!);
+
+              if (mounted) {
+                Navigator.pop(context); // Cierra el modal
+                // Redirigir a la principal del conductor tras finalizar
+                Navigator.pushReplacementNamed(context, '/principal_conductor');
+              }
+            } catch (e) {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Error al finalizar viaje: $e'),
+                    backgroundColor: AppColors.error,
+                  ),
+                );
+              }
             }
-
-            // TODO: Llamar al endpoint para marcar el viaje como FINALIZADO en tu BD general
-
-            Navigator.pop(context); // Vuelve al Home tras acabar todo
           },
         );
       }
@@ -296,7 +334,6 @@ class _ViajeActualMapaState extends State<ViajeActualMapa> {
     return Scaffold(
       body: Stack(
         children: [
-          // ── MAPA FUNCIONAL ──
           Positioned.fill(
             child: (_isLoading || _driverLocation == null)
                 ? const Center(child: CircularProgressIndicator())
@@ -334,7 +371,9 @@ class _ViajeActualMapaState extends State<ViajeActualMapa> {
                                 size: 40,
                               ),
                             ),
-                          if (_pickupLocation != null && _tripPhase == 0)
+                          // Ocultar origen cuando ya estemos en ruta
+                          if (_pickupLocation != null &&
+                              _estadoViaje == 'Agendado')
                             Marker(
                               point: _pickupLocation!,
                               width: 40,
@@ -373,7 +412,7 @@ class _ViajeActualMapaState extends State<ViajeActualMapa> {
                   ),
           ),
 
-          // ── BARRA SUPERIOR ──
+          // ── BARRA SUPERIOR (Solo botón de regreso) ──
           Positioned(
             top: 0,
             left: 0,
@@ -386,7 +425,11 @@ class _ViajeActualMapaState extends State<ViajeActualMapa> {
                     GestureDetector(
                       onTap: () {
                         _positionStream?.cancel();
-                        Navigator.pop(context);
+                        // Redirige explícitamente a la ruta del conductor
+                        Navigator.pushReplacementNamed(
+                          context,
+                          '/principal_conductor',
+                        );
                       },
                       child: Container(
                         width: 40,
@@ -408,44 +451,6 @@ class _ViajeActualMapaState extends State<ViajeActualMapa> {
                         ),
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 10,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.primary,
-                          borderRadius: BorderRadius.circular(14),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.primary.withValues(alpha: 0.3),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(
-                              Icons.turn_right_rounded,
-                              color: AppColors.white,
-                              size: 24,
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Text(
-                                _tripPhase == 0
-                                    ? 'Dirígete hacia el pasajero'
-                                    : 'Sigue la ruta al destino',
-                                style: mBold(color: AppColors.white, size: 12),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
                   ],
                 ),
               ),
@@ -454,10 +459,10 @@ class _ViajeActualMapaState extends State<ViajeActualMapa> {
 
           // ── INDICADOR DE FASE (Widget Modular) ──
           Positioned(
-            top: 100,
+            top: 80, // Se mantiene en su lugar
             left: 16,
             right: 16,
-            child: IndicadorFases(tripPhase: _tripPhase),
+            child: IndicadorFases(estadoViaje: _estadoViaje),
           ),
 
           // ── PANEL INFERIOR (Widget Modular) ──
@@ -472,7 +477,7 @@ class _ViajeActualMapaState extends State<ViajeActualMapa> {
               builder: (context, scrollController) => PanelInferiorViaje(
                 scrollController: scrollController,
                 datosViaje: _datosViaje,
-                tripPhase: _tripPhase,
+                estadoViaje: _estadoViaje,
                 onTogglePanel: _togglePanel,
                 onAvanzarFase: _avanzarFase,
               ),

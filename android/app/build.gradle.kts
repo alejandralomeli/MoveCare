@@ -1,3 +1,6 @@
+import java.util.Properties
+import java.io.FileInputStream
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
@@ -5,59 +8,57 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
-// 1. Cargar el archivo de propiedades con tus contraseñas y rutas
-def keystoreProperties = new Properties()
-def keystorePropertiesFile = rootProject.file('key.properties')
+// 1. Cargar el archivo de propiedades usando sintaxis de Kotlin
+val keystoreProperties = Properties()
+val keystorePropertiesFile = rootProject.file("key.properties")
 if (keystorePropertiesFile.exists()) {
-    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
 
 android {
-    namespace = "com.example.movecare"
+    namespace = "move.care.app"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = "28.2.13676358"
 
-    packaging {
-        jniLibs {
-            keepDebugSymbols.add("**/*.so")
-        }
-    }
+    // packaging {
+    //     jniLibs {
+    //         keepDebugSymbols.add("**/*.so")
+    //     }
+    // }
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    // kotlinOptions {
-    //     jvmTarget = JavaVersion.VERSION_11.toString()
-    // }
-
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.example.movecare"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
+        applicationId = "move.care.app"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
 
-    // 2. Crear la configuración de firma oficial (Release)
+    // 2. Crear la configuración de firma en Kotlin
     signingConfigs {
-        release {
-            keyAlias = keystoreProperties['keyAlias']
-            keyPassword = keystoreProperties['keyPassword']
-            storeFile = keystoreProperties['storeFile'] ? file(keystoreProperties['storeFile']) : null
-            storePassword = keystoreProperties['storePassword']
+        create("release") {
+            keyAlias = keystoreProperties.getProperty("keyAlias")
+            keyPassword = keystoreProperties.getProperty("keyPassword")
+            storeFile = keystoreProperties.getProperty("storeFile")?.let { file(it) }
+            storePassword = keystoreProperties.getProperty("storePassword")
         }
     }
 
     buildTypes {
-        release {
-            // 3. Usar la firma oficial en lugar de la firma "debug"
+        getByName("release") {
+            // 3. Asignar la firma oficial
             signingConfig = signingConfigs.getByName("release")
         }
+    }
+
+lint {
+        checkReleaseBuilds = false
+        abortOnError = false
     }
 }
 

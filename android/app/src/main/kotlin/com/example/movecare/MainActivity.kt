@@ -1,4 +1,4 @@
-package com.example.movecare
+package move.care.app
 
 import io.flutter.embedding.android.FlutterFragmentActivity
 

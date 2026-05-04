@@ -239,4 +239,32 @@ class ViajeService {
     final bodyResponse = jsonDecode(response.body);
     throw Exception(bodyResponse["detail"] ?? "Error al validar el PIN");
   }
+
+  // ── NUEVO: Método para finalizar el viaje ──
+  static Future<bool> finalizarViaje(String idViaje) async {
+    // Usamos patch ya que así lo definimos en el backend. 
+    // Nota: Asegúrate de que tu clase HttpClient tenga implementado el método .patch().
+    // Si no lo tiene, puedes agregarlo a HttpClient o cambiar esta petición (y la ruta de FastAPI) a .put()
+    final response = await HttpClient.put(
+      "/viajes/$idViaje/finalizar", 
+      {} // Mandamos un body vacío si tu HttpClient lo requiere
+    );
+
+    if (response.statusCode == 200) {
+      return true; // Viaje finalizado correctamente
+    }
+
+    if (response.statusCode == 400) {
+      return false; // Error de lógica (ej. el viaje ya estaba finalizado)
+    }
+
+    if (response.statusCode == 401) {
+      throw Exception('TOKEN_INVALIDO');
+    }
+
+    // Manejo de otros errores que devuelva el backend
+    final bodyResponse = jsonDecode(response.body);
+    throw Exception(bodyResponse["detail"] ?? "Error al finalizar el viaje");
+  }
+
 }
