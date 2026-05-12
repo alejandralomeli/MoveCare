@@ -116,6 +116,25 @@ class _AgendarViajeState extends State<AgendarViaje> with VozMixin {
     super.initState();
     inicializarVoz();
     _cargarDatosIniciales();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _preLlenarDesdeVoz());
+  }
+
+  void _preLlenarDesdeVoz() {
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args == null || args is! Map<String, dynamic>) return;
+
+    final origen = args['punto_inicio'] as String?;
+    final destino = args['destino'] as String?;
+
+    if (origen != null && origen.isNotEmpty) {
+      origenController.text = origen;
+    }
+    if (destino != null && destino.isNotEmpty) {
+      destinoController.text = destino;
+    }
+    if (origenController.text.isNotEmpty && destinoController.text.isNotEmpty) {
+      _calcularRutaYDistancia();
+    }
   }
 
   @override
@@ -175,7 +194,7 @@ class _AgendarViajeState extends State<AgendarViaje> with VozMixin {
       if (d != null && d.isNotEmpty) setState(() => destinoController.text = d);
     },
     'establecer_origen': (e) {
-      final o = e['origen'] as String?;
+      final o = e['punto_inicio'] as String?;
       if (o != null && o.isNotEmpty) setState(() => origenController.text = o);
     },
     'confirmar': (_) => _crearViaje(),
