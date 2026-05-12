@@ -91,11 +91,11 @@ class _ViajeActualMapaState extends State<ViajeActualMapa> {
           if (rutaData != null) {
             _pickupLocation = LatLng(
               double.parse(rutaData['origen']['lat'].toString()),
-              double.parse(rutaData['origen']['lng'].toString()),
+              double.parse(rutaData['origen']['lon'].toString()),
             );
             _destinationLocation = LatLng(
               double.parse(rutaData['destino']['lat'].toString()),
-              double.parse(rutaData['destino']['lng'].toString()),
+              double.parse(rutaData['destino']['lon'].toString()),
             );
           }
           _isLoading = false;
