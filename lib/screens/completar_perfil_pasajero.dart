@@ -166,9 +166,19 @@ class _CompletarPerfilPasajeroState extends State<CompletarPerfilPasajero>
             "${_fechaNacimiento!.year}-${_fechaNacimiento!.month.toString().padLeft(2, '0')}-${_fechaNacimiento!.day.toString().padLeft(2, '0')}";
       }
 
+      const Map<String, String> _discapacidadKeys = {
+        'Tercera Edad': 'adulto_mayor',
+        'Movilidad reducida': 'motriz',
+        'Disc. auditiva': 'auditiva',
+        'Disc. visual': 'visual',
+        'Obesidad': 'obesidad',
+      };
+
       String? discapacidadesStr;
       if (_selectedNeeds.isNotEmpty) {
-        discapacidadesStr = _selectedNeeds.join(", ");
+        discapacidadesStr = _selectedNeeds
+            .map((n) => _discapacidadKeys[n] ?? n)
+            .join(', ');
       } else {
         discapacidadesStr = "";
       }

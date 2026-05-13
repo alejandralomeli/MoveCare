@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import '../http_client.dart';
 import 'package:latlong2/latlong.dart';
 
@@ -55,7 +56,6 @@ class ViajeService {
     }
 
     final bodyResponse = jsonDecode(response.body);
-    print("Error Backend: $bodyResponse");
     throw Exception(bodyResponse["detail"] ?? "Error al crear viaje");
   }
 
@@ -186,9 +186,7 @@ class ViajeService {
         points.add(LatLng(lat / 1E5, lng / 1E5));
       }
     } catch (e) {
-      print(
-        "⚠️ Error decodificando polyline: $e. Se dibujará hasta donde se pudo.",
-      );
+      debugPrint("⚠️ Error decodificando polyline: $e.");
     }
 
     return points;

@@ -45,15 +45,17 @@ class _SolicitudViajeState extends State<SolicitudViaje> {
         if (polyline.isNotEmpty && polyline != "sin_datos_de_polyline") {
           puntosRuta = ViajeService.decodificarPolyline(polyline);
         } else if (rutaData['origen'] != null && rutaData['destino'] != null) {
-          double startLat = double.parse(rutaData['origen']['lat'].toString());
-          double startLng = double.parse(rutaData['origen']['lng'].toString());
-          double endLat = double.parse(rutaData['destino']['lat'].toString());
-          double endLng = double.parse(rutaData['destino']['lng'].toString());
+          final latO = rutaData['origen']['lat'];
+          final lonO = rutaData['origen']['lon'];
+          final latD = rutaData['destino']['lat'];
+          final lonD = rutaData['destino']['lon'];
 
-          puntosRuta = await _obtenerRutaDesdeOSRM(
-            LatLng(startLat, startLng),
-            LatLng(endLat, endLng),
-          );
+          if (latO != null && lonO != null && latD != null && lonD != null) {
+            puntosRuta = await _obtenerRutaDesdeOSRM(
+              LatLng(double.parse(latO.toString()), double.parse(lonO.toString())),
+              LatLng(double.parse(latD.toString()), double.parse(lonD.toString())),
+            );
+          }
         }
       }
 
@@ -286,13 +288,13 @@ class _SolicitudViajeState extends State<SolicitudViaje> {
         if (rutaData['origen'] != null) {
           startCoord = LatLng(
             double.parse(rutaData['origen']['lat'].toString()),
-            double.parse(rutaData['origen']['lng'].toString()),
+            double.parse(rutaData['origen']['lon'].toString()),
           );
         }
         if (rutaData['destino'] != null) {
           endCoord = LatLng(
             double.parse(rutaData['destino']['lat'].toString()),
-            double.parse(rutaData['destino']['lng'].toString()),
+            double.parse(rutaData['destino']['lon'].toString()),
           );
         }
         if (rutaData['distancia_km'] != null) {

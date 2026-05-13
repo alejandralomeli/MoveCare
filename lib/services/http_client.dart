@@ -14,6 +14,8 @@ class HttpClient {
     };
   }
 
+  static const Duration _timeout = Duration(seconds: 15);
+
   // ================= POST =================
   static Future<http.Response> post(
     String path,
@@ -25,7 +27,7 @@ class HttpClient {
       url,
       headers: await _headers(),
       body: jsonEncode(body),
-    );
+    ).timeout(_timeout);
   }
 
   // ================= GET =================
@@ -35,7 +37,7 @@ class HttpClient {
     return await http.get(
       url,
       headers: await _headers(),
-    );
+    ).timeout(_timeout);
   }
 
   // ================= PUT =================
@@ -49,7 +51,7 @@ class HttpClient {
       url,
       headers: await _headers(),
       body: jsonEncode(body),
-    );
+    ).timeout(_timeout);
   }
 
   // ================= DELETE =================
@@ -59,7 +61,7 @@ class HttpClient {
     return await http.delete(
       url,
       headers: await _headers(),
-    );
+    ).timeout(_timeout);
   }
 }
 
