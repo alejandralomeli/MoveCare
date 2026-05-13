@@ -16,7 +16,7 @@ class RouteMapWidget extends StatelessWidget {
     this.startCoord,
     this.endCoord,
     required this.routePoints,
-    this.paradas, 
+    this.paradas,
     this.distanciaTotalKm,
     this.isLoading = false,
   });
@@ -44,9 +44,17 @@ class RouteMapWidget extends StatelessWidget {
       );
     }
 
-    // Centro por defecto (Guadalajara, ZMG) si aún no hay coordenadas
     final defaultCenter = const LatLng(20.676667, -103.3475);
     final centerMap = startCoord ?? defaultCenter;
+
+    // --- MAGIA DEL AUTO-ZOOM ---
+    // Calculamos los límites para enmarcar toda la ruta o los puntos de origen/destino
+    LatLngBounds? routeBounds;
+    if (routePoints.isNotEmpty) {
+      routeBounds = LatLngBounds.fromPoints(routePoints);
+    } else if (startCoord != null && endCoord != null) {
+      routeBounds = LatLngBounds.fromPoints([startCoord!, endCoord!]);
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -61,9 +69,18 @@ class RouteMapWidget extends StatelessWidget {
           child: ClipRRect(
             borderRadius: BorderRadius.circular(18),
             child: FlutterMap(
+              // Forzar redibujado si cambian los puntos
+              key: ValueKey('route_map_${routePoints.length}'), 
               options: MapOptions(
+                // Si hay límites calculados, ajustamos la cámara con un margen
+                initialCameraFit: routeBounds != null
+                    ? CameraFit.bounds(
+                        bounds: routeBounds,
+                        padding: const EdgeInsets.all(40.0), // Margen para que no toque los bordes
+                      )
+                    : null,
                 initialCenter: centerMap,
-                initialZoom: routePoints.isNotEmpty ? 13.0 : 11.0,
+                initialZoom: 13.0,
               ),
               children: [
                 TileLayer(
@@ -86,7 +103,7 @@ class RouteMapWidget extends StatelessWidget {
                 // --- CAPA DE MARCADORES INTELIGENTE ---
                 MarkerLayer(
                   markers: [
-                    // A) PIN DE ORIGEN (Verde) - Siempre se dibuja si existe
+                    // A) PIN DE ORIGEN (Verde)
                     if (startCoord != null)
                       Marker(
                         point: startCoord!,
@@ -95,12 +112,11 @@ class RouteMapWidget extends StatelessWidget {
                         child: const Icon(Icons.location_on, color: Colors.blue, size: 40),
                       ),
                       
-                    // B) MÚLTIPLES DESTINOS (Numerados) - Solo si 'paradas' tiene datos
+                    // B) MÚLTIPLES DESTINOS (Numerados)
                     if (paradas != null && paradas!.isNotEmpty)
                       ...paradas!.asMap().entries.map((entry) {
                         int index = entry.key;
                         LatLng punto = entry.value;
-                        // El último de la lista es el destino final (Rojo), los demás son paradas (Naranja)
                         bool isLast = index == paradas!.length - 1;
 
                         return Marker(
@@ -131,7 +147,7 @@ class RouteMapWidget extends StatelessWidget {
                         );
                       })
                       
-                    // C) UN SOLO DESTINO (Rojo normal) - Solo si NO hay paradas pero SÍ hay endCoord
+                    // C) UN SOLO DESTINO (Rojo normal)
                     else if (endCoord != null)
                       Marker(
                         point: endCoord!,

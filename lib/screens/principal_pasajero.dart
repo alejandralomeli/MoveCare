@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:latlong2/latlong.dart'; // Restaurado para las rutas
 import '../services/voz/voz_singleton.dart';
+import 'package:http/http.dart' as http; // <-- AGREGA ESTA LÍNEA
 
 import 'chat_viaje.dart';
 import 'widgets/map_widget.dart';
@@ -64,7 +65,6 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
   }
 
   // --- LÓGICA DE DATOS ---
-  // --- LÓGICA DE DATOS ---
   Future<void> _loadHome() async {
     try {
       final homeData = await HomeService.getHome(role: "pasajero");
@@ -118,13 +118,12 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
               }).toList();
             }
 
-            // 4. Si la polyline es null (como en tu ejemplo), pero tenemos origen y destino,
-            // agregamos ambos puntos a la lista para que el widget del mapa no falle
-            // y al menos dibuje una línea recta y los marcadores.
+            // 4. Si la polyline es null, pedimos a OSRM que nos trace las calles
             if (_routePoints.isEmpty &&
                 _startCoord != null &&
                 _endCoord != null) {
-              _routePoints = [_startCoord!, _endCoord!];
+              // Aquí ocurre la magia: si la BD no mandó ruta, OSRM la calcula al vuelo
+              _routePoints = await _obtenerRutaOSRM(_startCoord!, _endCoord!);
             }
           } catch (e) {
             debugPrint("Error al decodificar la ruta del viaje próximo: $e");
@@ -143,6 +142,36 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
       ); // Aseguramos quitar el loading en caso de error
       AuthHelper.manejarError(context, e);
     }
+  }
+
+  // --- FUNCIÓN PARA OBTENER RUTA DE CALLES ---
+  Future<List<LatLng>> _obtenerRutaOSRM(LatLng start, LatLng end) async {
+    try {
+      final url = Uri.parse(
+        'https://router.project-osrm.org/route/v1/driving/${start.longitude},${start.latitude};${end.longitude},${end.latitude}?overview=full&geometries=geojson',
+      );
+
+      final response = await http.get(url);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['routes'] != null && data['routes'].isNotEmpty) {
+          final coordinates =
+              data['routes'][0]['geometry']['coordinates'] as List;
+
+          return coordinates.map((coord) {
+            return LatLng(
+              (coord[1] as num).toDouble(), // Lat
+              (coord[0] as num).toDouble(), // Lng
+            );
+          }).toList();
+        }
+      }
+    } catch (e) {
+      debugPrint("❌ Error obteniendo ruta de OSRM: $e");
+    }
+    // Si falla, regresamos la línea recta como respaldo
+    return [start, end];
   }
 
   // Restaurada lógica de Cancelación (Adaptada a la nueva estética)
@@ -356,6 +385,8 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
     final intencion = respuesta['intencion'] as String? ?? 'no_reconocido';
     final entidades = respuesta['entidades'] as Map<String, dynamic>? ?? {};
 
+    final String? idViajeActual = _viajeProximo?['id_viaje']?.toString();
+
     switch (intencion) {
       case 'solicitar_viaje':
         Navigator.pushNamed(context, '/agendar_viaje', arguments: entidades);
@@ -374,7 +405,15 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
         _mostrarConfirmacionCancelar();
         break;
       case 'ver_viaje_actual':
-        Navigator.pushNamed(context, '/viaje_actual');
+        if (idViajeActual != null) {
+          Navigator.pushNamed(
+            context,
+            '/viaje_actual_pasajero',
+            arguments: idViajeActual,
+          );
+        } else {
+          VozSingleton.tts.speak("No tienes un viaje en curso");
+        }
         break;
       case 'crear_acompanante':
         Navigator.pushNamed(
@@ -417,6 +456,9 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
   }
 
   void _mostrarConfirmacionCancelar() {
+    final String? idViaje = _viajeProximo?['id_viaje']?.toString();
+    if (idViaje == null) return;
+
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
@@ -434,10 +476,12 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
             onPressed: () {
               Navigator.pop(context);
-              Navigator.pushNamed(context, '/viaje_actual');
+              _procesarCancelacion(
+                idViaje,
+              ); // <--- AHORA SÍ CANCELA EN EL BACKEND
             },
             child: Text(
-              'Cancelar viaje',
+              'Sí, cancelar',
               style: mExtrabold(color: AppColors.white, size: 13),
             ),
           ),
@@ -765,6 +809,8 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
   }
 
   Widget _buildNextTripCard() {
+    final user = context.read<UserProvider>().user;
+
     if (_viajeProximo == null) {
       return Text(
         "No tienes viajes programados",
@@ -774,7 +820,7 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
 
     // 1. Extraemos el estado del viaje
     // (Asegúrate de que la llave sea 'estatus' o cámbiala por la que use tu API)
-    final String estado = _viajeProximo!['estatus'] ?? 'Agendado';
+    final String estado = _viajeProximo!['estado'] ?? 'Agendado';
     final bool esEnCurso = estado == 'En_curso';
 
     return Container(
@@ -832,10 +878,15 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
                 esEnCurso ? 'Ver ruta' : 'Ver detalles',
                 onPressed: () {
                   if (esEnCurso) {
-                    // Acción para viaje En_curso
-                    Navigator.pushNamed(context, '/viaje_actual_pasajero');
+                    // 1. NAVEGACIÓN AL MAPA: Es vital pasar el arguments
+                    Navigator.pushNamed(
+                      context,
+                      '/viaje_actual_pasajero',
+                      arguments: _viajeProximo!['id_viaje']
+                          .toString(), // <--- ESTO ES LO QUE FALTA
+                    );
                   } else {
-                    // Acción para viaje Agendado
+                    // 2. MODAL DE DETALLES: Para viajes que aún no inician
                     showModalBottomSheet(
                       context: context,
                       isScrollControlled: true,
@@ -861,16 +912,22 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
               ),
               const SizedBox(width: 10),
               GestureDetector(
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => ChatViaje(
-                      nombreContacto:
-                          _viajeProximo!['nombre_conductor'] ?? 'Conductor',
-                      esConductor: false,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => ChatViaje(
+                        nombreContacto:
+                            _viajeProximo!['nombre_conductor'] ?? 'Conductor',
+                        esConductor: false,
+                        idViaje: _viajeProximo!['id_viaje'].toString(),
+                        idUsuarioActual:
+                            user?.idUsuario ??
+                            '', // <--- Sacado del provider
+                      ),
                     ),
-                  ),
-                ),
+                  );
+                },
                 child: Container(
                   width: 40,
                   height: 40,
@@ -1105,49 +1162,54 @@ class _PrincipalPasajeroState extends State<PrincipalPasajero> {
     );
   }
 
-  Widget _buildContactarConductorButton() {
-    final nombreConductor = _viajeProximo?['nombre_conductor'] ?? 'Conductor';
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton.icon(
-        onPressed: () => Navigator.push(
+Widget _buildContactarConductorButton() {
+  // 1. Obtenemos el usuario del provider para el ID
+  final user = context.read<UserProvider>().user;
+  
+  // 2. Extraemos los datos necesarios del viaje
+  final nombreConductor = _viajeProximo?['nombre_conductor'] ?? 'Conductor';
+  final idViaje = _viajeProximo?['id_viaje']?.toString() ?? '';
+
+  return SizedBox(
+    width: double.infinity,
+    child: ElevatedButton.icon(
+      onPressed: () {
+        // Verificación de seguridad
+        if (idViaje.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("No se encontró el ID del viaje")),
+          );
+          return;
+        }
+
+        Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) =>
-                ChatViaje(nombreContacto: nombreConductor, esConductor: false),
+            builder: (_) => ChatViaje(
+              nombreContacto: nombreConductor,
+              esConductor: false,
+              idViaje: idViaje,             // <--- AGREGADO
+              idUsuarioActual: user?.idUsuario ?? '', // <--- AGREGADO
+            ),
           ),
-        ),
-        icon: const Icon(Icons.message_rounded, color: AppColors.white),
-        label: Text(
-          'Contactar conductor',
-          style: mExtrabold(color: AppColors.white, size: 15),
-        ),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primary,
-          elevation: 0,
-          padding: const EdgeInsets.symmetric(vertical: 12),
+        );
+      },
+      icon: const Icon(Icons.message_rounded, color: AppColors.white),
+      label: Text(
+        'Contactar conductor',
+        style: mExtrabold(color: AppColors.white, size: 15),
+      ),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: AppColors.primary,
+        elevation: 0,
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12), // Para que haga juego con tus otros botones
         ),
       ),
-    );
-  }
-
-  // Widget _buildReportButton() {
-  //   return SizedBox(
-  //     width: double.infinity,
-  //     child: ElevatedButton.icon(
-  //       onPressed: () => Navigator.pushNamed(context, '/reporte_incidencia_pasajero'),
-  //       icon: const Icon(Icons.error, color: AppColors.white),
-  //       label: Text(
-  //         'Reportar incidencia',
-  //         style: mExtrabold(color: AppColors.white, size: 15),
-  //       ),
-  //       style: ElevatedButton.styleFrom(
-  //         backgroundColor: const Color.fromARGB(255, 219, 26, 26),
-  //         padding: const EdgeInsets.symmetric(vertical: 12),
-  //       ),
-  //     ),
-  //   );
-  // }
+    ),
+  );
+}
 
   Widget _bottomSheetContent(BuildContext context) {
     return Container(

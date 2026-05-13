@@ -2,7 +2,7 @@ name: movecare
 description: "A new Flutter project."
 publish_to: 'none'
 
-version: 1.0.0+1
+version: 1.0.1+2
 
 environment:
   sdk: ^3.9.2
@@ -26,7 +26,7 @@ dependencies:
   syncfusion_flutter_pdfviewer: ^33.1.44
   speech_to_text: ^7.0.0
   flutter_tts: ^4.2.0
-  record: ^5.1.2
+  record: ^6.2.0
   flutter_dotenv: ^6.0.0
   flutter_stripe: ^12.6.0
   flutter_stripe_web: ^7.6.0

@@ -166,7 +166,7 @@ class _HistorialViajesConductorState extends State<HistorialViajesConductor> {
     bool esFinalizado = false;
 
     // Colores y textos adaptados a tu base de datos y nuevo diseño
-    if (estado == 'en_curso') {
+    if (estado == 'En_curso') {
       statusText = 'En Curso';
       statusColor = AppColors.primary;
     } else if (estado == 'agendado') {

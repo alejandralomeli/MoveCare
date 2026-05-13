@@ -1,18 +1,24 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+
+// Asegúrate de que las rutas a tus archivos coincidan con tu proyecto
 import '../app_theme.dart';
+import '../models/mensaje_model.dart';
+import '../services/chat/chat_service.dart';
 
 class ChatViaje extends StatefulWidget {
-  /// nombre del contacto con quien se chatea
   final String nombreContacto;
-
-  /// true = el usuario actual es conductor, false = pasajero
   final bool esConductor;
+  final String idViaje;
+  final String idUsuarioActual;
 
   const ChatViaje({
     super.key,
     required this.nombreContacto,
     required this.esConductor,
+    required this.idViaje,
+    required this.idUsuarioActual,
   });
 
   @override
@@ -23,11 +29,9 @@ class _ChatViajeState extends State<ChatViaje> {
   final TextEditingController _ctrl = TextEditingController();
   final ScrollController _scroll = ScrollController();
 
-  final List<_Mensaje> _mensajes = [
-    _Mensaje('Hola, ya voy en camino hacia ti.', false, '9:18 AM'),
-    _Mensaje('Perfecto, te espero en la entrada principal.', true, '9:19 AM'),
-    _Mensaje('Entendido, en 5 minutos llego.', false, '9:19 AM'),
-  ];
+  List<MensajeModel> _mensajes = [];
+  Timer? _pollingTimer;
+  bool _isCargando = true;
 
   final List<String> _respuestasRapidas = [
     'Ya voy 👍',
@@ -37,20 +41,49 @@ class _ChatViajeState extends State<ChatViaje> {
     'Gracias',
   ];
 
-  TextStyle mBold({Color color = AppColors.textPrimary, double size = 14}) {
-    return GoogleFonts.montserrat(
-      color: color,
-      fontSize: size,
-      fontWeight: FontWeight.w600,
-    );
+  @override
+  void initState() {
+    super.initState();
+    // 1. Carga inicial de mensajes
+    _cargarHistorial(animarScroll: true);
+    
+    // 2. Polling: Pide mensajes nuevos cada 3 segundos al backend
+    _pollingTimer = Timer.periodic(const Duration(seconds: 3), (_) {
+      _cargarHistorial(animarScroll: false);
+    });
   }
 
-  void _enviar(String texto) {
-    if (texto.trim().isEmpty) return;
-    setState(() {
-      _mensajes.add(_Mensaje(texto.trim(), true, _horaActual()));
-    });
-    _ctrl.clear();
+  @override
+  void dispose() {
+    _pollingTimer?.cancel(); // IMPORTANTE: Matar el proceso en 2do plano al salir
+    _ctrl.dispose();
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  Future<void> _cargarHistorial({required bool animarScroll}) async {
+    try {
+      final historial = await ChatService.obtenerHistorial(widget.idViaje);
+      
+      // Solo repinta la pantalla si hay mensajes nuevos
+      if (historial.length != _mensajes.length) {
+        setState(() {
+          _mensajes = historial;
+          _isCargando = false;
+        });
+
+        if (animarScroll) {
+          _hacerScrollAlFondo();
+        }
+      } else if (_isCargando) {
+        setState(() => _isCargando = false);
+      }
+    } catch (e) {
+      debugPrint("Error al hacer polling del chat: $e");
+    }
+  }
+
+  void _hacerScrollAlFondo() {
     Future.delayed(const Duration(milliseconds: 100), () {
       if (_scroll.hasClients) {
         _scroll.animateTo(
@@ -62,18 +95,40 @@ class _ChatViajeState extends State<ChatViaje> {
     });
   }
 
-  String _horaActual() {
-    final now = DateTime.now();
-    final h = now.hour.toString().padLeft(2, '0');
-    final m = now.minute.toString().padLeft(2, '0');
+  Future<void> _enviar(String texto) async {
+    if (texto.trim().isEmpty) return;
+    
+    final textoEnviado = texto.trim();
+    _ctrl.clear(); // Limpiamos el input de inmediato
+    
+    try {
+      // Enviamos el mensaje a FastAPI
+      final nuevoMensaje = await ChatService.enviarMensaje(widget.idViaje, textoEnviado);
+      
+      setState(() {
+        _mensajes.add(nuevoMensaje);
+      });
+      _hacerScrollAlFondo();
+      
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al enviar el mensaje: $e')),
+      );
+    }
+  }
+
+  String _formatearHora(DateTime fecha) {
+    final h = fecha.hour.toString().padLeft(2, '0');
+    final m = fecha.minute.toString().padLeft(2, '0');
     return '$h:$m';
   }
 
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    _scroll.dispose();
-    super.dispose();
+  TextStyle mBold({Color color = AppColors.textPrimary, double size = 14}) {
+    return GoogleFonts.montserrat(
+      color: color,
+      fontSize: size,
+      fontWeight: FontWeight.w600,
+    );
   }
 
   @override
@@ -84,7 +139,11 @@ class _ChatViajeState extends State<ChatViaje> {
       body: Column(
         children: [
           _buildHeader(context),
-          Expanded(child: _buildMensajes()),
+          Expanded(
+            child: _isCargando 
+                ? const Center(child: CircularProgressIndicator(color: AppColors.primary)) 
+                : _buildMensajes(),
+          ),
           _buildRespuestasRapidas(),
           _buildInput(context),
         ],
@@ -92,8 +151,7 @@ class _ChatViajeState extends State<ChatViaje> {
     );
   }
 
-  // ── HEADER ────────────────────────────────────────────────────────────────
-
+  // ── HEADER CON REDIRECCIÓN DE RUTAS ───────────────────────────────────────
   Widget _buildHeader(BuildContext context) {
     return Container(
       color: AppColors.primaryLight,
@@ -106,7 +164,17 @@ class _ChatViajeState extends State<ChatViaje> {
             children: [
               IconButton(
                 icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.primary, size: 20),
-                onPressed: () => Navigator.pop(context),
+                onPressed: () {
+                  // Cancelamos el timer por seguridad antes de cambiar de ruta
+                  _pollingTimer?.cancel();
+                  
+                  // Lógica de ruteo según el rol del usuario
+                  if (widget.esConductor) {
+                    Navigator.pushReplacementNamed(context, '/viaje_actual');
+                  } else {
+                    Navigator.pushReplacementNamed(context, '/viaje_actual_pasajero');
+                  }
+                },
               ),
               CircleAvatar(
                 radius: 20,
@@ -152,7 +220,6 @@ class _ChatViajeState extends State<ChatViaje> {
   }
 
   // ── MENSAJES ──────────────────────────────────────────────────────────────
-
   Widget _buildMensajes() {
     return ListView.builder(
       controller: _scroll,
@@ -163,8 +230,11 @@ class _ChatViajeState extends State<ChatViaje> {
     );
   }
 
-  Widget _buildBurbuja(_Mensaje msg) {
-    final esMio = msg.esMio;
+  Widget _buildBurbuja(MensajeModel msg) {
+    // Determinamos si el globo va a la derecha o izquierda comparando IDs
+    final esMio = msg.idEmisor == widget.idUsuarioActual;
+    final horaStr = _formatearHora(msg.fechaEnvio);
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Row(
@@ -197,7 +267,7 @@ class _ChatViajeState extends State<ChatViaje> {
                   border: esMio ? null : Border.all(color: AppColors.border),
                 ),
                 child: Text(
-                  msg.texto,
+                  msg.contenido,
                   style: mBold(
                     color: esMio ? AppColors.white : AppColors.textPrimary,
                     size: 13,
@@ -205,7 +275,7 @@ class _ChatViajeState extends State<ChatViaje> {
                 ),
               ),
               const SizedBox(height: 3),
-              Text(msg.hora, style: mBold(color: AppColors.textSecondary, size: 10)),
+              Text(horaStr, style: mBold(color: AppColors.textSecondary, size: 10)),
             ],
           ),
         ],
@@ -214,7 +284,6 @@ class _ChatViajeState extends State<ChatViaje> {
   }
 
   // ── RESPUESTAS RÁPIDAS ────────────────────────────────────────────────────
-
   Widget _buildRespuestasRapidas() {
     return SizedBox(
       height: 38,
@@ -230,7 +299,7 @@ class _ChatViajeState extends State<ChatViaje> {
             decoration: BoxDecoration(
               color: AppColors.primaryLight,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+              border: Border.all(color: AppColors.primary.withOpacity(0.3)),
             ),
             child: Text(
               _respuestasRapidas[i],
@@ -243,7 +312,6 @@ class _ChatViajeState extends State<ChatViaje> {
   }
 
   // ── INPUT ─────────────────────────────────────────────────────────────────
-
   Widget _buildInput(BuildContext context) {
     return Container(
       padding: EdgeInsets.fromLTRB(
@@ -294,11 +362,4 @@ class _ChatViajeState extends State<ChatViaje> {
       ),
     );
   }
-}
-
-class _Mensaje {
-  final String texto;
-  final bool esMio;
-  final String hora;
-  _Mensaje(this.texto, this.esMio, this.hora);
 }

@@ -34,6 +34,7 @@ import 'screens/viaje_confirmado.dart';
 import 'screens/estimacion_costo.dart';
 import 'screens/metodos_pago_vista.dart';
 import 'screens/terminos_vista.dart';
+import 'screens/viaje_actual_pasajero.dart';
 
 // Screens Conductor
 import 'screens/registro_conductor.dart';
@@ -131,6 +132,7 @@ class MyApp extends StatelessWidget {
         '/metodos_pago_lista': (context) => const MetodosPagoVista(),
         '/terminos_condiciones': (context) => const TerminosVista(),
         '/aviso_privacidad': (context) => const PrivacidadVista(),
+        '/viaje_actual_pasajero': (context) => const ViajeActualPasajero(),
 
         // Módulo Conductor
         '/registro_conductor': (context) => const RegistroConductor(),

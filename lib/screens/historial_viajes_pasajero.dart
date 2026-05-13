@@ -216,7 +216,7 @@ class _HistorialViajesPasajero extends State<HistorialViajesPasajero> with VozMi
     Color statusColor = AppColors.primary;
     bool esFinalizado = false;
 
-    if (estado == 'en_curso') {
+    if (estado == 'En_curso') {
       statusText = 'En Curso';
       statusColor = AppColors.primary;
     } else if (estado == 'agendado') {

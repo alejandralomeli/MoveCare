@@ -1,14 +1,16 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../app_theme.dart'; // Ajusta la ruta
-import '../chat_viaje.dart'; // Ajusta la ruta
+import 'package:provider/provider.dart'; // Asegúrate de tener este import
+import '../../app_theme.dart'; 
+import '../chat_viaje.dart'; 
+import '../../providers/user_provider.dart';
 
 class PanelInferiorViaje extends StatelessWidget {
+  // 1. Las propiedades de la clase solo deben ser las que recibes por constructor
   final ScrollController scrollController;
   final Map<String, dynamic>? datosViaje;
-  final String
-  estadoViaje; // <-- Cambiado de int tripPhase a String estadoViaje
+  final String estadoViaje; 
   final VoidCallback onTogglePanel;
   final VoidCallback onAvanzarFase;
 
@@ -16,7 +18,7 @@ class PanelInferiorViaje extends StatelessWidget {
     super.key,
     required this.scrollController,
     required this.datosViaje,
-    required this.estadoViaje, // <-- Actualizado aquí
+    required this.estadoViaje,
     required this.onTogglePanel,
     required this.onAvanzarFase,
   });
@@ -29,6 +31,7 @@ class PanelInferiorViaje extends StatelessWidget {
     );
   }
 
+  // ... (Tus métodos _buildAvatar, _etaChip y _circleBtn se mantienen igual)
   Widget _buildAvatar(String? base64String) {
     if (base64String == null || base64String.isEmpty) {
       return const CircleAvatar(
@@ -71,7 +74,7 @@ class PanelInferiorViaje extends StatelessWidget {
         width: 40,
         height: 40,
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.1),
+          color: color.withOpacity(0.1),
           shape: BoxShape.circle,
         ),
         child: Icon(icon, color: color, size: 20),
@@ -81,6 +84,10 @@ class PanelInferiorViaje extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 2. OBTENEMOS LOS DATOS AQUÍ (Dentro del build el context sí es válido)
+    final user = context.read<UserProvider>().user;
+    final String idViaje = datosViaje?['id_viaje']?.toString() ?? '';
+
     final pasajeroData = datosViaje?['pasajero'] ?? {};
     final rutaData = datosViaje?['ruta_data'] ?? datosViaje?['ruta'] ?? {};
 
@@ -89,20 +96,12 @@ class PanelInferiorViaje extends StatelessWidget {
     final calificacion = pasajeroData['calificacion'] ?? '--';
     final discapacidad = pasajeroData['discapacidad'] ?? 'Ninguna';
 
-    final direccionDestino =
-        rutaData['destino']?['direccion'] ?? 'Dirección no disponible';
-    final tiempo = rutaData['duracion_aprox_min'] != null
-        ? "${rutaData['duracion_aprox_min']} min"
-        : "-- min";
-    final distancia = rutaData['distancia_km'] != null
-        ? "${rutaData['distancia_km']} km"
-        : "-- km";
+    final direccionDestino = rutaData['destino']?['direccion'] ?? 'Dirección no disponible';
+    final tiempo = rutaData['duracion_aprox_min'] != null ? "${rutaData['duracion_aprox_min']} min" : "-- min";
+    final distancia = rutaData['distancia_km'] != null ? "${rutaData['distancia_km']} km" : "-- km";
 
-    // LÓGICA DEL BOTÓN BASADA EN EL ESTADO DEL BACKEND
     final bool esAgendado = estadoViaje == 'Agendado';
-    final String textoBoton = esAgendado
-        ? 'Confirmar recogida'
-        : 'Finalizar viaje';
+    final String textoBoton = esAgendado ? 'Confirmar recogida' : 'Finalizar viaje';
     final Color colorBoton = esAgendado ? AppColors.primary : AppColors.success;
 
     return Container(
@@ -111,7 +110,7 @@ class PanelInferiorViaje extends StatelessWidget {
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.12),
+            color: Colors.black.withOpacity(0.12),
             blurRadius: 20,
             offset: const Offset(0, -4),
           ),
@@ -142,31 +141,17 @@ class PanelInferiorViaje extends StatelessWidget {
               const SizedBox(height: 10),
               Row(
                 children: [
-                  _etaChip(
-                    Icons.access_time_rounded,
-                    tiempo,
-                    AppColors.primary,
-                  ),
+                  _etaChip(Icons.access_time_rounded, tiempo, AppColors.primary),
                   const SizedBox(width: 10),
-                  _etaChip(
-                    Icons.route_rounded,
-                    distancia,
-                    AppColors.textSecondary,
-                  ),
+                  _etaChip(Icons.route_rounded, distancia, AppColors.textSecondary),
                   const Spacer(),
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 5,
-                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                     decoration: BoxDecoration(
-                      color: AppColors.success.withValues(alpha: 0.1),
+                      color: AppColors.success.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Text(
-                      'En Tiempo',
-                      style: mBold(color: AppColors.success, size: 11),
-                    ),
+                    child: Text('En Tiempo', style: mBold(color: AppColors.success, size: 11)),
                   ),
                 ],
               ),
@@ -185,37 +170,15 @@ class PanelInferiorViaje extends StatelessWidget {
                         const SizedBox(height: 2),
                         Row(
                           children: [
-                            const Icon(
-                              Icons.star_rounded,
-                              color: Colors.orange,
-                              size: 14,
-                            ),
+                            const Icon(Icons.star_rounded, color: Colors.orange, size: 14),
                             const SizedBox(width: 3),
-                            Text(
-                              calificacion,
-                              style: mBold(
-                                color: AppColors.textSecondary,
-                                size: 12,
-                              ),
-                            ),
-                            if (discapacidad != 'Ninguna' &&
-                                discapacidad.isNotEmpty) ...[
+                            Text(calificacion, style: mBold(color: AppColors.textSecondary, size: 12)),
+                            if (discapacidad != 'Ninguna' && discapacidad.isNotEmpty) ...[
                               const SizedBox(width: 10),
-                              const Icon(
-                                Icons.accessible_forward_rounded,
-                                color: AppColors.primary,
-                                size: 14,
-                              ),
+                              const Icon(Icons.accessible_forward_rounded, color: AppColors.primary, size: 14),
                               const SizedBox(width: 3),
                               Expanded(
-                                child: Text(
-                                  discapacidad,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: mBold(
-                                    color: AppColors.textSecondary,
-                                    size: 12,
-                                  ),
-                                ),
+                                child: Text(discapacidad, overflow: TextOverflow.ellipsis, style: mBold(color: AppColors.textSecondary, size: 12)),
                               ),
                             ],
                           ],
@@ -232,6 +195,8 @@ class PanelInferiorViaje extends StatelessWidget {
                         builder: (_) => ChatViaje(
                           nombreContacto: nombre,
                           esConductor: true,
+                          idViaje: idViaje,
+                          idUsuarioActual: user?.idUsuario ?? '',
                         ),
                       ),
                     );
@@ -248,11 +213,7 @@ class PanelInferiorViaje extends StatelessWidget {
                 ),
                 child: Row(
                   children: [
-                    const Icon(
-                      Icons.flag_rounded,
-                      color: AppColors.error,
-                      size: 18,
-                    ),
+                    const Icon(Icons.flag_rounded, color: AppColors.error, size: 18),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
@@ -272,17 +233,11 @@ class PanelInferiorViaje extends StatelessWidget {
                 child: ElevatedButton(
                   onPressed: onAvanzarFase,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor:
-                        colorBoton, // <-- Usamos el color calculado
+                    backgroundColor: colorBoton,
                     elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   ),
-                  child: Text(
-                    textoBoton, // <-- Usamos el texto calculado
-                    style: mBold(color: AppColors.white, size: 15),
-                  ),
+                  child: Text(textoBoton, style: mBold(color: AppColors.white, size: 15)),
                 ),
               ),
             ],
