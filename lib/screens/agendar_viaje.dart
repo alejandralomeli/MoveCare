@@ -62,6 +62,13 @@ class _AgendarViajeState extends State<AgendarViaje> with VozMixin {
   String? polylineRuta;
   bool calculandoRuta = false;
 
+  double? costoEstimado;
+
+  final double TARIFA_BASE = 30.0; // Cobro inicial por pedir el viaje
+  final double COSTO_POR_KM = 7.0; // Cobro por cada kilómetro recorrido
+  final double COSTO_POR_MINUTO = 2.5; // Cobro por cada minuto (tráfico/tiempo)
+  final double TARIFA_MINIMA = 40.0; // El viaje no puede costar menos de esto
+
   // Listas Estáticas
   final List<String> hoursList = List.generate(
     24,
@@ -89,8 +96,6 @@ class _AgendarViajeState extends State<AgendarViaje> with VozMixin {
     'Obesidad',
     'Discapacidad visual',
   ];
-
-  // --- VARIABLES DE UI ---
 
   // --- MÉTODOS DE FECHA ---
   String _dayLetter(DateTime d) {
@@ -202,6 +207,17 @@ class _AgendarViajeState extends State<AgendarViaje> with VozMixin {
     'ir_atras': (_) => Navigator.pop(context),
   });
 
+  // --- LÓGICA DE CÁLCULO DE COSTO ---
+  double _calcularCostoEstimado(double km, int minutos) {
+    double subtotal =
+        TARIFA_BASE + (km * COSTO_POR_KM) + (minutos * COSTO_POR_MINUTO);
+    // Redondeamos a 2 decimales para que sea formato de moneda
+    double totalRedondeado = double.parse(subtotal.toStringAsFixed(2));
+
+    // Si el cálculo es menor a la tarifa mínima, cobramos la mínima
+    return totalRedondeado < TARIFA_MINIMA ? TARIFA_MINIMA : totalRedondeado;
+  }
+
   // 2. --- FUNCIÓN _calcularRutaYDistancia() ---
   Future<void> _calcularRutaYDistancia() async {
     if (origenController.text.isEmpty || destinoController.text.isEmpty) return;
@@ -219,6 +235,14 @@ class _AgendarViajeState extends State<AgendarViaje> with VozMixin {
             routePoints = rutaData['puntos'];
             duracionMin = rutaData['duracion']?.toInt();
             polylineRuta = rutaData['polyline'];
+
+            // --- AQUÍ CALCULAMOS Y GUARDAMOS EL COSTO ---
+            if (distanciaTotalKm != null && duracionMin != null) {
+              costoEstimado = _calcularCostoEstimado(
+                distanciaTotalKm!,
+                duracionMin!,
+              );
+            }
           });
         }
       }
@@ -389,6 +413,8 @@ class _AgendarViajeState extends State<AgendarViaje> with VozMixin {
                           endCoord: endCoord,
                           routePoints: routePoints,
                           distanciaTotalKm: distanciaTotalKm,
+                          costoEstimado:
+                              costoEstimado, // <--- PASAMOS EL COSTO AQUÍ
                           isLoading: calculandoRuta,
                         ),
 
@@ -933,6 +959,7 @@ class _AgendarViajeState extends State<AgendarViaje> with VozMixin {
   }
 
   // 5. --- EL PAYLOAD COMPLETO EN _crearViaje() ---
+  // 5. --- EL PAYLOAD COMPLETO EN _crearViaje() ---
   Future<void> _crearViaje() async {
     if (_isCreatingTrip) return;
 
@@ -973,12 +1000,15 @@ class _AgendarViajeState extends State<AgendarViaje> with VozMixin {
       return;
     }
 
-    // Validación para asegurar que se buscaron las rutas
-    if (startCoord == null || endCoord == null || distanciaTotalKm == null) {
+    // Validación para asegurar que se buscaron las rutas Y se calculó el costo
+    if (startCoord == null ||
+        endCoord == null ||
+        distanciaTotalKm == null ||
+        costoEstimado == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
-            'Por favor busca las direcciones presionando la lupa para calcular la ruta.',
+            'Por favor busca las direcciones presionando la lupa para calcular la ruta y el costo.',
           ),
           backgroundColor: Colors.orange,
         ),
@@ -1014,7 +1044,7 @@ class _AgendarViajeState extends State<AgendarViaje> with VozMixin {
         "duracion_aprox_min": duracionMin ?? 0,
       };
 
-      // Inyectado rutaJson a la llamada del backend
+      // Inyectado rutaJson y COSTO a la llamada del backend
       final viajeId = await ViajeService.crearViaje(
         ruta: rutaJson,
         puntoInicio: origenController.text.trim(),
@@ -1026,7 +1056,7 @@ class _AgendarViajeState extends State<AgendarViaje> with VozMixin {
         especificaciones: especificaciones,
         checkAcompanante: hasCompanion,
         idAcompanante: hasCompanion ? selectedAcompananteId : null,
-        costo: null,
+        costo: costoEstimado, // <--- SE ENVÍA EL COSTO CALCULADO
         duracionEstimada: duracionMin,
       );
 

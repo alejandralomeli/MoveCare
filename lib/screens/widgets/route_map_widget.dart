@@ -7,8 +7,9 @@ class RouteMapWidget extends StatelessWidget {
   final LatLng? startCoord;
   final LatLng? endCoord;
   final List<LatLng> routePoints;
-  final List<LatLng>? paradas; // Lista opcional para los múltiples destinos
+  final List<LatLng>? paradas; 
   final double? distanciaTotalKm;
+  final double? costoEstimado; // <--- NUEVA VARIABLE PARA EL COSTO
   final bool isLoading;
 
   const RouteMapWidget({
@@ -18,6 +19,7 @@ class RouteMapWidget extends StatelessWidget {
     required this.routePoints,
     this.paradas,
     this.distanciaTotalKm,
+    this.costoEstimado, // <--- AÑADIDO AL CONSTRUCTOR
     this.isLoading = false,
   });
 
@@ -48,7 +50,6 @@ class RouteMapWidget extends StatelessWidget {
     final centerMap = startCoord ?? defaultCenter;
 
     // --- MAGIA DEL AUTO-ZOOM ---
-    // Calculamos los límites para enmarcar toda la ruta o los puntos de origen/destino
     LatLngBounds? routeBounds;
     if (routePoints.isNotEmpty) {
       routeBounds = LatLngBounds.fromPoints(routePoints);
@@ -69,14 +70,12 @@ class RouteMapWidget extends StatelessWidget {
           child: ClipRRect(
             borderRadius: BorderRadius.circular(18),
             child: FlutterMap(
-              // Forzar redibujado si cambian los puntos
               key: ValueKey('route_map_${routePoints.length}'), 
               options: MapOptions(
-                // Si hay límites calculados, ajustamos la cámara con un margen
                 initialCameraFit: routeBounds != null
                     ? CameraFit.bounds(
                         bounds: routeBounds,
-                        padding: const EdgeInsets.all(40.0), // Margen para que no toque los bordes
+                        padding: const EdgeInsets.all(40.0), 
                       )
                     : null,
                 initialCenter: centerMap,
@@ -88,7 +87,6 @@ class RouteMapWidget extends StatelessWidget {
                   userAgentPackageName: 'com.tuempresa.movecare',
                 ),
                 
-                // Línea de la ruta
                 if (routePoints.isNotEmpty)
                   PolylineLayer(
                     polylines: [
@@ -100,10 +98,9 @@ class RouteMapWidget extends StatelessWidget {
                     ],
                   ),
                 
-                // --- CAPA DE MARCADORES INTELIGENTE ---
                 MarkerLayer(
                   markers: [
-                    // A) PIN DE ORIGEN (Verde)
+                    // A) PIN DE ORIGEN
                     if (startCoord != null)
                       Marker(
                         point: startCoord!,
@@ -112,7 +109,7 @@ class RouteMapWidget extends StatelessWidget {
                         child: const Icon(Icons.location_on, color: Colors.blue, size: 40),
                       ),
                       
-                    // B) MÚLTIPLES DESTINOS (Numerados)
+                    // B) MÚLTIPLES DESTINOS
                     if (paradas != null && paradas!.isNotEmpty)
                       ...paradas!.asMap().entries.map((entry) {
                         int index = entry.key;
@@ -147,7 +144,7 @@ class RouteMapWidget extends StatelessWidget {
                         );
                       })
                       
-                    // C) UN SOLO DESTINO (Rojo normal)
+                    // C) UN SOLO DESTINO
                     else if (endCoord != null)
                       Marker(
                         point: endCoord!,
@@ -162,22 +159,47 @@ class RouteMapWidget extends StatelessWidget {
           ),
         ),
         
-        // 3. TEXTO DE DISTANCIA TOTAL
+        // 3. TEXTO DE DISTANCIA TOTAL Y COSTO
         if (distanciaTotalKm != null)
           Padding(
-            padding: const EdgeInsets.only(top: 10, left: 5),
-            child: Row(
+            padding: const EdgeInsets.only(top: 12, left: 5),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.directions_car, color: Color(0xFF1559B2), size: 20),
-                const SizedBox(width: 8),
-                Text(
-                  'Distancia del viaje: ${distanciaTotalKm!.toStringAsFixed(2)} km',
-                  style: GoogleFonts.montserrat(
-                    color: const Color(0xFF1559B2),
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                  ),
+                // Fila de Distancia
+                Row(
+                  children: [
+                    const Icon(Icons.directions_car, color: Color(0xFF1559B2), size: 20),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Distancia del viaje: ${distanciaTotalKm!.toStringAsFixed(2)} km',
+                      style: GoogleFonts.montserrat(
+                        color: const Color(0xFF1559B2),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                 ),
+                
+                // Fila de Costo (Añadida)
+                if (costoEstimado != null) ...[
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      const Icon(Icons.payments_rounded, color: Colors.green, size: 20),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Costo estimado: \$${costoEstimado!.toStringAsFixed(2)} MXN',
+                        style: GoogleFonts.montserrat(
+                          color: Colors.green[700],
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold, // Un poco más resaltado por ser dinero
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ],
             ),
           ),

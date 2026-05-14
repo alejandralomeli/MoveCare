@@ -120,15 +120,12 @@ class MyApp extends StatelessWidget {
         '/principal_pasajero': (context) => const PrincipalPasajero(),
         '/completar_perfil_pasajero': (context) => const CompletarPerfilPasajero(),
         '/perfil_pasajero': (context) => const PerfilPasajero(),
-        '/agendar_viaje': (context) => const AgendarViaje(), //F IA
-        '/agendar_varios_destinos': (context) => const AgendarVariosDestinos(), //F IA
-        // '/pago_tarjeta': (context) => const PagoTarjetaScreen(),
+        '/agendar_viaje': (context) => const AgendarViaje(),
+        '/agendar_varios_destinos': (context) => const AgendarVariosDestinos(), 
         '/registro_tarjeta': (context) => const RegistroTarjetaScreen(),
         '/registro_acompanante': (context) => const RegistrarAcompanante(),
         '/historial_viajes_pasajero': (context) => const HistorialViajesPasajero(),
         '/reporte_incidencia_pasajero': (context) => const ReporteIncidenciaPasajero(),
-        // '/viaje_confirmado': (context) => const ViajeConfirmado(), //F
-        //'/estimacion_costo': (context) => const EstimacionViaje(), //F
         '/metodos_pago_lista': (context) => const MetodosPagoVista(),
         '/terminos_condiciones': (context) => const TerminosVista(),
         '/aviso_privacidad': (context) => const PrivacidadVista(),

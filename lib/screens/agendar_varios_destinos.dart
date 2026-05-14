@@ -40,6 +40,14 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos>
   String? polylineRuta;
   bool calculandoRuta = false;
 
+  double? costoEstimado;
+
+  // Tarifas estándar
+  final double TARIFA_BASE = 30.0;
+  final double COSTO_POR_KM = 7.0;
+  final double COSTO_POR_MINUTO = 2.5;
+  final double TARIFA_MINIMA = 40.0;
+
   // Fechas y Horas
   DateTime _weekStart = DateTime.now().subtract(
     Duration(days: DateTime.now().weekday - 1),
@@ -222,6 +230,14 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos>
     });
   }
 
+  // --- LÓGICA DE CÁLCULO DE COSTO ---
+  double _calcularCostoEstimado(double km, int minutos) {
+    double subtotal =
+        TARIFA_BASE + (km * COSTO_POR_KM) + (minutos * COSTO_POR_MINUTO);
+    double totalRedondeado = double.parse(subtotal.toStringAsFixed(2));
+    return totalRedondeado < TARIFA_MINIMA ? TARIFA_MINIMA : totalRedondeado;
+  }
+
   // --- LÓGICA DEL MAPA Y TEMPORIZADOR ANTI-BLOQUEOS (De viejo.txt) ---
   Future<void> _calcularRutaMultiDestino() async {
     final originText = origenController.text.trim();
@@ -238,13 +254,13 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos>
       List<LatLng> coordenadasRuta = [start];
       List<LatLng> paradasTemp = [];
 
-      // 2. Procesamos cada destino con PAUSA OBLIGATORIA para no bloquear la API (1.5s)
+      // 2. Procesamos cada destino con PAUSA OBLIGATORIA
       for (String destText in destTexts) {
         await Future.delayed(const Duration(milliseconds: 1500));
         LatLng? dest = await OsmService.obtenerCoordenadas(destText);
         if (dest != null) {
           coordenadasRuta.add(dest);
-          paradasTemp.add(dest); // Guardamos la parada para su pin
+          paradasTemp.add(dest);
         }
       }
 
@@ -259,6 +275,14 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos>
             distanciaTotalKm = routeData['distancia'];
             duracionMin = routeData['duracion'];
             paradasCoords = paradasTemp;
+
+            // --- CÁLCULO DEL COSTO AQUÍ ---
+            if (distanciaTotalKm != null && duracionMin != null) {
+              costoEstimado = _calcularCostoEstimado(
+                distanciaTotalKm!,
+                duracionMin!,
+              );
+            }
           });
         }
       }
@@ -305,7 +329,6 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos>
 
   Future<void> _crearViaje() async {
     if (_isCreatingTrip) return;
-
     bool esPagoConTarjeta =
         (selectedPayment == 'Tarjeta de crédito' ||
         selectedPayment == 'Tarjeta de débito');
@@ -342,10 +365,17 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos>
       );
       return;
     }
-    if (startCoord == null || endCoord == null || distanciaTotalKm == null) {
+
+    // --- VALIDACIÓN DE COSTO INCLUIDA ---
+    if (startCoord == null ||
+        endCoord == null ||
+        distanciaTotalKm == null ||
+        costoEstimado == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Por favor espera a que se calcule la ruta en el mapa'),
+          content: Text(
+            'Por favor espera a que se calcule la ruta y el costo en el mapa',
+          ),
         ),
       );
       return;
@@ -386,7 +416,10 @@ class _AgendarVariosDestinosState extends State<AgendarVariosDestinos>
         especificaciones: especificaciones,
         checkAcompanante: hasCompanion,
         idAcompanante: hasCompanion ? selectedAcompananteId : null,
-        costo: null,
+
+        // --- SE ENVÍA EL COSTO ESTIMADO ---
+        costo: costoEstimado,
+
         duracionEstimada: duracionMin,
       );
 
