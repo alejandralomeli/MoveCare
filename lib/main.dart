@@ -110,8 +110,8 @@ class MyApp extends StatelessWidget {
         // Rutas de Autenticación y Sistema
         '/bienvenido': (context) => const Bienvenido(),
         '/iniciar_sesion': (context) => const IniciarSesion(),
-        '/olvide_contrasena': (context) => const OlvideContrasena(), //F
-        '/nueva_contrasena': (context) => const NuevaContrasena(), //F
+        '/olvide_contrasena': (context) => const OlvideContrasena(),
+        // '/nueva_contrasena': (context) => const NuevaContrasena(),
         '/confirmar-correo': (context) => const ConfirmarCorreoScreen(), 
         '/registro': (context) => const Registro(),
 

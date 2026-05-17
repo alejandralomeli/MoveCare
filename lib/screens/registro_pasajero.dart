@@ -372,6 +372,7 @@ class _RegistroPasajeroState extends State<RegistroPasajero> {
     setState(() => _loading = true);
     final result = await AuthService.registerPassenger(
       nombreCompleto: _nombreCtrl.text,
+      direccion: _direccionCtrl.text,
       correo: _correoCtrl.text,
       telefono: _telefonoCtrl.text,
       password: _passwordCtrl.text,

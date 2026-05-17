@@ -30,12 +30,14 @@ class AuthService {
   // ================= REGISTRO PASAJERO =================
   static Future<Map<String, dynamic>> registerPassenger({
     required String nombreCompleto,
+    required String direccion,
     required String correo,
     required String telefono,
     required String password,
   }) async {
     final response = await HttpClient.post("/auth/auth/registro/pasajero", {
       "nombre_completo": nombreCompleto,
+      "direccion": direccion,
       "correo": correo,
       "telefono": telefono,
       "password": password,
@@ -139,4 +141,49 @@ class AuthService {
   static Future<void> logout() async {
     await SecureStorage.deleteAll();
   }
+
+  // ================= RECUPERACIÓN DE CONTRASEÑA =================
+  
+  // 1. Solicitar el código
+  static Future<Map<String, dynamic>> solicitarRecuperacion(String email) async {
+    final response = await HttpClient.post("/auth/auth/recuperar-password/solicitar", {
+      "correo": email,
+    });
+    final data = jsonDecode(response.body);
+    if (response.statusCode == 200) {
+      return {"ok": true, "mensaje": data["message"]};
+    } else {
+      return {"ok": false, "error": data["detail"]};
+    }
+  }
+
+  // 2. Validar el código ingresado en el modal
+  static Future<Map<String, dynamic>> validarCodigoRecuperacion(String email, String codigo) async {
+    final response = await HttpClient.post("/auth/auth/recuperar-password/validar", {
+      "correo": email,
+      "codigo": codigo,
+    });
+    final data = jsonDecode(response.body);
+    if (response.statusCode == 200) {
+      return {"ok": true, "mensaje": data["message"]};
+    } else {
+      return {"ok": false, "error": data["detail"]};
+    }
+  }
+
+  // 3. Cambiar la contraseña final
+  static Future<Map<String, dynamic>> cambiarPassword(String email, String codigo, String nuevaPassword) async {
+    final response = await HttpClient.post("/auth/auth/recuperar-password/cambiar", {
+      "correo": email,
+      "codigo": codigo,
+      "nueva_password": nuevaPassword,
+    });
+    final data = jsonDecode(response.body);
+    if (response.statusCode == 200) {
+      return {"ok": true, "mensaje": data["message"]};
+    } else {
+      return {"ok": false, "error": data["detail"]};
+    }
+  }
+
 }
